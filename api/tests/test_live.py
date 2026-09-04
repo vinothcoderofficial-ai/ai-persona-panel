@@ -190,6 +190,28 @@ def test_replay_through_the_socket_equals_offline_fusion(client, predictions_dir
     assert last["prediction_id"] == lock["prediction_id"]
 
 
+def stored_events(engine, session_id, expected: int, timeout_s: float = 5.0):
+    """The session's persisted events, once at least `expected` have landed.
+
+    TestClient runs the websocket handler on a portal thread, so leaving the
+    `with` block closes the socket but does not guarantee ws.py's `finally`
+    flush has finished. Asserting straight after the block is a race -- it is
+    what made this module flake. Polling a bounded predicate turns a genuine
+    async boundary into a deterministic wait, and still fails (on the caller's
+    assertion) if the rows never arrive.
+    """
+    deadline = time.monotonic() + timeout_s
+    rows = []
+    while True:
+        with Session(engine) as db_session:
+            rows = db_session.exec(
+                select(EventRecord).where(EventRecord.session_id == session_id)
+            ).all()
+        if len(rows) >= expected or time.monotonic() >= deadline:
+            return rows
+        time.sleep(0.005)
+
+
 def test_replayed_events_reach_the_database(client, predictions_dir, test_engine):
     session_id, lock = create_session(client, predictions_dir)
     events = recorded_session(live_module.slot_vocabulary(lock), n_events=30)
@@ -198,10 +220,7 @@ def test_replayed_events_reach_the_database(client, predictions_dir, test_engine
         for batch in batches(events, sizes=(10,)):
             ingest.send_json({"events": batch})
 
-    with Session(test_engine) as db_session:
-        rows = db_session.exec(
-            select(EventRecord).where(EventRecord.session_id == session_id)
-        ).all()
+    rows = stored_events(test_engine, session_id, len(events))
     assert len(rows) == len(events)
     assert json.loads(rows[0].data) == events[0]
 
@@ -428,18 +447,29 @@ def test_ws_session_reports_an_invalid_batch_without_dropping_the_stream(
     session_id, lock = create_session(client, predictions_dir)
     slot_ids = live_module.slot_vocabulary(lock)
 
+    # A spectator gives this test a synchronisation point. Acks were cut
+    # (docs/PLAN.md 13), so the ingest socket answers a *valid* batch with
+    # nothing at all -- closing straight after sending one races the server and
+    # can drop it. The broadcast is the observable effect of the fold, so
+    # waiting for it proves the batch was processed before we close.
     with client.websocket_connect(f"/ws/session/{session_id}") as ingest:
         ingest.send_json({"events": [{"t_ms": 1, "type": "not_a_real_type",
                                       "station_id": "B1", "payload": {}}]})
         error = ingest.receive_json()
         assert "error" in error
-        # The socket is still usable afterwards.
-        ingest.send_json({"events": [fixation(slot_ids[0], 100)]})
 
-    with Session(test_engine) as db_session:
-        rows = db_session.exec(
-            select(EventRecord).where(EventRecord.session_id == session_id)
-        ).all()
+        # The spectator connects second, because the snapshot is only sent once
+        # a live state exists and the ingest socket is what creates it.
+        with client.websocket_connect(f"/ws/spectator/{session_id}") as spectator:
+            spectator.receive_json()  # the join snapshot
+            # The socket is still usable afterwards.
+            ingest.send_json({"events": [fixation(slot_ids[0], 100)]})
+            assert spectator.receive_json()["n_fixations"] == 1
+
+    # The invalid batch was rejected before the valid one was sent, so anything
+    # wrongly persisted from it is already present by the time the valid event
+    # lands -- waiting for 1 row cannot mask a second.
+    rows = stored_events(test_engine, session_id, 1)
     assert len(rows) == 1, "the invalid batch must not have been persisted"
 
 
