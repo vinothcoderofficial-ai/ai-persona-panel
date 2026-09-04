@@ -1,0 +1,64 @@
+flowchart LR
+    subgraph BROWSER["Browser (Track A + B)"]
+        SHOP["Shopper screen<br/>R3F store · StationController<br/>WebGazer · FixationFilter · CursorTracker<br/>EventLogger"]
+        SPEC["Spectator screen<br/>gaze trail · live heatmap vs prediction<br/>agreement meter · prediction badge · clock"]
+        WHATIF["What-if controls<br/>SKU → shelf level · creative → ad slot"]
+        DASH["Dashboard<br/>heatmaps · metrics · Ad Slot Index<br/>traces · noise dashboard"]
+        VPROG["VisionProgress<br/>boxes per frame · bays assembling"]
+    end
+
+    subgraph API["API — FastAPI (Track C owns live/prediction/whatif)"]
+        REST["REST<br/>/planograms /variants<br/>/sessions /experiments /reports"]
+        WSS["WS /ws/session/{id}<br/>event batches every 500 ms, acked"]
+        LIVEENG["Live engine<br/>running fusion → Spearman vs lock"]
+        WSP["WS /ws/spectator/{id}"]
+        PRED["Prediction lock<br/>writes predictions/{session}.json<br/>hash + timestamp on POST /sessions"]
+        WI["POST /whatif<br/>resolve → saliency → 10k sim<br/>warm, p95 < 1 s"]
+    end
+
+    subgraph SIM["sim/ — Python (Track C)"]
+        SALI["saliency.py"]
+        POLI["policy.py + llm_client.py<br/>cached · LLM_OFFLINE"]
+        SIMU["simulator.py<br/>numpy, vectorised"]
+        SLOW["slow_agent.py<br/>20 traces / persona"]
+    end
+
+    subgraph ANA["analytics/ — Python (Track D)"]
+        FUS["fusion.py (single source of truth)"]
+        NOI["noise.py (parity with TS filter)"]
+        METR["metrics.py · noise_ceiling.py<br/>calibration.py · known_effect.py"]
+        EVAL["eval.py → RESULTS.md + figures<br/>verifies lock precedes first event"]
+        REPT["report.py<br/>number-grounding check"]
+    end
+
+    subgraph VIS["vision/ — GPU laptop only (Track E)"]
+        VSVC["service.py :8100<br/>Grounding DINO tiny fp16<br/>WS progress"]
+    end
+
+    subgraph DATA["Data"]
+        DB[("SQLite<br/>sessions · events · experiments")]
+        FILES[("Repo files<br/>schemas/ · data/planograms · data/variants<br/>data/cache/policies · data/cache/traces<br/>predictions/ · data/sessions/anon")]
+    end
+
+    SHOP -- "events (WS, 500 ms)" --> WSS
+    WSS --> LIVEENG --> WSP --> SPEC
+    WSS -- "batch write 2 s" --> DB
+    REST -- "POST /sessions" --> PRED --> FILES
+    PRED -- "hash prefix + time" --> SPEC
+    LIVEENG -. "imports" .-> FUS
+    WHATIF --> WI --> SALI --> SIMU --> WI
+    WI -- "lift + heatmap" --> WHATIF
+    POLI --> SIMU
+    SLOW --> FILES
+    DB --> EVAL
+    FILES --> EVAL
+    EVAL --> METR --> REPT --> DASH
+    NOI -. "same fixtures" .-> SHOP
+    VPROG -- "mp4 upload" --> VSVC -- "planogram JSON + boxes" --> VPROG
+    VSVC -. "if offline: replay committed output" .-> FILES
+
+    style PRED fill:#fff3cd,stroke:#d9a300,stroke-width:2px
+    style LIVEENG fill:#e7f5ff,stroke:#1c7ed6,stroke-width:2px
+    style WI fill:#e7f5ff,stroke:#1c7ed6,stroke-width:2px
+    style FUS fill:#e6fcf5,stroke:#0ca678,stroke-width:2px
+    style VIS fill:#f8f9fa,stroke:#adb5bd,stroke-dasharray: 5 5

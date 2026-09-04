@@ -1,0 +1,6 @@
+{
+  "persona_id": "mission",
+  "archetype": "mission",
+  "share_of_population": 0.35,
+  "description": "Comes with a list, time-pressed, low exploration, buys the first acceptable match."
+}

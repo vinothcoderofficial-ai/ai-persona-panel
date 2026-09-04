@@ -1,0 +1,19 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "prediction.schema.json",
+  "title": "PredictionLock",
+  "type": "object",
+  "required": ["prediction_id", "session_id", "variant_id", "sim_run_id", "created_at",
+               "population_fixation_prob", "sha256"],
+  "additionalProperties": false,
+  "properties": {
+    "prediction_id": { "type": "string" },
+    "session_id": { "type": "string" },
+    "variant_id": { "type": "string" },
+    "sim_run_id": { "type": "string" },
+    "created_at": { "type": "string", "format": "date-time" },
+    "population_fixation_prob": { "type": "object", "additionalProperties": { "type": "number" } },
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "git_commit": { "type": ["string", "null"] }
+  }
+}

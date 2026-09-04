@@ -1,0 +1,42 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "policy.schema.json",
+  "title": "PersonaPolicy",
+  "type": "object",
+  "required": ["persona_id", "goal_categories", "time_budget_s", "exploration", "brand_affinity",
+               "price_sensitivity", "promo_sensitivity", "ad_receptivity", "purchase_threshold",
+               "dwell_ms", "fixations_per_station"],
+  "additionalProperties": false,
+  "properties": {
+    "persona_id": { "type": "string" },
+    "goal_categories": { "type": "array", "items": { "type": "string" } },
+    "time_budget_s": {
+      "type": "object",
+      "required": ["mean", "sd"],
+      "additionalProperties": false,
+      "properties": { "mean": { "type": "number", "exclusiveMinimum": 0 }, "sd": { "type": "number", "minimum": 0 } }
+    },
+    "exploration": { "type": "number", "minimum": 0, "maximum": 1 },
+    "brand_affinity": {
+      "type": "object",
+      "required": ["_default"],
+      "additionalProperties": { "type": "number", "minimum": 0, "maximum": 1 }
+    },
+    "price_sensitivity": { "type": "number", "minimum": 0, "maximum": 1 },
+    "promo_sensitivity": { "type": "number", "minimum": 0, "maximum": 1 },
+    "ad_receptivity": { "type": "number", "minimum": 0, "maximum": 1 },
+    "purchase_threshold": { "type": "number", "minimum": 0, "maximum": 1 },
+    "dwell_ms": {
+      "type": "object",
+      "required": ["mu", "sigma"],
+      "additionalProperties": false,
+      "properties": { "mu": { "type": "number" }, "sigma": { "type": "number", "exclusiveMinimum": 0 } }
+    },
+    "fixations_per_station": {
+      "type": "object",
+      "required": ["lam"],
+      "additionalProperties": false,
+      "properties": { "lam": { "type": "number", "exclusiveMinimum": 0 } }
+    }
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "simresult.schema.json",
+  "title": "SimResult",
+  "type": "object",
+  "required": ["sim_run_id", "variant_id", "persona_id", "n_runs", "seed",
+               "fixation_prob", "dwell_ms_mean", "ad_slot_attention", "purchase_share", "path"],
+  "additionalProperties": false,
+  "properties": {
+    "sim_run_id": { "type": "string" },
+    "variant_id": { "type": "string" },
+    "persona_id": { "type": "string" },
+    "n_runs": { "type": "integer", "minimum": 1 },
+    "seed": { "type": "integer" },
+    "fixation_prob": { "type": "object", "additionalProperties": { "type": "number", "minimum": 0, "maximum": 1 } },
+    "dwell_ms_mean": { "type": "object", "additionalProperties": { "type": "number", "minimum": 0 } },
+    "ad_slot_attention": { "type": "object", "additionalProperties": { "type": "number", "minimum": 0, "maximum": 1 } },
+    "purchase_share": { "type": "object", "additionalProperties": { "type": "number", "minimum": 0, "maximum": 1 } },
+    "ad_exposed_purchase_share": { "type": "object", "additionalProperties": { "type": "number" } },
+    "ad_unexposed_purchase_share": { "type": "object", "additionalProperties": { "type": "number" } },
+    "path": {
+      "type": "object",
+      "required": ["stations_mean", "duration_s_mean"],
+      "additionalProperties": false,
+      "properties": {
+        "stations_mean": { "type": "number", "minimum": 0 },
+        "duration_s_mean": { "type": "number", "minimum": 0 }
+      }
+    },
+    "traces": { "type": "array", "items": { "type": "string" } }
+  }
+}

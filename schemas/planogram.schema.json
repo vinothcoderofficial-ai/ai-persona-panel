@@ -1,0 +1,317 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "planogram.schema.json",
+  "title": "Planogram",
+  "type": "object",
+  "required": [
+    "planogram_id",
+    "name",
+    "source",
+    "bays",
+    "skus",
+    "creatives"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "planogram_id": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "source": {
+      "type": "string",
+      "enum": [
+        "manual",
+        "video"
+      ]
+    },
+    "bays": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/definitions/bay"
+      }
+    },
+    "skus": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/definitions/sku"
+      }
+    },
+    "creatives": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/creative"
+      }
+    }
+  },
+  "definitions": {
+    "bay": {
+      "type": "object",
+      "required": [
+        "bay_id",
+        "type",
+        "width_m",
+        "height_m",
+        "station",
+        "shelves",
+        "ad_slots"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "bay_id": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "shelf",
+            "endcap"
+          ]
+        },
+        "width_m": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "height_m": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "station": {
+          "type": "object",
+          "required": [
+            "camera_pos",
+            "look_at"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "camera_pos": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 3,
+              "maxItems": 3
+            },
+            "look_at": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 3,
+              "maxItems": 3
+            }
+          }
+        },
+        "shelves": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/definitions/shelf"
+          }
+        },
+        "ad_slots": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ad_slot"
+          }
+        }
+      }
+    },
+    "shelf": {
+      "type": "object",
+      "required": [
+        "shelf_id",
+        "height_m",
+        "level",
+        "slots"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "shelf_id": {
+          "type": "string"
+        },
+        "height_m": {
+          "type": "number",
+          "minimum": 0
+        },
+        "level": {
+          "type": "string",
+          "enum": [
+            "top",
+            "above_eye",
+            "eye",
+            "below_eye",
+            "bottom"
+          ]
+        },
+        "slots": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/slot"
+          }
+        }
+      }
+    },
+    "slot": {
+      "type": "object",
+      "required": [
+        "slot_id",
+        "sku_id",
+        "facings",
+        "x_m",
+        "width_m",
+        "height_m"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "slot_id": {
+          "type": "string"
+        },
+        "sku_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "facings": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "x_m": {
+          "type": "number",
+          "minimum": 0
+        },
+        "width_m": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "height_m": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      }
+    },
+    "ad_slot": {
+      "type": "object",
+      "required": [
+        "ad_slot_id",
+        "type",
+        "attached_to",
+        "x_m",
+        "width_m",
+        "creative_id"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "ad_slot_id": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "shelf_talker",
+            "endcap_header",
+            "floor_decal",
+            "screen"
+          ]
+        },
+        "attached_to": {
+          "type": "string"
+        },
+        "x_m": {
+          "type": "number",
+          "minimum": 0
+        },
+        "width_m": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "creative_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      }
+    },
+    "sku": {
+      "type": "object",
+      "required": [
+        "sku_id",
+        "name",
+        "brand",
+        "category",
+        "price",
+        "promo",
+        "texture_url",
+        "color_lab"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "sku_id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "brand": {
+          "type": "string"
+        },
+        "category": {
+          "type": "string"
+        },
+        "price": {
+          "type": "number",
+          "minimum": 0
+        },
+        "promo": {
+          "type": "boolean"
+        },
+        "texture_url": {
+          "type": "string"
+        },
+        "color_lab": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 3,
+          "maxItems": 3
+        }
+      }
+    },
+    "creative": {
+      "type": "object",
+      "required": [
+        "creative_id",
+        "brand",
+        "texture_url"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "creative_id": {
+          "type": "string"
+        },
+        "brand": {
+          "type": "string"
+        },
+        "texture_url": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

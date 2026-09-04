@@ -1,0 +1,792 @@
+{
+  "planogram_id": "demo_aisle",
+  "name": "Demo snacks aisle",
+  "source": "manual",
+  "bays": [
+    {
+      "bay_id": "B1",
+      "type": "shelf",
+      "width_m": 1.2,
+      "height_m": 1.8,
+      "station": {
+        "camera_pos": [
+          0.0,
+          1.5,
+          2.2
+        ],
+        "look_at": [
+          0.0,
+          1.1,
+          0.0
+        ]
+      },
+      "shelves": [
+        {
+          "shelf_id": "B1S1",
+          "height_m": 1.7,
+          "level": "top",
+          "slots": [
+            {
+              "slot_id": "B1S1P1",
+              "sku_id": "SKU_001",
+              "facings": 2,
+              "x_m": 0.05,
+              "width_m": 0.5,
+              "height_m": 0.22
+            },
+            {
+              "slot_id": "B1S1P2",
+              "sku_id": "SKU_002",
+              "facings": 3,
+              "x_m": 0.6,
+              "width_m": 0.5,
+              "height_m": 0.22
+            }
+          ]
+        },
+        {
+          "shelf_id": "B1S2",
+          "height_m": 1.45,
+          "level": "above_eye",
+          "slots": [
+            {
+              "slot_id": "B1S2P1",
+              "sku_id": "SKU_003",
+              "facings": 3,
+              "x_m": 0.05,
+              "width_m": 0.5,
+              "height_m": 0.22
+            },
+            {
+              "slot_id": "B1S2P2",
+              "sku_id": "SKU_004",
+              "facings": 4,
+              "x_m": 0.6,
+              "width_m": 0.5,
+              "height_m": 0.22
+            }
+          ]
+        },
+        {
+          "shelf_id": "B1S3",
+          "height_m": 1.2,
+          "level": "eye",
+          "slots": [
+            {
+              "slot_id": "B1S3P1",
+              "sku_id": "SKU_005",
+              "facings": 4,
+              "x_m": 0.05,
+              "width_m": 0.5,
+              "height_m": 0.22
+            },
+            {
+              "slot_id": "B1S3P2",
+              "sku_id": null,
+              "facings": 0,
+              "x_m": 0.6,
+              "width_m": 0.5,
+              "height_m": 0.22
+            }
+          ]
+        },
+        {
+          "shelf_id": "B1S4",
+          "height_m": 0.85,
+          "level": "below_eye",
+          "slots": [
+            {
+              "slot_id": "B1S4P1",
+              "sku_id": "SKU_006",
+              "facings": 2,
+              "x_m": 0.05,
+              "width_m": 0.5,
+              "height_m": 0.22
+            },
+            {
+              "slot_id": "B1S4P2",
+              "sku_id": "SKU_007",
+              "facings": 3,
+              "x_m": 0.6,
+              "width_m": 0.5,
+              "height_m": 0.22
+            }
+          ]
+        },
+        {
+          "shelf_id": "B1S5",
+          "height_m": 0.4,
+          "level": "bottom",
+          "slots": [
+            {
+              "slot_id": "B1S5P1",
+              "sku_id": "SKU_008",
+              "facings": 3,
+              "x_m": 0.05,
+              "width_m": 0.5,
+              "height_m": 0.22
+            },
+            {
+              "slot_id": "B1S5P2",
+              "sku_id": null,
+              "facings": 0,
+              "x_m": 0.6,
+              "width_m": 0.5,
+              "height_m": 0.22
+            }
+          ]
+        }
+      ],
+      "ad_slots": [
+        {
+          "ad_slot_id": "B1_TALKER",
+          "type": "shelf_talker",
+          "attached_to": "B1S3",
+          "x_m": 0.4,
+          "width_m": 0.3,
+          "creative_id": null
+        }
+      ]
+    },
+    {
+      "bay_id": "B2",
+      "type": "shelf",
+      "width_m": 1.2,
+      "height_m": 1.8,
+      "station": {
+        "camera_pos": [
+          1.5,
+          1.5,
+          2.2
+        ],
+        "look_at": [
+          1.5,
+          1.1,
+          0.0
+        ]
+      },
+      "shelves": [
+        {
+          "shelf_id": "B2S1",
+          "height_m": 1.7,
+          "level": "top",
+          "slots": [
+            {
+              "slot_id": "B2S1P1",
+              "sku_id": "SKU_009",
+              "facings": 3,
+              "x_m": 0.05,
+              "width_m": 0.5,
+              "height_m": 0.22
+            },
+            {
+              "slot_id": "B2S1P2",
+              "sku_id": "SKU_010",
+              "facings": 4,
+              "x_m": 0.6,
+              "width_m": 0.5,
+              "height_m": 0.22
+            }
+          ]
+        },
+        {
+          "shelf_id": "B2S2",
+          "height_m": 1.45,
+          "level": "above_eye",
+          "slots": [
+            {
+              "slot_id": "B2S2P1",
+              "sku_id": "SKU_011",
+              "facings": 4,
+              "x_m": 0.05,
+              "width_m": 0.5,
+              "height_m": 0.22
+            },
+            {
+              "slot_id": "B2S2P2",
+              "sku_id": "SKU_012",
+              "facings": 2,
+              "x_m": 0.6,
+              "width_m": 0.5,
+              "height_m": 0.22
+            }
+          ]
+        },
+        {
+          "shelf_id": "B2S3",
+          "height_m": 1.2,
+          "level": "eye",
+          "slots": [
+            {
+              "slot_id": "B2S3P1",
+              "sku_id": "SKU_013",
+              "facings": 2,
+              "x_m": 0.05,
+              "width_m": 0.5,
+              "height_m": 0.22
+            },
+            {
+              "slot_id": "B2S3P2",
+              "sku_id": null,
+              "facings": 0,
+              "x_m": 0.6,
+              "width_m": 0.5,
+              "height_m": 0.22
+            }
+          ]
+        },
+        {
+          "shelf_id": "B2S4",
+          "height_m": 0.85,
+          "level": "below_eye",
+          "slots": [
+            {
+              "slot_id": "B2S4P1",
+              "sku_id": "SKU_014",
+              "facings": 3,
+              "x_m": 0.05,
+              "width_m": 0.5,
+              "height_m": 0.22
+            },
+            {
+              "slot_id": "B2S4P2",
+              "sku_id": "SKU_015",
+              "facings": 4,
+              "x_m": 0.6,
+              "width_m": 0.5,
+              "height_m": 0.22
+            }
+          ]
+        },
+        {
+          "shelf_id": "B2S5",
+          "height_m": 0.4,
+          "level": "bottom",
+          "slots": [
+            {
+              "slot_id": "B2S5P1",
+              "sku_id": "SKU_016",
+              "facings": 4,
+              "x_m": 0.05,
+              "width_m": 0.5,
+              "height_m": 0.22
+            },
+            {
+              "slot_id": "B2S5P2",
+              "sku_id": null,
+              "facings": 0,
+              "x_m": 0.6,
+              "width_m": 0.5,
+              "height_m": 0.22
+            }
+          ]
+        }
+      ],
+      "ad_slots": [
+        {
+          "ad_slot_id": "B2_DECAL",
+          "type": "floor_decal",
+          "attached_to": "B2",
+          "x_m": 0.3,
+          "width_m": 0.6,
+          "creative_id": null
+        }
+      ]
+    },
+    {
+      "bay_id": "B3",
+      "type": "endcap",
+      "width_m": 1.2,
+      "height_m": 1.8,
+      "station": {
+        "camera_pos": [
+          3.0,
+          1.5,
+          2.2
+        ],
+        "look_at": [
+          3.0,
+          1.1,
+          0.0
+        ]
+      },
+      "shelves": [
+        {
+          "shelf_id": "B3S1",
+          "height_m": 1.7,
+          "level": "top",
+          "slots": [
+            {
+              "slot_id": "B3S1P1",
+              "sku_id": "SKU_017",
+              "facings": 4,
+              "x_m": 0.05,
+              "width_m": 0.5,
+              "height_m": 0.22
+            },
+            {
+              "slot_id": "B3S1P2",
+              "sku_id": "SKU_018",
+              "facings": 2,
+              "x_m": 0.6,
+              "width_m": 0.5,
+              "height_m": 0.22
+            }
+          ]
+        },
+        {
+          "shelf_id": "B3S2",
+          "height_m": 1.45,
+          "level": "above_eye",
+          "slots": [
+            {
+              "slot_id": "B3S2P1",
+              "sku_id": "SKU_019",
+              "facings": 2,
+              "x_m": 0.05,
+              "width_m": 0.5,
+              "height_m": 0.22
+            },
+            {
+              "slot_id": "B3S2P2",
+              "sku_id": "SKU_020",
+              "facings": 3,
+              "x_m": 0.6,
+              "width_m": 0.5,
+              "height_m": 0.22
+            }
+          ]
+        },
+        {
+          "shelf_id": "B3S3",
+          "height_m": 1.2,
+          "level": "eye",
+          "slots": [
+            {
+              "slot_id": "B3S3P1",
+              "sku_id": "SKU_021",
+              "facings": 3,
+              "x_m": 0.05,
+              "width_m": 0.5,
+              "height_m": 0.22
+            },
+            {
+              "slot_id": "B3S3P2",
+              "sku_id": null,
+              "facings": 0,
+              "x_m": 0.6,
+              "width_m": 0.5,
+              "height_m": 0.22
+            }
+          ]
+        },
+        {
+          "shelf_id": "B3S4",
+          "height_m": 0.85,
+          "level": "below_eye",
+          "slots": [
+            {
+              "slot_id": "B3S4P1",
+              "sku_id": "SKU_022",
+              "facings": 4,
+              "x_m": 0.05,
+              "width_m": 0.5,
+              "height_m": 0.22
+            },
+            {
+              "slot_id": "B3S4P2",
+              "sku_id": "SKU_023",
+              "facings": 2,
+              "x_m": 0.6,
+              "width_m": 0.5,
+              "height_m": 0.22
+            }
+          ]
+        },
+        {
+          "shelf_id": "B3S5",
+          "height_m": 0.4,
+          "level": "bottom",
+          "slots": [
+            {
+              "slot_id": "B3S5P1",
+              "sku_id": "SKU_024",
+              "facings": 2,
+              "x_m": 0.05,
+              "width_m": 0.5,
+              "height_m": 0.22
+            },
+            {
+              "slot_id": "B3S5P2",
+              "sku_id": null,
+              "facings": 0,
+              "x_m": 0.6,
+              "width_m": 0.5,
+              "height_m": 0.22
+            }
+          ]
+        }
+      ],
+      "ad_slots": [
+        {
+          "ad_slot_id": "B3_ENDCAP",
+          "type": "endcap_header",
+          "attached_to": "B3",
+          "x_m": 0.2,
+          "width_m": 0.8,
+          "creative_id": "AD_1"
+        }
+      ]
+    }
+  ],
+  "skus": [
+    {
+      "sku_id": "SKU_001",
+      "name": "Crunch Chips 100g",
+      "brand": "Crunch",
+      "category": "chips",
+      "price": 25.0,
+      "promo": true,
+      "texture_url": "/textures/sku_001.png",
+      "color_lab": [
+        62.0,
+        48.0,
+        51.0
+      ]
+    },
+    {
+      "sku_id": "SKU_002",
+      "name": "Zapp Chips 110g",
+      "brand": "Zapp",
+      "category": "chips",
+      "price": 30.0,
+      "promo": false,
+      "texture_url": "/textures/sku_002.png",
+      "color_lab": [
+        55.0,
+        -30.0,
+        40.0
+      ]
+    },
+    {
+      "sku_id": "SKU_003",
+      "name": "Nimbus Cola 120g",
+      "brand": "Nimbus",
+      "category": "cola",
+      "price": 35.0,
+      "promo": false,
+      "texture_url": "/textures/sku_003.png",
+      "color_lab": [
+        70.0,
+        5.0,
+        -45.0
+      ]
+    },
+    {
+      "sku_id": "SKU_004",
+      "name": "Orchid Cola 130g",
+      "brand": "Orchid",
+      "category": "cola",
+      "price": 40.0,
+      "promo": false,
+      "texture_url": "/textures/sku_004.png",
+      "color_lab": [
+        45.0,
+        55.0,
+        -20.0
+      ]
+    },
+    {
+      "sku_id": "SKU_005",
+      "name": "Crunch Biscuits 140g",
+      "brand": "Crunch",
+      "category": "biscuits",
+      "price": 45.0,
+      "promo": false,
+      "texture_url": "/textures/sku_005.png",
+      "color_lab": [
+        62.0,
+        48.0,
+        51.0
+      ]
+    },
+    {
+      "sku_id": "SKU_006",
+      "name": "Zapp Biscuits 100g",
+      "brand": "Zapp",
+      "category": "biscuits",
+      "price": 50.0,
+      "promo": false,
+      "texture_url": "/textures/sku_006.png",
+      "color_lab": [
+        55.0,
+        -30.0,
+        40.0
+      ]
+    },
+    {
+      "sku_id": "SKU_007",
+      "name": "Nimbus Nuts 110g",
+      "brand": "Nimbus",
+      "category": "nuts",
+      "price": 55.0,
+      "promo": false,
+      "texture_url": "/textures/sku_007.png",
+      "color_lab": [
+        70.0,
+        5.0,
+        -45.0
+      ]
+    },
+    {
+      "sku_id": "SKU_008",
+      "name": "Orchid Nuts 120g",
+      "brand": "Orchid",
+      "category": "nuts",
+      "price": 25.0,
+      "promo": false,
+      "texture_url": "/textures/sku_008.png",
+      "color_lab": [
+        45.0,
+        55.0,
+        -20.0
+      ]
+    },
+    {
+      "sku_id": "SKU_009",
+      "name": "Crunch Chips 130g",
+      "brand": "Crunch",
+      "category": "chips",
+      "price": 30.0,
+      "promo": false,
+      "texture_url": "/textures/sku_009.png",
+      "color_lab": [
+        62.0,
+        48.0,
+        51.0
+      ]
+    },
+    {
+      "sku_id": "SKU_010",
+      "name": "Zapp Chips 140g",
+      "brand": "Zapp",
+      "category": "chips",
+      "price": 35.0,
+      "promo": true,
+      "texture_url": "/textures/sku_010.png",
+      "color_lab": [
+        55.0,
+        -30.0,
+        40.0
+      ]
+    },
+    {
+      "sku_id": "SKU_011",
+      "name": "Nimbus Cola 100g",
+      "brand": "Nimbus",
+      "category": "cola",
+      "price": 40.0,
+      "promo": false,
+      "texture_url": "/textures/sku_011.png",
+      "color_lab": [
+        70.0,
+        5.0,
+        -45.0
+      ]
+    },
+    {
+      "sku_id": "SKU_012",
+      "name": "Orchid Cola 110g",
+      "brand": "Orchid",
+      "category": "cola",
+      "price": 45.0,
+      "promo": false,
+      "texture_url": "/textures/sku_012.png",
+      "color_lab": [
+        45.0,
+        55.0,
+        -20.0
+      ]
+    },
+    {
+      "sku_id": "SKU_013",
+      "name": "Crunch Biscuits 120g",
+      "brand": "Crunch",
+      "category": "biscuits",
+      "price": 50.0,
+      "promo": false,
+      "texture_url": "/textures/sku_013.png",
+      "color_lab": [
+        62.0,
+        48.0,
+        51.0
+      ]
+    },
+    {
+      "sku_id": "SKU_014",
+      "name": "Zapp Biscuits 130g",
+      "brand": "Zapp",
+      "category": "biscuits",
+      "price": 55.0,
+      "promo": false,
+      "texture_url": "/textures/sku_014.png",
+      "color_lab": [
+        55.0,
+        -30.0,
+        40.0
+      ]
+    },
+    {
+      "sku_id": "SKU_015",
+      "name": "Nimbus Nuts 140g",
+      "brand": "Nimbus",
+      "category": "nuts",
+      "price": 25.0,
+      "promo": false,
+      "texture_url": "/textures/sku_015.png",
+      "color_lab": [
+        70.0,
+        5.0,
+        -45.0
+      ]
+    },
+    {
+      "sku_id": "SKU_016",
+      "name": "Orchid Nuts 100g",
+      "brand": "Orchid",
+      "category": "nuts",
+      "price": 30.0,
+      "promo": false,
+      "texture_url": "/textures/sku_016.png",
+      "color_lab": [
+        45.0,
+        55.0,
+        -20.0
+      ]
+    },
+    {
+      "sku_id": "SKU_017",
+      "name": "Crunch Chips 110g",
+      "brand": "Crunch",
+      "category": "chips",
+      "price": 35.0,
+      "promo": false,
+      "texture_url": "/textures/sku_017.png",
+      "color_lab": [
+        62.0,
+        48.0,
+        51.0
+      ]
+    },
+    {
+      "sku_id": "SKU_018",
+      "name": "Zapp Chips 120g",
+      "brand": "Zapp",
+      "category": "chips",
+      "price": 40.0,
+      "promo": false,
+      "texture_url": "/textures/sku_018.png",
+      "color_lab": [
+        55.0,
+        -30.0,
+        40.0
+      ]
+    },
+    {
+      "sku_id": "SKU_019",
+      "name": "Nimbus Cola 130g",
+      "brand": "Nimbus",
+      "category": "cola",
+      "price": 45.0,
+      "promo": true,
+      "texture_url": "/textures/sku_019.png",
+      "color_lab": [
+        70.0,
+        5.0,
+        -45.0
+      ]
+    },
+    {
+      "sku_id": "SKU_020",
+      "name": "Orchid Cola 140g",
+      "brand": "Orchid",
+      "category": "cola",
+      "price": 50.0,
+      "promo": false,
+      "texture_url": "/textures/sku_020.png",
+      "color_lab": [
+        45.0,
+        55.0,
+        -20.0
+      ]
+    },
+    {
+      "sku_id": "SKU_021",
+      "name": "Crunch Biscuits 100g",
+      "brand": "Crunch",
+      "category": "biscuits",
+      "price": 55.0,
+      "promo": false,
+      "texture_url": "/textures/sku_021.png",
+      "color_lab": [
+        62.0,
+        48.0,
+        51.0
+      ]
+    },
+    {
+      "sku_id": "SKU_022",
+      "name": "Zapp Biscuits 110g",
+      "brand": "Zapp",
+      "category": "biscuits",
+      "price": 25.0,
+      "promo": false,
+      "texture_url": "/textures/sku_022.png",
+      "color_lab": [
+        55.0,
+        -30.0,
+        40.0
+      ]
+    },
+    {
+      "sku_id": "SKU_023",
+      "name": "Nimbus Nuts 120g",
+      "brand": "Nimbus",
+      "category": "nuts",
+      "price": 30.0,
+      "promo": false,
+      "texture_url": "/textures/sku_023.png",
+      "color_lab": [
+        70.0,
+        5.0,
+        -45.0
+      ]
+    },
+    {
+      "sku_id": "SKU_024",
+      "name": "Orchid Nuts 130g",
+      "brand": "Orchid",
+      "category": "nuts",
+      "price": 35.0,
+      "promo": false,
+      "texture_url": "/textures/sku_024.png",
+      "color_lab": [
+        45.0,
+        55.0,
+        -20.0
+      ]
+    }
+  ],
+  "creatives": [
+    {
+      "creative_id": "AD_1",
+      "brand": "Crunch",
+      "texture_url": "/textures/ad_1.png"
+    },
+    {
+      "creative_id": "AD_2",
+      "brand": "Zapp",
+      "texture_url": "/textures/ad_2.png"
+    }
+  ]
+}

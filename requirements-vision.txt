@@ -1,0 +1,6 @@
+# GPU laptop only - install after requirements.txt
+# torch: pick the CUDA build for your driver from https://pytorch.org/get-started/locally/
+torch
+transformers==4.48.0
+opencv-python-headless==4.10.0.84
+ffmpeg-python==0.2.0

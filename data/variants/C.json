@@ -1,0 +1,17 @@
+{
+  "variant_id": "C",
+  "base_planogram_id": "demo_aisle",
+  "name": "Ad creative moved to the bay 1 shelf talker",
+  "patches": [
+    {
+      "op": "set_ad_creative",
+      "ad_slot_id": "B3_ENDCAP",
+      "creative_id": null
+    },
+    {
+      "op": "set_ad_creative",
+      "ad_slot_id": "B1_TALKER",
+      "creative_id": "AD_1"
+    }
+  ]
+}

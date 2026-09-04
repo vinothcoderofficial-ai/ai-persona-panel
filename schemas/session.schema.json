@@ -1,0 +1,45 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "session.schema.json",
+  "title": "Session",
+  "type": "object",
+  "required": ["session_id", "variant_id", "consent", "started_at", "screen_w", "screen_h", "mode"],
+  "additionalProperties": false,
+  "properties": {
+    "session_id": { "type": "string" },
+    "variant_id": { "type": "string" },
+    "consent": { "type": "boolean" },
+    "started_at": { "type": "string", "format": "date-time" },
+    "ended_at": { "type": ["string", "null"], "format": "date-time" },
+    "screen_w": { "type": "integer" },
+    "screen_h": { "type": "integer" },
+    "mode": { "type": "string", "enum": ["webcam", "cursor_only"] },
+    "calibration_error_px": { "type": ["number", "null"] },
+    "intake": {
+      "type": "object",
+      "required": ["has_list", "same_brand", "hurry"],
+      "additionalProperties": false,
+      "properties": {
+        "has_list": { "type": "boolean" },
+        "same_brand": { "type": "boolean" },
+        "hurry": { "type": "boolean" }
+      }
+    },
+    "archetype_label": { "type": ["string", "null"], "enum": ["mission", "browser", "loyalist", "switcher", null] },
+    "prediction_id": { "type": ["string", "null"] },
+    "accepted": { "type": ["boolean", "null"] },
+    "reject_reason": {
+      "type": ["string", "null"],
+      "enum": ["too_short", "one_station", "no_interaction", "low_coverage", "no_consent", null]
+    },
+    "quality": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "fixation_coverage": { "type": "number", "minimum": 0, "maximum": 1 },
+        "stations_visited": { "type": "integer", "minimum": 0 },
+        "duration_s": { "type": "number", "minimum": 0 }
+      }
+    }
+  }
+}

@@ -1,0 +1,61 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "variant.schema.json",
+  "title": "Variant",
+  "type": "object",
+  "required": ["variant_id", "base_planogram_id", "name", "patches"],
+  "additionalProperties": false,
+  "properties": {
+    "variant_id": { "type": "string" },
+    "base_planogram_id": { "type": "string" },
+    "name": { "type": "string" },
+    "patches": { "type": "array", "items": { "$ref": "#/definitions/patch" } }
+  },
+  "definitions": {
+    "patch": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["op", "sku_id", "to_slot_id"],
+          "additionalProperties": false,
+          "properties": {
+            "op": { "const": "move_sku" },
+            "sku_id": { "type": "string" },
+            "to_slot_id": { "type": "string" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["op", "ad_slot_id", "creative_id"],
+          "additionalProperties": false,
+          "properties": {
+            "op": { "const": "set_ad_creative" },
+            "ad_slot_id": { "type": "string" },
+            "creative_id": { "type": ["string", "null"] }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["op", "sku_id", "texture_url"],
+          "additionalProperties": false,
+          "properties": {
+            "op": { "const": "swap_texture" },
+            "sku_id": { "type": "string" },
+            "texture_url": { "type": "string" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["op", "sku_id", "price"],
+          "additionalProperties": false,
+          "properties": {
+            "op": { "const": "set_price" },
+            "sku_id": { "type": "string" },
+            "price": { "type": "number", "minimum": 0 },
+            "promo": { "type": "boolean" }
+          }
+        }
+      ]
+    }
+  }
+}

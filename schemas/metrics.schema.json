@@ -1,0 +1,76 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "metrics.schema.json",
+  "title": "ExperimentMetrics",
+  "type": "object",
+  "required": ["experiment_id", "fit_variant", "holdout_variants", "per_variant",
+               "decision_agreement", "noise_ceiling", "n_real_accepted", "n_real_rejected", "n_synth"],
+  "additionalProperties": false,
+  "properties": {
+    "experiment_id": { "type": "string" },
+    "fit_variant": { "type": "string" },
+    "holdout_variants": { "type": "array", "items": { "type": "string" } },
+    "per_variant": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["attention_spearman", "heatmap_kl", "purchase_share_mae"],
+        "additionalProperties": false,
+        "properties": {
+          "attention_spearman": { "type": "number" },
+          "heatmap_kl": { "type": "number" },
+          "purchase_share_mae": { "type": "number" },
+          "ad_slot_index_spearman": { "type": "number" }
+        }
+      }
+    },
+    "decision_agreement": {
+      "type": "object",
+      "required": ["kpi", "winner_real", "winner_synth", "agree"],
+      "additionalProperties": false,
+      "properties": {
+        "kpi": { "type": "string" },
+        "winner_real": { "type": "string" },
+        "winner_synth": { "type": "string" },
+        "agree": { "type": "boolean" }
+      }
+    },
+    "noise_ceiling": {
+      "type": "object",
+      "required": ["spearman_mean", "ci95", "n_splits"],
+      "additionalProperties": false,
+      "properties": {
+        "spearman_mean": { "type": "number" },
+        "ci95": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 },
+        "n_splits": { "type": "integer" }
+      }
+    },
+    "relative_agreement": { "type": "number" },
+    "known_effect": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "real_uplift": { "type": "number" },
+        "synth_uplift": { "type": "number" },
+        "same_direction": { "type": "boolean" }
+      }
+    },
+    "ad_to_purchase_lift": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "real": { "type": ["number", "null"] },
+          "synth": { "type": "number" },
+          "ci95": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 }
+        }
+      }
+    },
+    "segment_fidelity": { "type": "object", "additionalProperties": { "type": "number" } },
+    "n_real_accepted": { "type": "integer" },
+    "n_real_rejected": { "type": "integer" },
+    "n_synth": { "type": "integer" },
+    "calibrated_shares": { "type": "object", "additionalProperties": { "type": "number" } }
+  }
+}

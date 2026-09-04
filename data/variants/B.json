@@ -1,0 +1,12 @@
+{
+  "variant_id": "B",
+  "base_planogram_id": "demo_aisle",
+  "name": "Focal SKU moved to eye level (known effect)",
+  "patches": [
+    {
+      "op": "move_sku",
+      "sku_id": "SKU_008",
+      "to_slot_id": "B1S3P2"
+    }
+  ]
+}

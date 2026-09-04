@@ -1,0 +1,44 @@
+flowchart TD
+    subgraph IN["1 · Store ingestion"]
+        V["Phone video of a real aisle"] --> DET["Detect shelves, SKUs, ad signs<br/>(Grounding DINO, GPU laptop)"]
+        MAN["Manual / seed planogram"]
+        DET --> PG["Planogram JSON<br/>bays · shelves · slots · ad slots"]
+        MAN --> PG
+    end
+
+    PG --> VAR["2 · Variants A / B / C<br/>A baseline · B focal SKU to eye level · C ad to endcap"]
+
+    VAR --> STORE["3 · 3D shelf-station store<br/>fixed camera per bay"]
+    VAR --> SAL["Saliency per slot<br/>shelf level · facings · colour · ad adjacency"]
+
+    subgraph SYN["4 · Synthetic panel"]
+        POL["Persona policies<br/>Mission · Browser · Loyalist · Switcher<br/>(LLM, once, cached)"]
+        SAL --> SIM["Simulator<br/>10,000 shoppers in < 1 s"]
+        POL --> SIM
+        SIM --> LOCK["Prediction LOCKED<br/>SHA-256 + timestamp<br/>before shopper starts"]
+    end
+
+    subgraph REAL["5 · Real panel"]
+        STORE --> SESS["Shopper session<br/>webcam gaze + cursor + clicks"]
+        SESS --> NOISE["Noise pipeline<br/>calibration gate → fixation filter → session gate"]
+        NOISE --> FUSE["Fused attention per slot<br/>0.5 gaze · 0.3 cursor · 0.2 interaction"]
+    end
+
+    LOCK --> LIVE["Live agreement meter<br/>on spectator screen"]
+    FUSE --> LIVE
+
+    subgraph VAL["6 · Validation"]
+        FUSE --> CAL["Calibrate on A only<br/>persona mix + 2 params"]
+        SIM --> CAL
+        CAL --> HOLD["Evaluate on B and C (holdout)"]
+        FUSE --> NC["Noise ceiling<br/>split-half of real shoppers"]
+        HOLD --> MET["Metrics<br/>Spearman · KL · purchase MAE<br/>decision agreement · known effect"]
+        NC --> MET
+    end
+
+    MET --> REP["7 · Report<br/>numbers computed, LLM narrates<br/>Ad Slot Attention Index · predicted lift"]
+    VAR -. "what-if: move ad, re-run < 1 s" .-> SIM
+
+    style LOCK fill:#fff3cd,stroke:#d9a300,stroke-width:2px
+    style LIVE fill:#e7f5ff,stroke:#1c7ed6,stroke-width:2px
+    style NC fill:#e6fcf5,stroke:#0ca678,stroke-width:2px

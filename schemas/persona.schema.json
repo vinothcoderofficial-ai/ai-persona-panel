@@ -1,0 +1,14 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "persona.schema.json",
+  "title": "Persona",
+  "type": "object",
+  "required": ["persona_id", "archetype", "description", "share_of_population"],
+  "additionalProperties": false,
+  "properties": {
+    "persona_id": { "type": "string" },
+    "archetype": { "type": "string", "enum": ["mission", "browser", "loyalist", "switcher"] },
+    "description": { "type": "string" },
+    "share_of_population": { "type": "number", "minimum": 0, "maximum": 1 }
+  }
+}

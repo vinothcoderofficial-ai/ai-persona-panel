@@ -1,0 +1,34 @@
+{
+  "name": "ai-persona-panel-web",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --config web/vite.config.ts",
+    "build": "tsc -p web/tsconfig.json && vite build --config web/vite.config.ts",
+    "preview": "vite preview --config web/vite.config.ts",
+    "test": "vitest run --config web/vite.config.ts",
+    "gen:types": "json2ts -i schemas -o web/src/contracts --unreachableDefinitions"
+  },
+  "dependencies": {
+    "@react-three/drei": "^9.117.3",
+    "@react-three/fiber": "^8.17.10",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "recharts": "^2.15.0",
+    "three": "^0.171.0",
+    "webgazer": "^3.3.0",
+    "zustand": "^5.0.2"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.17",
+    "@types/react-dom": "^18.3.5",
+    "@types/three": "^0.171.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "json-schema-to-typescript": "^15.0.3",
+    "jsdom": "^25.0.1",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.5",
+    "vitest": "^2.1.8"
+  }
+}
