@@ -6,14 +6,15 @@ import type { Session } from "@/contracts/session.schema";
 import { createSession, getResolvedVariant } from "@/api/client";
 import type { ArchetypeLabel, Intake } from "@/capture/archetype";
 import { CaptureFlow, type CaptureResult } from "@/capture/CaptureFlow";
-import { EventLogger } from "@/capture/EventLogger";
+import type { GazeTracker } from "@/capture/GazeTracker";
+import { SessionSocket } from "@/capture/SessionSocket";
 import { PlanogramScene } from "@/store/PlanogramScene";
 import Experiment from "@/dashboard/Experiment";
 
 type LoadState =
   | { status: "loading" }
   | { status: "error"; message: string }
-  | { status: "ready"; planogram: Planogram; logger: EventLogger };
+  | { status: "ready"; planogram: Planogram; events: SessionSocket };
 
 /** What the capture flow decides, and what POST /sessions is told (SPEC 4.3). */
 interface SessionFields {
@@ -22,6 +23,12 @@ interface SessionFields {
   calibration_error_px: number | null;
   intake?: Intake;
   archetype_label?: ArchetypeLabel;
+  /**
+   * The running tracker a webcam session brings out of the capture flow. It is
+   * not part of the session document - it is the live camera, and holding it
+   * here is what makes a webcam session produce gaze at all.
+   */
+  tracker?: GazeTracker;
 }
 
 /**
@@ -50,9 +57,18 @@ function skipCaptureFromQuery(): boolean {
 function Store({ variantId, fields }: { variantId: string; fields: SessionFields }) {
   const [state, setState] = useState<LoadState>({ status: "loading" });
 
+  // The camera goes back when the store goes away, whatever happened on the way
+  // there: a session that failed to open, a closed tab, an unmounted app.
+  // PlanogramScene releases it too, and GazeTracker.stop() is idempotent.
+  useEffect(() => {
+    const tracker = fields.tracker;
+    if (tracker === undefined) return undefined;
+    return () => tracker.stop();
+  }, [fields]);
+
   useEffect(() => {
     let cancelled = false;
-    let logger: EventLogger | null = null;
+    let events: SessionSocket | null = null;
 
     void (async () => {
       try {
@@ -76,9 +92,12 @@ function Store({ variantId, fields }: { variantId: string; fields: SessionFields
         const planogram = await getResolvedVariant(variantId);
         if (cancelled) return;
 
-        logger = new EventLogger(session.session_id);
-        logger.start();
-        setState({ status: "ready", planogram, logger });
+        // Only now, with the session created and its prediction locked, is
+        // there anything the socket is allowed to connect to: ws.py refuses a
+        // session it does not know (4404) or that has no lock (4409).
+        events = new SessionSocket(session.session_id);
+        events.start();
+        setState({ status: "ready", planogram, events });
       } catch (error) {
         if (cancelled) return;
         setState({
@@ -90,7 +109,7 @@ function Store({ variantId, fields }: { variantId: string; fields: SessionFields
 
     return () => {
       cancelled = true;
-      logger?.stop();
+      events?.stop();
     };
   }, [variantId, fields]);
 
@@ -108,7 +127,13 @@ function Store({ variantId, fields }: { variantId: string; fields: SessionFields
       </div>
     );
   }
-  return <PlanogramScene planogram={state.planogram} logger={state.logger} />;
+  return (
+    <PlanogramScene
+      planogram={state.planogram}
+      logger={state.events}
+      tracker={fields.tracker ?? null}
+    />
+  );
 }
 
 function App() {

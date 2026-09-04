@@ -17,10 +17,29 @@ export interface CaptureResult {
   archetype_label: ArchetypeLabel;
   mode: Session["mode"];
   calibration_error_px: number | null;
+  /**
+   * The calibrated tracker, still running, handed to the shopping session.
+   *
+   * Present only for `mode: "webcam"`, and absent - not null - otherwise, so a
+   * cursor-only result is exactly the object it always was. **Whoever receives
+   * it owns the camera** and must call `stop()` when shopping ends or the
+   * component unmounts; this flow will not touch it again.
+   *
+   * It is handed over rather than restarted because `GazeTracker.stop()` ends
+   * WebGazer, and WebGazer's model lives in memory: restarting it in the store
+   * would throw away the calibration whose error was just measured and written
+   * into the session.
+   */
+  tracker?: GazeTracker;
 }
 
 export interface CaptureFlowProps {
   onComplete: (result: CaptureResult) => void;
+  /**
+   * Injectable so the webcam path can be driven in jsdom, which has neither
+   * WebGL nor a camera. Production builds the real tracker.
+   */
+  createTracker?: () => GazeTracker;
 }
 
 type Step =
@@ -52,8 +71,14 @@ function screenWidth(): number {
  *     turning the person away. A blocked camera, a tracker that will not start
  *     and a calibration error over 12% of the screen width all end the same
  *     way: the session runs, and it says so in `mode`.
+ *
+ * The camera is released here in every case but one: a `webcam` session hands
+ * the running tracker to the store through `CaptureResult.tracker`, because
+ * measuring a calibration and then closing the camera would give an honest
+ * `calibration_error_px` and not a single gaze event to use it on. Ownership
+ * moves exactly once, in `start()`, and nowhere else.
  */
-export function CaptureFlow({ onComplete }: CaptureFlowProps): JSX.Element {
+export function CaptureFlow({ onComplete, createTracker }: CaptureFlowProps): JSX.Element {
   const [step, setStep] = useState<Step>("consent");
   const [intake, setIntake] = useState<Intake | null>(null);
   const [outcome, setOutcome] = useState<ValidationOutcome | null>(null);
@@ -86,7 +111,7 @@ export function CaptureFlow({ onComplete }: CaptureFlowProps): JSX.Element {
     if (step !== "calibrate" || tracker.current !== null) return undefined;
 
     let cancelled = false;
-    const started = new GazeTracker();
+    const started = createTracker === undefined ? new GazeTracker() : createTracker();
     tracker.current = started;
 
     void started
@@ -108,7 +133,7 @@ export function CaptureFlow({ onComplete }: CaptureFlowProps): JSX.Element {
     return () => {
       cancelled = true;
     };
-  }, [step, finishCursorOnly]);
+  }, [step, finishCursorOnly, createTracker]);
 
   // Only reachable if the tracker died between calibration and validation.
   useEffect(() => {
@@ -119,8 +144,11 @@ export function CaptureFlow({ onComplete }: CaptureFlowProps): JSX.Element {
 
   const onValidated = useCallback(
     (validated: ValidationOutcome) => {
-      // Whatever the verdict, the measurement is over and the camera goes.
-      stopTracker();
+      // A cursor_only verdict has nothing left to measure, so the camera goes
+      // back now. A webcam verdict keeps it: the tracker is handed to the store
+      // in start(), and if the shopper walks away instead, the unmount cleanup
+      // above still releases it.
+      if (validated.mode !== "webcam") stopTracker();
       setOutcome(validated);
       setFallbackReason(
         validated.mode === "cursor_only"
@@ -134,13 +162,24 @@ export function CaptureFlow({ onComplete }: CaptureFlowProps): JSX.Element {
 
   function start(): void {
     if (intake === null || outcome === null) return;
-    stopTracker();
+
+    const handover = outcome.mode === "webcam" ? tracker.current : null;
+    if (handover === null) {
+      stopTracker();
+    } else {
+      // Detached before onComplete, so this component's unmount cleanup - which
+      // releases the camera - cannot stop the tracker it has just given away.
+      tracker.current = null;
+      setTrackerReady(false);
+    }
+
     onComplete({
       consent: true,
       intake,
       archetype_label: archetypeFromIntake(intake),
       mode: outcome.mode,
       calibration_error_px: outcome.calibration_error_px,
+      ...(handover === null ? {} : { tracker: handover }),
     });
   }
 

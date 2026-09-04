@@ -4,7 +4,9 @@ import { Canvas } from "@react-three/fiber";
 import type { Creative, Planogram, Sku, Slot } from "@/contracts/planogram.schema";
 import { finishSession } from "@/api/client";
 import { CursorTracker, type CursorDwell } from "@/capture/CursorTracker";
-import type { EventLogger } from "@/capture/EventLogger";
+import { FixationFilter, fixationPayload, type Fixation } from "@/capture/FixationFilter";
+import type { GazeTracker } from "@/capture/GazeTracker";
+import type { EventSink } from "@/capture/SessionSocket";
 import { Bay } from "@/store/Bay";
 import { StationController } from "@/store/StationController";
 import type { ScreenRect } from "@/store/SlotMapper";
@@ -30,7 +32,13 @@ interface CartLine {
 
 export interface PlanogramSceneProps {
   planogram: Planogram;
-  logger: EventLogger;
+  logger: EventSink;
+  /**
+   * The calibrated tracker a `webcam` session brings with it from CaptureFlow.
+   * Null or absent for `cursor_only`. This component owns it from here: it
+   * releases the camera at checkout and on unmount.
+   */
+  tracker?: GazeTracker | null;
 }
 
 function clamp(value: number, low: number, high: number): number {
@@ -50,9 +58,11 @@ function errorMessage(error: unknown): string {
  *
  * It renders the resolved planogram exactly as the server sent it — there is no
  * client-side resolve — and it deliberately shows no gaze dot: that belongs to
- * the spectator view, because shoppers stare at their own dot.
+ * the spectator view, because shoppers stare at their own dot. A `webcam`
+ * session streams `gaze` and `fixation` events from here while the person
+ * shops; nothing about them is drawn on this screen.
  */
-export function PlanogramScene({ planogram, logger }: PlanogramSceneProps) {
+export function PlanogramScene({ planogram, logger, tracker }: PlanogramSceneProps) {
   const [stationIndex, setStationIndex] = useState(0);
   const [rects, setRects] = useState<ScreenRect[]>([]);
   const [hoveredSlotId, setHoveredSlotId] = useState<string | null>(null);
@@ -154,6 +164,68 @@ export function PlanogramScene({ planogram, logger }: PlanogramSceneProps) {
     };
   }, [cursor, logger, stationId]);
 
+  // Read through refs rather than through the effect's dependencies: rebuilding
+  // the subscription every time the camera lerps or the station changes would
+  // throw away FixationFilter's open run, and with it the fixation it was in
+  // the middle of measuring.
+  const rectsRef = useRef<ScreenRect[]>(rects);
+  rectsRef.current = rects;
+  const stationIdRef = useRef(stationId);
+  stationIdRef.current = stationId;
+  const stopGaze = useRef<(() => void) | null>(null);
+
+  /**
+   * The webcam pipeline, and the only place gaze becomes events.
+   *
+   * Everything upstream of `logger.log` stays in this browser: WebGazer's
+   * predictions are turned into `{x, y, conf, t}` inside GazeTracker, filtered
+   * into fixations inside FixationFilter, and no frame, eye patch or model ever
+   * reaches the network. No dot is drawn here either - the shopper's screen
+   * stays clean and the spectator view renders the trail from the `gaze` events
+   * instead.
+   */
+  useEffect(() => {
+    if (tracker === null || tracker === undefined) return undefined;
+
+    const filter = new FixationFilter();
+    const record = (fixations: Fixation[]) => {
+      for (const fixation of fixations) {
+        logger.log(
+          "fixation",
+          stationIdRef.current,
+          fixationPayload(fixation, rectsRef.current),
+        );
+      }
+    };
+
+    const unsubscribe = tracker.subscribe((sample) => {
+      logger.log("gaze", stationIdRef.current, {
+        x: sample.x,
+        y: sample.y,
+        conf: sample.conf,
+      });
+      record(filter.push(sample));
+    });
+
+    let released = false;
+    const release = () => {
+      if (released) return;
+      released = true;
+      unsubscribe();
+      // The fixation still open when shopping stops is a real fixation.
+      record(filter.end());
+      // This component owns the camera from the moment CaptureFlow handed the
+      // tracker over. Checkout or unmount, it goes back here.
+      tracker.stop();
+    };
+
+    stopGaze.current = release;
+    return () => {
+      release();
+      stopGaze.current = null;
+    };
+  }, [logger, tracker]);
+
   const onSlotEnter = (slotId: string) => {
     setHoveredSlotId(slotId);
     const entry = slotIndex.get(slotId);
@@ -197,6 +269,9 @@ export function PlanogramScene({ planogram, logger }: PlanogramSceneProps) {
   const checkout = async () => {
     if (checkedOut) return;
     logDwell(cursor.end(performance.now()));
+    // Measurement over: the last fixation is recorded and the camera is handed
+    // back before the session is closed on the server.
+    stopGaze.current?.();
     logger.log("checkout", stationId, {});
     setCheckedOut(true);
     setCardSlotId(null);
