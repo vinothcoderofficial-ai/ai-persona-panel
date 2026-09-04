@@ -154,6 +154,36 @@ def post_events(
     return {"accepted": len(body)}
 
 
+@router.get("/sessions/{session_id}/prediction")
+def get_session_prediction(session_id: str):
+    """The locked prediction for a session, for the spectator window.
+
+    The spectator is a second window that never created the session, so it
+    cannot receive the lock from `POST /sessions`' response the way the
+    shopper's page does. Without this route the prediction badge -- the
+    on-screen evidence that the prediction predates the shopping -- would have
+    to be hand-passed in the URL on every recording take.
+
+    This deliberately serves the *locked* vector rather than anything freshly
+    simulated: `GET /experiments/{id}` re-runs the simulator, and showing that
+    beside the live column would quietly discard the pre-registration this
+    whole project rests on.
+    """
+    lock = prediction.read_lock(session_id)
+    if lock is None:
+        raise HTTPException(
+            status_code=404, detail=f"no prediction lock for session_id {session_id!r}"
+        )
+    return {
+        "prediction_id": lock["prediction_id"],
+        "sim_run_id": lock["sim_run_id"],
+        "created_at": lock["created_at"],
+        # SPEC 4.6: the spectator screen shows the first 8 hex characters.
+        "sha256_prefix": lock["sha256"][:8],
+        "population_fixation_prob": lock["population_fixation_prob"],
+    }
+
+
 @router.post("/sessions/{session_id}/finish")
 def finish_session(
     session_id: str, body: Dict[str, Any], session: Session = Depends(get_session)

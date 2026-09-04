@@ -336,3 +336,35 @@ def test_every_seeded_variant_can_be_locked(client, predictions_dir, variant_id)
     lock = read_lock(predictions_dir, session_id)
     errors = sorted(prediction_validator().iter_errors(lock), key=str)
     assert not errors, [e.message for e in errors]
+
+
+# ---------------------------------------------------------------------------
+# GET /sessions/{id}/prediction - the spectator's lock source
+# ---------------------------------------------------------------------------
+
+
+def test_spectator_can_fetch_the_lock_for_a_session(client, predictions_dir):
+    """The spectator window never creates the session, so it cannot receive the
+    lock from POST /sessions' response. Without this route the prediction badge
+    -- the on-screen evidence that the prediction predates the shopping -- would
+    have to be passed by hand in the URL on every take.
+    """
+    session_id, _ = create_session(client)
+    lock = read_lock(predictions_dir, session_id)
+
+    response = client.get(f"/sessions/{session_id}/prediction")
+    assert response.status_code == 200
+    body = response.json()
+
+    assert body["prediction_id"] == lock["prediction_id"]
+    assert body["sim_run_id"] == lock["sim_run_id"]
+    assert body["created_at"] == lock["created_at"]
+    # The badge shows the first 8 hex characters (SPEC 4.6).
+    assert body["sha256_prefix"] == lock["sha256"][:8]
+    assert len(body["sha256_prefix"]) == 8
+    # The locked heatmap column needs the vector it was locked to.
+    assert body["population_fixation_prob"] == lock["population_fixation_prob"]
+
+
+def test_fetching_a_prediction_for_an_unknown_session_is_404(client, predictions_dir):
+    assert client.get("/sessions/no-such-session/prediction").status_code == 404
