@@ -9,8 +9,9 @@ import { formatElapsed, type LiveUpdate } from "@/spectator/liveMessage";
 import {
   NO_LOCK,
   fetchLock,
+  fetchPredictionLock,
   lockFromQuery,
-  mergeLocks,
+  resolveLock,
   type LockView,
 } from "@/spectator/lock";
 import {
@@ -51,13 +52,18 @@ import {
  * beside the locked prediction, the agreement meter, the prediction badge and
  * the wall clock.
  *
+ * `?session=<id>` on its own is a complete instruction: the prediction badge
+ * and the locked heatmap column come from `GET /sessions/{id}/prediction`. The
+ * lock params below are explicit overrides of that default, in the precedence
+ * `lock.ts:resolveLock` documents.
+ *
  * URL - the params may be written before the hash (`/?session=x#/spectator`,
  * the way the dashboard is opened) or after it (`#/spectator?session=x`):
  *
  *     #/spectator?session=<id>
  *                [&fake=1]                         ws.py's synthetic demo stream
- *                [&sha256=<hex>&locked_at=<iso>]   the prediction badge
- *                [&lock=<url>]                     the whole lock document
+ *                [&sha256=<hex>&locked_at=<iso>]   overrides the badge
+ *                [&lock=<url>]                     overrides both, whole document
  *                [&screen_w=&screen_h=]            the shopper's screen size
  *                [&screenshot=<url>]               a still of the station
  *                [&ceiling=<rho>]                  the panel's noise ceiling
@@ -149,6 +155,12 @@ export interface SpectatorViewProps {
   ceiling?: number | null;
   /** Injected in tests, so the whole page runs in jsdom with no server. */
   createSocket?: SpectatorSocketFactory;
+  /**
+   * The default lock source, `GET /sessions/{id}/prediction`. Injectable the
+   * same way the socket factory is, so tests drive it without a server. It must
+   * never reject and never invent a lock: NO_LOCK is how "no lock" is said.
+   */
+  fetchPrediction?: (sessionId: string) => Promise<LockView>;
   /** The spectator's clock, used to age the gaze trail. */
   now?: () => number;
   /** The wall clock on the recording. */
@@ -188,6 +200,10 @@ export function SpectatorView(props: SpectatorViewProps) {
   );
   const [points, setPoints] = useState<GazePoint[]>([]);
   const [fileLock, setFileLock] = useState<LockView>(NO_LOCK);
+  const [apiLock, setApiLock] = useState<LockView>(NO_LOCK);
+  // True only while the default fetch is genuinely in flight, so a slow API
+  // never shows "no lock supplied" for a session that has one.
+  const [lockLoading, setLockLoading] = useState(false);
   const [attempt, setAttempt] = useState(0);
   // Re-render so the trail fades between messages. The value is never read;
   // ageing is `trail.ts:visibleTrail(points, now())`, computed below.
@@ -199,6 +215,8 @@ export function SpectatorView(props: SpectatorViewProps) {
   nowRef.current = now;
   const createSocketRef = useRef(props.createSocket);
   createSocketRef.current = props.createSocket;
+  const fetchPredictionRef = useRef(props.fetchPrediction);
+  fetchPredictionRef.current = props.fetchPrediction;
 
   useEffect(() => {
     if (sessionId === null || sessionId.length === 0) return undefined;
@@ -226,6 +244,35 @@ export function SpectatorView(props: SpectatorViewProps) {
   }, [sessionId, askedForFake, attempt]);
 
   useEffect(() => {
+    // A fake stream has no lock at all: `?fake=1` never touches a session, its
+    // prediction_id is the constant "fake-prediction", and the yellow badge
+    // already says there is nothing behind the numbers. Asking the API would be
+    // a guaranteed 404 against a session id that was never registered.
+    if (askedForFake || sessionId === null || sessionId.length === 0) return undefined;
+
+    const load = fetchPredictionRef.current ?? fetchPredictionLock;
+    let cancelled = false;
+    setLockLoading(true);
+    const finish = (loaded: LockView) => {
+      if (cancelled) return;
+      setApiLock(loaded);
+      setLockLoading(false);
+    };
+    try {
+      // Issued synchronously, so the badge starts filling in from the moment
+      // the window opens rather than a microtask later.
+      // An injected stub is allowed to reject; the real fetch never does.
+      // Either way a failure is "no lock", never zeros and never a fresh sim.
+      void load(sessionId).then(finish, () => finish(NO_LOCK));
+    } catch {
+      finish(NO_LOCK);
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [sessionId, askedForFake]);
+
+  useEffect(() => {
     if (lockUrl === null) return undefined;
     let cancelled = false;
     void fetchLock(lockUrl).then((loaded) => {
@@ -242,7 +289,9 @@ export function SpectatorView(props: SpectatorViewProps) {
     return () => clearInterval(timer);
   }, [fadeIntervalMs, points.length]);
 
-  const lock = mergeLocks(queryLock, fileLock);
+  // Lowest priority first: the endpoint is the default, and the two URL forms
+  // are explicit overrides. `lock.ts:resolveLock` documents why in that order.
+  const lock = resolveLock([apiLock, queryLock, fileLock]);
   // The server's own marks win: a frame that says it is synthetic is synthetic
   // whether or not this page asked for the fake stream.
   const fake = askedForFake || update?.fake === true;
@@ -279,7 +328,11 @@ export function SpectatorView(props: SpectatorViewProps) {
             {status === "live" ? "LIVE" : status === "connecting" ? "CONNECTING" : "DISCONNECTED"}
           </div>
         </div>
-        <PredictionBadge lock={lock} fake={fake} />
+        <PredictionBadge
+          lock={lock}
+          fake={fake}
+          loading={lockLoading && lock.sha256_prefix === null}
+        />
         <ClockOverlay now={props.wallClock} />
       </header>
 

@@ -9,22 +9,25 @@
  *
  * Where it comes from
  * -------------------
- * `POST /sessions` returns the badge to the page that created the session:
- * `{"prediction": {"prediction_id", "sha256_prefix", "created_at", "sim_run_id"}}`.
- * The spectator is a *different* window - it is opened on a second monitor and
- * never creates a session - and the API has no endpoint that hands a lock back
- * by session id. So the spectator is given its evidence in its own URL:
+ * `POST /sessions` returns the badge to the page that *created* the session.
+ * The spectator is a different window - opened on a second monitor, and it
+ * never creates a session - so it reads the lock itself, from three sources
+ * that `resolveLock` folds in this order (lowest priority first):
  *
- *     #/spectator?session=<id>&sha256=<hex>&locked_at=<created_at>
+ *   3. `GET /sessions/{id}/prediction`, the default. This is what makes
+ *      `#/spectator?session=<id>` a complete instruction: the operator types
+ *      nothing else and the badge and the locked heatmap column fill in.
+ *   2. `?sha256=<hex>&locked_at=<created_at>` typed into the spectator URL.
+ *   1. `?lock=<url of predictions/{id}.json>`, a whole lock document.
  *
- * and, when the whole locked vector is wanted beside the live heatmap, a URL to
- * the lock document itself:
+ * The two URL forms are explicit overrides and beat the endpoint - they are how
+ * a committed lock file is replayed against a session the running API no longer
+ * knows about. `resolveLock`'s own doc comment argues the ordering.
  *
- *     #/spectator?session=<id>&lock=<url of predictions/{id}.json>
- *
- * Both are read here. Neither is invented: with no lock supplied the badge says
- * so in as many words, because a badge that fills itself in from nothing is
- * worse than no badge at all.
+ * Nothing here is ever invented. With no lock from any source the badge says so
+ * in as many words and the heatmap's right-hand column stays empty, because a
+ * badge that fills itself in from nothing - or a prediction column of zeros -
+ * is worse than none at all.
  */
 
 /** What the spectator screen holds about the lock. Every field may be absent. */
@@ -36,7 +39,8 @@ export interface LockView {
   created_at: string | null;
   /** The locked per-slot prediction, when the whole document was available. */
   population_fixation_prob: Record<string, number> | null;
-  source: "query" | "file" | "none";
+  /** Which of the sources `resolveLock` folds this view actually came from. */
+  source: "query" | "file" | "api" | "none";
 }
 
 export const NO_LOCK: LockView = {
@@ -142,15 +146,102 @@ export async function fetchLock(
   }
 }
 
-/** The badge from the URL, filled in by the lock document when one is offered. */
-export function mergeLocks(fromQuery: LockView, fromFile: LockView): LockView {
-  if (fromFile.source === "none") return fromQuery;
-  if (fromQuery.source === "none") return fromFile;
+/**
+ * Two sources, field by field: `higher` wins wherever it has something.
+ *
+ * The fall-through on `population_fixation_prob` matters more than it looks.
+ * `?sha256=` and `?locked_at=` carry a badge and never a vector, so without it
+ * a hand-typed badge would silently blank the locked heatmap column beside it -
+ * the panel would drop from a real prediction to "unavailable" purely because
+ * somebody pinned the hash.
+ */
+export function mergeLocks(lower: LockView, higher: LockView): LockView {
+  if (higher.source === "none") return lower;
+  if (lower.source === "none") return higher;
   return {
-    prediction_id: fromFile.prediction_id ?? fromQuery.prediction_id,
-    sha256_prefix: fromFile.sha256_prefix ?? fromQuery.sha256_prefix,
-    created_at: fromFile.created_at ?? fromQuery.created_at,
-    population_fixation_prob: fromFile.population_fixation_prob,
-    source: "file",
+    prediction_id: higher.prediction_id ?? lower.prediction_id,
+    sha256_prefix: higher.sha256_prefix ?? lower.sha256_prefix,
+    created_at: higher.created_at ?? lower.created_at,
+    population_fixation_prob:
+      higher.population_fixation_prob ?? lower.population_fixation_prob,
+    source: higher.source,
   };
+}
+
+/**
+ * Fold every lock source into one, **lowest priority first**.
+ *
+ * The spectator's order is `[fetched, typed, document]`:
+ *
+ *   1. `?lock=<url>` — a whole lock document, named explicitly. Highest,
+ *      because it is the artefact itself: its digest, its `created_at` and its
+ *      vector are one internally consistent object, and letting a hand-typed
+ *      hash sit beside a different document's numbers would put a badge on
+ *      screen that does not describe what is beside it.
+ *   2. `?sha256=` / `?locked_at=` / `?prediction=` — hand-typed badge fields.
+ *      Explicit, so they beat the endpoint; useful when replaying a committed
+ *      lock file against a session the running API no longer knows about.
+ *   3. `GET /sessions/{id}/prediction` — the automatic default, which is what
+ *      makes `#/spectator?session=<id>` a complete instruction on its own.
+ */
+export function resolveLock(sources: readonly LockView[]): LockView {
+  return sources.reduce(mergeLocks, NO_LOCK);
+}
+
+/**
+ * `GET /sessions/{session_id}/prediction`'s response body.
+ *
+ * Not the same shape as the lock file: the endpoint has already cut the digest
+ * down to the 8 characters SPEC 4.6 says the spectator screen shows, and it
+ * omits `session_id`, `variant_id` and `git_commit`. It serves the *locked*
+ * vector - never anything re-simulated - which is the only reason that vector
+ * can honestly be drawn beside the live column.
+ */
+export function lockFromPredictionEndpoint(body: unknown): LockView {
+  if (!isRecord(body)) return NO_LOCK;
+  const sha256_prefix = hashPrefix(body.sha256_prefix);
+  const created_at =
+    typeof body.created_at === "string" ? nonEmpty(body.created_at) : null;
+  if (sha256_prefix === null || created_at === null) return NO_LOCK;
+
+  return {
+    prediction_id:
+      typeof body.prediction_id === "string" ? nonEmpty(body.prediction_id) : null,
+    sha256_prefix,
+    created_at,
+    population_fixation_prob: numericMap(body.population_fixation_prob),
+    source: "api",
+  };
+}
+
+/**
+ * The API serves SPEC's root paths and the vite dev proxy strips this prefix -
+ * the same constant `web/src/api/client.ts` uses. It is written again rather
+ * than imported because that module is the shopper's ingest client and this one
+ * is the spectator's read path; one shared string is not worth coupling them.
+ */
+const API_BASE = "/api";
+
+/**
+ * The session's locked prediction, for the badge and the heatmap's right-hand
+ * column. This is the default source, so `#/spectator?session=<id>` is enough.
+ *
+ * A 404 (no such session, or a session with no lock) and an API that is not
+ * running both come back as NO_LOCK, and the view then says so in as many
+ * words. It never falls back to zeros, and it never substitutes a fresh
+ * simulation: `GET /experiments/{id}` re-runs the simulator, and showing that
+ * beside the live column would quietly discard the pre-registration.
+ */
+export async function fetchPredictionLock(
+  sessionId: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<LockView> {
+  const path = `${API_BASE}/sessions/${encodeURIComponent(sessionId)}/prediction`;
+  try {
+    const response = await fetchImpl(path);
+    if (!response.ok) return NO_LOCK;
+    return lockFromPredictionEndpoint(await response.json());
+  } catch {
+    return NO_LOCK;
+  }
 }

@@ -24,6 +24,13 @@ export interface PredictionBadgeProps {
   lock: LockView;
   /** True when the feed is ws.py's synthetic stream: there is no real lock. */
   fake: boolean;
+  /**
+   * True while `GET /sessions/{id}/prediction` is still in flight. The badge
+   * says it is fetching rather than "no lock supplied", so a slow API cannot
+   * make a session that *does* have a lock look, for a moment, like one that
+   * never had one.
+   */
+  loading?: boolean;
 }
 
 function lockedAt(createdAt: string): string | null {
@@ -31,7 +38,7 @@ function lockedAt(createdAt: string): string | null {
   return Number.isNaN(date.getTime()) ? null : wallClockTime(date);
 }
 
-export function PredictionBadge({ lock, fake }: PredictionBadgeProps) {
+export function PredictionBadge({ lock, fake, loading = false }: PredictionBadgeProps) {
   const time = lock.created_at === null ? null : lockedAt(lock.created_at);
 
   return (
@@ -44,7 +51,12 @@ export function PredictionBadge({ lock, fake }: PredictionBadgeProps) {
         </div>
       )}
 
-      {lock.sha256_prefix === null ? (
+      {lock.sha256_prefix === null && loading ? (
+        <div data-testid="prediction-lock-loading" style={loadingStyle}>
+          Fetching the prediction lock from{" "}
+          <code style={mono}>GET /sessions/&#123;id&#125;/prediction</code>...
+        </div>
+      ) : lock.sha256_prefix === null ? (
         <div data-testid="prediction-lock-missing" style={missingStyle}>
           No prediction lock supplied. Open this page with{" "}
           <code style={mono}>?sha256=&lt;hash&gt;&amp;locked_at=&lt;created_at&gt;</code> (or{" "}
@@ -101,6 +113,11 @@ const fakeLineStyle: CSSProperties = {
 
 const missingStyle: CSSProperties = {
   color: ALERT,
+  fontSize: 14,
+};
+
+const loadingStyle: CSSProperties = {
+  color: GREY,
   fontSize: 14,
 };
 

@@ -1,5 +1,14 @@
 import { describe, expect, it, vi } from "vitest";
-import { NO_LOCK, fetchLock, mergeLocks, lockFromQuery } from "@/spectator/lock";
+import {
+  NO_LOCK,
+  fetchLock,
+  fetchPredictionLock,
+  lockFromDocument,
+  lockFromPredictionEndpoint,
+  lockFromQuery,
+  mergeLocks,
+  resolveLock,
+} from "@/spectator/lock";
 import {
   DEFAULT_SCREEN,
   spectatorParamsFromQuery,
@@ -133,5 +142,99 @@ describe("mergeLocks", () => {
 
   it("is NO_LOCK when neither source had anything", () => {
     expect(mergeLocks(NO_LOCK, NO_LOCK)).toEqual(NO_LOCK);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// GET /sessions/{id}/prediction — the default lock source
+// ---------------------------------------------------------------------------
+
+/** Exactly what `api/app/routers/sessions.py:get_session_prediction` returns. */
+const PREDICTION_RESPONSE = {
+  prediction_id: "f2493990-4a5d-479d-902c-eaeb8d91680d",
+  sim_run_id: "run-1",
+  created_at: "2026-09-04T22:19:33.086Z",
+  sha256_prefix: "f3ded23e",
+  population_fixation_prob: { B1S3P1: 0.038, B1S3P2: 0.021 },
+};
+
+describe("lockFromPredictionEndpoint", () => {
+  it("reads the endpoint's already-truncated sha256_prefix", () => {
+    const lock = lockFromPredictionEndpoint(PREDICTION_RESPONSE);
+    expect(lock.sha256_prefix).toBe("f3ded23e");
+    expect(lock.created_at).toBe("2026-09-04T22:19:33.086Z");
+    expect(lock.prediction_id).toBe("f2493990-4a5d-479d-902c-eaeb8d91680d");
+    expect(lock.population_fixation_prob).toEqual({ B1S3P1: 0.038, B1S3P2: 0.021 });
+    expect(lock.source).toBe("api");
+  });
+
+  it("refuses a body that is not this endpoint's", () => {
+    expect(lockFromPredictionEndpoint({ detail: "no prediction lock" })).toEqual(NO_LOCK);
+    expect(lockFromPredictionEndpoint({ ...PREDICTION_RESPONSE, sha256_prefix: "nope" }))
+      .toEqual(NO_LOCK);
+    expect(lockFromPredictionEndpoint(null)).toEqual(NO_LOCK);
+  });
+});
+
+describe("fetchPredictionLock", () => {
+  it("GETs the session's lock through the api prefix the dev proxy strips", async () => {
+    const calls: string[] = [];
+    const fetchImpl = (async (url: string) => {
+      calls.push(url);
+      return { ok: true, status: 200, json: async () => PREDICTION_RESPONSE };
+    }) as unknown as typeof fetch;
+
+    const lock = await fetchPredictionLock("sess 1", fetchImpl);
+    expect(calls).toEqual(["/api/sessions/sess%201/prediction"]);
+    expect(lock.sha256_prefix).toBe("f3ded23e");
+  });
+
+  it("is NO_LOCK on a 404 — the honest 'no lock' message, never zeros", async () => {
+    const notFound = (async () => ({
+      ok: false,
+      status: 404,
+      json: async () => ({ detail: "no prediction lock" }),
+    })) as unknown as typeof fetch;
+    expect(await fetchPredictionLock("s-1", notFound)).toEqual(NO_LOCK);
+  });
+
+  it("is NO_LOCK when the API is not running at all", async () => {
+    const down = (async () => {
+      throw new TypeError("Failed to fetch");
+    }) as unknown as typeof fetch;
+    expect(await fetchPredictionLock("s-1", down)).toEqual(NO_LOCK);
+  });
+});
+
+describe("resolveLock precedence", () => {
+  const fetched = lockFromPredictionEndpoint(PREDICTION_RESPONSE);
+  const typed = lockFromQuery(`?sha256=${SHA}&locked_at=2026-09-14T10:32:07.412Z`);
+  const document = lockFromDocument(LOCK_DOCUMENT);
+
+  it("falls back to the fetched lock when nothing was typed", () => {
+    expect(resolveLock([fetched, NO_LOCK, NO_LOCK])).toEqual(fetched);
+  });
+
+  it("lets hand-typed badge fields override the fetched ones", () => {
+    const lock = resolveLock([fetched, typed, NO_LOCK]);
+    expect(lock.sha256_prefix).toBe("a3f9c0d1");
+    expect(lock.created_at).toBe("2026-09-14T10:32:07.412Z");
+  });
+
+  it("keeps the fetched vector when the override supplied only a badge", () => {
+    // Overriding the badge must not blank the heatmap column beside it.
+    const lock = resolveLock([fetched, typed, NO_LOCK]);
+    expect(lock.population_fixation_prob).toEqual({ B1S3P1: 0.038, B1S3P2: 0.021 });
+  });
+
+  it("lets an explicitly named lock document beat both", () => {
+    const lock = resolveLock([fetched, typed, document]);
+    expect(lock.sha256_prefix).toBe("a3f9c0d1");
+    expect(lock.population_fixation_prob).toEqual({ B1S3P1: 0.038 });
+    expect(lock.source).toBe("file");
+  });
+
+  it("is NO_LOCK when every source came up empty", () => {
+    expect(resolveLock([NO_LOCK, NO_LOCK, NO_LOCK])).toEqual(NO_LOCK);
   });
 });
