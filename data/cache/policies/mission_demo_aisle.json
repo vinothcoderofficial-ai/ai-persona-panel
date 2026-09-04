@@ -1,0 +1,19 @@
+{
+  "persona_id": "mission",
+  "goal_categories": ["chips", "cola"],
+  "time_budget_s": { "mean": 45.0, "sd": 10.0 },
+  "exploration": 0.05,
+  "brand_affinity": {
+    "_default": 0.5,
+    "Crunch": 0.55,
+    "Nimbus": 0.5,
+    "Orchid": 0.45,
+    "Zapp": 0.5
+  },
+  "price_sensitivity": 0.4,
+  "promo_sensitivity": 0.2,
+  "ad_receptivity": 0.15,
+  "purchase_threshold": 0.25,
+  "dwell_ms": { "mu": 6.0, "sigma": 0.45 },
+  "fixations_per_station": { "lam": 2.5 }
+}

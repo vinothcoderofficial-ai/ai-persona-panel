@@ -1,0 +1,19 @@
+{
+  "persona_id": "switcher",
+  "goal_categories": ["chips", "nuts"],
+  "time_budget_s": { "mean": 90.0, "sd": 20.0 },
+  "exploration": 0.45,
+  "brand_affinity": {
+    "_default": 0.5,
+    "Crunch": 0.5,
+    "Nimbus": 0.5,
+    "Orchid": 0.5,
+    "Zapp": 0.5
+  },
+  "price_sensitivity": 0.9,
+  "promo_sensitivity": 0.85,
+  "ad_receptivity": 0.4,
+  "purchase_threshold": 0.42,
+  "dwell_ms": { "mu": 6.3, "sigma": 0.55 },
+  "fixations_per_station": { "lam": 5.0 }
+}

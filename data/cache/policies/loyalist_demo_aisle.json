@@ -1,0 +1,19 @@
+{
+  "persona_id": "loyalist",
+  "goal_categories": ["biscuits", "nuts"],
+  "time_budget_s": { "mean": 70.0, "sd": 15.0 },
+  "exploration": 0.2,
+  "brand_affinity": {
+    "_default": 0.1,
+    "Crunch": 0.95,
+    "Nimbus": 0.15,
+    "Orchid": 0.15,
+    "Zapp": 0.1
+  },
+  "price_sensitivity": 0.1,
+  "promo_sensitivity": 0.15,
+  "ad_receptivity": 0.6,
+  "purchase_threshold": 0.35,
+  "dwell_ms": { "mu": 6.2, "sigma": 0.45 },
+  "fixations_per_station": { "lam": 3.5 }
+}

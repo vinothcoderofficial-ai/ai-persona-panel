@@ -1,0 +1,19 @@
+{
+  "persona_id": "browser",
+  "goal_categories": ["biscuits", "chips", "cola", "nuts"],
+  "time_budget_s": { "mean": 150.0, "sd": 30.0 },
+  "exploration": 0.9,
+  "brand_affinity": {
+    "_default": 0.5,
+    "Crunch": 0.5,
+    "Nimbus": 0.55,
+    "Orchid": 0.5,
+    "Zapp": 0.5
+  },
+  "price_sensitivity": 0.3,
+  "promo_sensitivity": 0.6,
+  "ad_receptivity": 0.5,
+  "purchase_threshold": 0.45,
+  "dwell_ms": { "mu": 6.5, "sigma": 0.5 },
+  "fixations_per_station": { "lam": 6.0 }
+}
