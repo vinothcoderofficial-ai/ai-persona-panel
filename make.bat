@@ -9,7 +9,11 @@ if "%1"=="setup" (
 )
 if "%1"=="seed" ( python scripts\make_seed_data.py & goto :eof )
 if "%1"=="validate" ( python scripts\validate_data.py & goto :eof )
-if "%1"=="gen-types" ( npm run gen:types & goto :eof )
+if "%1"=="gen-types" (
+    npm run gen:types
+    python scripts\gen_schemas.py
+    goto :eof
+)
 if "%1"=="api" ( uvicorn api.app.main:app --reload --port 8000 & goto :eof )
 if "%1"=="web" ( npm run dev & goto :eof )
 if "%1"=="test" ( pytest & npm test & goto :eof )

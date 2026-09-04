@@ -14,6 +14,7 @@ validate:
 
 gen-types:
 	npm run gen:types
+	python scripts/gen_schemas.py
 
 api:
 	uvicorn api.app.main:app --reload --port 8000
