@@ -10,6 +10,7 @@ import type { GazeTracker } from "@/capture/GazeTracker";
 import { SessionSocket } from "@/capture/SessionSocket";
 import { PlanogramScene } from "@/store/PlanogramScene";
 import Experiment from "@/dashboard/Experiment";
+import { SpectatorView } from "@/spectator/SpectatorView";
 
 type LoadState =
   | { status: "loading" }
@@ -179,6 +180,16 @@ if (container === null) throw new Error("web/index.html is missing #root");
 // router would be three dependencies for one branch.
 const isDashboard = window.location.hash.startsWith("#/dashboard");
 
+// #/spectator?session=<id> is the second screen (S7). It is a separate window
+// on a second monitor and never the shopper's: CLAUDE.md forbids the gaze dot
+// on the screen of the person being measured, because people stare at it. This
+// file is the only module that knows about both, and it renders exactly one.
+// SpectatorView reads its own session id, ?fake=1 and prediction badge from the
+// query string, the way Experiment does.
+const isSpectator = window.location.hash.startsWith("#/spectator");
+
 // No StrictMode: its double-mounted effects would open two sessions, and write
 // two prediction locks, on every page load.
-createRoot(container).render(isDashboard ? <Experiment /> : <App />);
+createRoot(container).render(
+  isSpectator ? <SpectatorView /> : isDashboard ? <Experiment /> : <App />,
+);
