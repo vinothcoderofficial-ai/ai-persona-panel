@@ -37,9 +37,9 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlmodel import Session
 
 from api.app import db as db_module
+from api.app import simcache
 from api.app.db import ROOT, PlanogramRecord, get_session, get_validator
 from api.app.resolve import PatchError, resolve
-from sim.simulator import build_store, combine, run
 
 router = APIRouter(tags=["whatif"])
 log = logging.getLogger(__name__)
@@ -56,13 +56,12 @@ MAX_N_SYNTH = 50_000
 # The planogram warmed at startup: the demo aisle the what-if UI opens on.
 WARM_PLANOGRAM_ID = "demo_aisle"
 
-# One lock guards all three module caches. It is only ever held around the dict access itself,
-# never across a simulation - load_personas() and load_policy() take it too, and a plain Lock is
-# not reentrant. Two concurrent cold requests can therefore both compute the same baseline; the
+# Guards the baseline cache only, and only around the dict access itself - never across a
+# simulation. Two concurrent cold requests can therefore both compute the same baseline; the
 # setdefault in get_baseline() keeps whichever landed first, so the cached object stays stable.
+# The persona, policy and simulation caches live in api/app/simcache.py, which prediction.py
+# shares, so a prediction lock and a what-if cannot drift apart.
 _cache_lock = threading.Lock()
-_personas: Optional[List[Dict[str, Any]]] = None
-_policies: Dict[Tuple[str, str], Dict[str, Any]] = {}
 _baselines: Dict[Tuple[str, int, int], "Baseline"] = {}
 
 
@@ -99,31 +98,13 @@ class Baseline:
 
 def load_personas() -> List[Dict[str, Any]]:
     """The persona documents, in filename order, carrying `share_of_population`."""
-    global _personas
-    with _cache_lock:
-        if _personas is None:
-            _personas = [
-                json.loads(path.read_text(encoding="utf-8"))
-                for path in sorted(PERSONAS_DIR.glob("*.json"))
-            ]
-        return _personas
+    return simcache.load_personas()
 
 
 def load_policy(persona_id: str, planogram_id: str) -> Dict[str, Any]:
     """One cached persona policy. Raises FileNotFoundError if this planogram has no policy for
     this persona - the endpoint turns that into a 404 and warm_up() into a warning."""
-    key = (persona_id, planogram_id)
-    with _cache_lock:
-        policy = _policies.get(key)
-        if policy is None:
-            path = POLICIES_DIR / f"{persona_id}_{planogram_id}.json"
-            if not path.exists():
-                raise FileNotFoundError(
-                    f"no cached policy for persona {persona_id!r} on planogram {planogram_id!r}"
-                )
-            policy = json.loads(path.read_text(encoding="utf-8"))
-            _policies[key] = policy
-        return policy
+    return simcache.load_policy(persona_id, planogram_id)
 
 
 def get_baseline(base: Dict[str, Any], n_synth: int, seed: int) -> Baseline:
@@ -253,24 +234,11 @@ def _simulate(resolved: Dict[str, Any], variant_id: str, n_synth: int,
               seed: int) -> Tuple[Dict[str, Dict[str, Any]], Dict[str, Any]]:
     """Run every persona over `resolved` and combine them into the population result.
 
-    build_store() computes the saliency layer; the policy reweighting and the Monte Carlo live in
-    sim/simulator.py. No maths is duplicated here.
+    Delegates to api/app/simcache.py, which prediction.py shares. One implementation only: a
+    what-if and the prediction lock a shopper is scored against must never drift apart.
     """
-    store = build_store(resolved)
-    per_persona: Dict[str, Dict[str, Any]] = {}
-    results: List[Dict[str, Any]] = []
-    shares: List[float] = []
-
-    for persona in load_personas():
-        persona_id = persona["persona_id"]
-        policy = load_policy(persona_id, resolved["planogram_id"])
-        result = run(store, policy, n_runs=n_synth, seed=seed, variant_id=variant_id,
-                     archetype=persona["archetype"])
-        per_persona[persona_id] = result
-        results.append(result)
-        shares.append(float(persona["share_of_population"]))
-
-    return per_persona, combine(results, shares)
+    bundle = simcache.population(resolved, variant_id, n_synth=n_synth, seed=seed)
+    return bundle.per_persona, bundle.population
 
 
 def _lift_vs_baseline(focal_sku_id: Optional[str], baseline: Baseline,
@@ -355,11 +323,14 @@ def _variant_id(base_hash: str, patches: List[Dict[str, Any]]) -> str:
 
 
 def _document_hash(document: Any) -> str:
-    return hashlib.sha256(_canonical(document).encode("utf-8")).hexdigest()
+    """Content hash, using the project's one canonical-JSON recipe (see simcache)."""
+    return simcache.document_hash(document)
 
 
 def _canonical(document: Any) -> str:
-    return json.dumps(document, sort_keys=True, separators=(",", ":"))
+    """Deterministic JSON. One recipe project-wide, so a what-if variant id and a
+    prediction lock's digest are built the same way."""
+    return simcache.canonical(document)
 
 
 def _validation_detail(errors) -> str:

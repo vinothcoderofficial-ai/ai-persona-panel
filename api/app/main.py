@@ -11,7 +11,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from api.app.db import init_db, seed_all
-from api.app.routers import experiments, planograms, sessions, variants, whatif
+from api.app.routers import experiments, planograms, sessions, variants, whatif, ws
 
 
 @asynccontextmanager
@@ -40,3 +40,4 @@ app.include_router(variants.router)
 app.include_router(sessions.router)
 app.include_router(experiments.router)
 app.include_router(whatif.router)
+app.include_router(ws.router)

@@ -8,7 +8,14 @@ functions read the module-global `engine` fresh on every call, so this
 covers them regardless of how they were imported elsewhere), and we also
 wire up FastAPI's dependency_overrides for get_session for request-time
 access, per the S3 task brief.
+
+The same isolation applies to prediction locks (S14). POST /sessions writes
+`predictions/{session_id}.json`, and those files are committed evidence, so
+`predictions_dir` is autouse: every test in this package gets its own tmp
+directory and the repository's real `predictions/` folder is never written
+to by the suite.
 """
+from pathlib import Path
 from typing import Iterator
 
 import pytest
@@ -17,7 +24,22 @@ from sqlmodel import Session, create_engine
 from sqlmodel.pool import StaticPool
 
 from api.app import db as db_module
+from api.app import prediction as prediction_module
 from api.app.main import app
+
+
+@pytest.fixture(name="predictions_dir", autouse=True)
+def predictions_dir_fixture(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """Redirect the prediction-lock directory at a per-test tmp folder.
+
+    prediction.py reads the module-global PREDICTIONS_DIR fresh on every call
+    (the same pattern db.py uses for `engine`), so patching it here covers the
+    router, the websocket ingest and any direct call.
+    """
+    directory = tmp_path / "predictions"
+    directory.mkdir()
+    monkeypatch.setattr(prediction_module, "PREDICTIONS_DIR", directory)
+    return directory
 
 
 @pytest.fixture(name="test_engine")
