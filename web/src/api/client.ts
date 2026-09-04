@@ -21,6 +21,10 @@ export interface CreateSessionBody {
   screen_w: number;
   screen_h: number;
   mode: Session["mode"];
+  /** S10: the capture flow fills these three in. A skipped flow leaves them out. */
+  calibration_error_px?: number | null;
+  intake?: Session["intake"];
+  archetype_label?: Session["archetype_label"];
 }
 
 export interface FinishSessionBody {

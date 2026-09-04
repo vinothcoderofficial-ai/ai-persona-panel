@@ -2,7 +2,10 @@ import { useEffect, useState } from "react";
 import type { CSSProperties } from "react";
 import { createRoot } from "react-dom/client";
 import type { Planogram } from "@/contracts/planogram.schema";
+import type { Session } from "@/contracts/session.schema";
 import { createSession, getResolvedVariant } from "@/api/client";
+import type { ArchetypeLabel, Intake } from "@/capture/archetype";
+import { CaptureFlow, type CaptureResult } from "@/capture/CaptureFlow";
 import { EventLogger } from "@/capture/EventLogger";
 import { PlanogramScene } from "@/store/PlanogramScene";
 import Experiment from "@/dashboard/Experiment";
@@ -12,14 +15,40 @@ type LoadState =
   | { status: "error"; message: string }
   | { status: "ready"; planogram: Planogram; logger: EventLogger };
 
+/** What the capture flow decides, and what POST /sessions is told (SPEC 4.3). */
+interface SessionFields {
+  consent: boolean;
+  mode: Session["mode"];
+  calibration_error_px: number | null;
+  intake?: Intake;
+  archetype_label?: ArchetypeLabel;
+}
+
+/**
+ * `?skip_capture=1` goes straight to the store, for development and for
+ * cursor-only testing. It records `consent: false`, which is the truth - nobody
+ * sat down and agreed to anything - and which makes the session identifiable as
+ * a developer session: SessionGate (S11) rejects it with `no_consent` instead of
+ * letting it into the real panel.
+ */
+const DEV_SKIP_FIELDS: SessionFields = {
+  consent: false,
+  mode: "cursor_only",
+  calibration_error_px: null,
+};
+
 function variantFromQuery(): string {
   const requested = new URLSearchParams(window.location.search).get("variant");
   return requested !== null && requested.length > 0 ? requested : "A";
 }
 
-function App() {
+function skipCaptureFromQuery(): boolean {
+  const value = new URLSearchParams(window.location.search).get("skip_capture");
+  return value !== null && value !== "0" && value !== "false";
+}
+
+function Store({ variantId, fields }: { variantId: string; fields: SessionFields }) {
   const [state, setState] = useState<LoadState>({ status: "loading" });
-  const variantId = variantFromQuery();
 
   useEffect(() => {
     let cancelled = false;
@@ -28,17 +57,21 @@ function App() {
     void (async () => {
       try {
         // The session comes first: the server writes the prediction lock on
-        // POST /sessions, before it will accept a single event.
-        // S9 puts the real consent screen in front of this.
+        // POST /sessions, before it will accept a single event. Consent, mode,
+        // intake and the calibration error all come from the capture flow that
+        // ran before this component mounted.
         const session = await createSession({
           session_id: crypto.randomUUID(),
           variant_id: variantId,
-          consent: true,
+          consent: fields.consent,
           started_at: new Date().toISOString(),
           // An offscreen window reports a screen of 0; fall back to the viewport.
           screen_w: Math.round(window.screen.width || window.innerWidth),
           screen_h: Math.round(window.screen.height || window.innerHeight),
-          mode: "cursor_only",
+          mode: fields.mode,
+          calibration_error_px: fields.calibration_error_px,
+          intake: fields.intake,
+          archetype_label: fields.archetype_label,
         });
         const planogram = await getResolvedVariant(variantId);
         if (cancelled) return;
@@ -59,7 +92,7 @@ function App() {
       cancelled = true;
       logger?.stop();
     };
-  }, [variantId]);
+  }, [variantId, fields]);
 
   if (state.status === "loading") {
     return <div style={messageStyle}>Opening variant {variantId}...</div>;
@@ -76,6 +109,20 @@ function App() {
     );
   }
   return <PlanogramScene planogram={state.planogram} logger={state.logger} />;
+}
+
+function App() {
+  const variantId = variantFromQuery();
+  // No session exists until the capture flow finishes. Consent is what the
+  // shopper chose on that first screen, never a constant in this file.
+  const [fields, setFields] = useState<SessionFields | null>(
+    skipCaptureFromQuery() ? DEV_SKIP_FIELDS : null,
+  );
+
+  if (fields === null) {
+    return <CaptureFlow onComplete={(result: CaptureResult) => setFields(result)} />;
+  }
+  return <Store variantId={variantId} fields={fields} />;
 }
 
 const messageStyle: CSSProperties = {
