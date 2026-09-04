@@ -63,15 +63,24 @@ export interface SessionSocketOptions {
   flushIntervalMs?: number;
   createSocket?: SocketFactory;
   post?: EventSender;
+  /** The session clock, shared with the wrapped `EventLogger`. Tests inject it. */
+  now?: () => number;
 }
 
 /**
- * What the store needs from its event stream. `EventLogger` satisfies it, and
- * so does `SessionSocket`, so a cursor-only development session can run on the
- * bare logger without the scene knowing.
+ * What the store needs from its event stream.
+ *
+ * `events` is the session's own record of everything it logged, and it exists
+ * for one caller: `SessionGate.summarise` at checkout. The gate has to see the
+ * whole session to decide `accepted`/`reject_reason`, and this is the only
+ * place every event already passes - tallying them a second time inside
+ * `PlanogramScene` would be gate logic written twice, which
+ * `capture/SessionGate.ts` is explicitly the single definition of.
  */
 export interface EventSink {
   readonly sessionId: string;
+  /** Everything logged so far, oldest first. A copy: the caller cannot mutate it. */
+  readonly events: readonly ShopperEvent[];
   log(
     type: ShopperEvent["type"],
     stationId: string | null,
@@ -107,6 +116,10 @@ export class SessionSocket implements EventSink {
   private readonly createSocket: SocketFactory;
   private readonly post: EventSender;
   private readonly logger: EventLogger;
+  private readonly now: () => number;
+  private readonly startedAt: number;
+  /** Every event this session logged, for the gate. Never sent anywhere itself. */
+  private readonly recorded: ShopperEvent[] = [];
 
   private socket: WebSocketLike | null = null;
   private closeCode: number | null = null;
@@ -116,10 +129,29 @@ export class SessionSocket implements EventSink {
     this.url = options.url ?? defaultUrl(sessionId);
     this.createSocket = options.createSocket ?? openWebSocket;
     this.post = options.post ?? postEvents;
+    this.now = options.now ?? (() => performance.now());
+    this.startedAt = this.now();
     this.logger = new EventLogger(sessionId, {
       flushIntervalMs: options.flushIntervalMs ?? WS_FLUSH_INTERVAL_MS,
       send: (id, events, opts) => this.deliver(id, events, opts),
+      // One clock for the record and the buffer, so the `t_ms` the gate reads
+      // is the `t_ms` the server is told. Both bases are taken in this
+      // constructor, so they agree to the millisecond t_ms is rounded to.
+      now: this.now,
     });
+  }
+
+  /**
+   * The session's events, oldest first — what `SessionGate.summarise` reads.
+   *
+   * Filled by `log`, not by delivery: `EventLogger.flush` is a no-op while
+   * another flush is in flight, so a record that only filled up on the wire
+   * could be missing the `checkout` event at exactly the moment the gate runs.
+   * A copy, so the snapshot a caller is holding cannot grow under it and
+   * nothing outside can push a phantom event into the record.
+   */
+  get events(): readonly ShopperEvent[] {
+    return [...this.recorded];
   }
 
   /** Why the socket is gone, for diagnostics. 4404 and 4409 are the server's refusals. */
@@ -144,6 +176,15 @@ export class SessionSocket implements EventSink {
     payload: Record<string, unknown> = {},
   ): void {
     this.logger.log(type, stationId, payload);
+    // A separate object, not the one the logger buffered: the record must stay
+    // exactly what was logged even though a batch is re-buffered on a failed
+    // POST, and it must not be reachable through anything that goes on the wire.
+    this.recorded.push({
+      t_ms: Math.round(this.now() - this.startedAt),
+      type,
+      station_id: stationId,
+      payload,
+    });
   }
 
   flush(): Promise<void> {

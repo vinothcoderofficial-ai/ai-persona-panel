@@ -27,8 +27,28 @@ export interface CreateSessionBody {
   archetype_label?: Session["archetype_label"];
 }
 
+/**
+ * POST /sessions/{id}/finish — exactly `api/app/routers/sessions.py`'s
+ * `_FINISH_FIELDS`, and no more: the router merges these four into the stored
+ * session and re-validates the whole document, and session.schema.json sets
+ * `additionalProperties: false`, so an extra key here is a 422 on the finish
+ * call rather than a field that is quietly ignored.
+ *
+ * All four are required, not optional. The verdict is the point of finishing:
+ * a session closed without `accepted`/`reject_reason` is invisible to
+ * `scripts/eval.py` (S19), which loads *accepted* sessions, and that is exactly
+ * the state every session was left in before this. Making them mandatory means
+ * a caller cannot regress to it without the compiler saying so.
+ *
+ * The values come from `SessionGate.evaluate`, which is the only thing that
+ * decides them.
+ */
 export interface FinishSessionBody {
   ended_at: string;
+  quality: NonNullable<Session["quality"]>;
+  accepted: boolean;
+  /** One of the schema's five reasons, or null exactly when `accepted` is true. */
+  reject_reason: NonNullable<Session["reject_reason"]> | null;
 }
 
 async function failure(method: string, path: string, res: Response): Promise<Error> {

@@ -371,3 +371,90 @@ describe("the local buffer", () => {
     expect(overRest(h)).toEqual([1]);
   });
 });
+
+/**
+ * S11 built `SessionGate` and nothing called it, so every session finished with
+ * `accepted` and `reject_reason` unset and `scripts/eval.py` (S19) - which
+ * loads *accepted* sessions - would have found none.
+ *
+ * The gate needs the session's own event list to summarise. `SessionSocket` is
+ * where every event already passes, so it keeps the record; the alternative was
+ * a second tally inside `PlanogramScene`, which would have been gate logic
+ * written twice.
+ */
+describe("the session's own event record", () => {
+  it("keeps every event the session logged, in order and in full", () => {
+    const h = start(harness());
+    h.sink.log("station_enter", "B1", {});
+    h.sink.log("hover", "B1", { sku_id: "SKU_1", slot_id: "B1S3P1" });
+    h.sink.log("fixation", "B2", { x: 1, y: 2, dur_ms: 300, slot_id: null, shelf_id: "B2S1" });
+
+    expect(h.sink.events.map((e) => e.type)).toEqual([
+      "station_enter",
+      "hover",
+      "fixation",
+    ]);
+    expect(h.sink.events.map((e) => e.station_id)).toEqual(["B1", "B1", "B2"]);
+    expect(h.sink.events[2].payload).toEqual({
+      x: 1,
+      y: 2,
+      dur_ms: 300,
+      slot_id: null,
+      shelf_id: "B2S1",
+    });
+    // Whole milliseconds since the session opened - the same t_ms the wire
+    // carries, because the record and the buffer share one clock.
+    for (const event of h.sink.events) {
+      expect(Number.isInteger(event.t_ms)).toBe(true);
+      expect(event.t_ms).toBeGreaterThanOrEqual(0);
+    }
+  });
+
+  it("records an event the moment it is logged, before any flush", () => {
+    // The gate runs at checkout, after an explicit flush - but EventLogger's
+    // flush is a no-op while another is in flight, so a record that only filled
+    // up on delivery could be missing the checkout event exactly when it is
+    // needed. Logging is what fills it.
+    const h = start(harness());
+    h.sink.log("checkout", "B1", { n: 1 });
+
+    expect(h.sink.events).toHaveLength(1);
+    expect(h.sink.events[0].type).toBe("checkout");
+    expect(delivered(h)).toEqual([]);
+  });
+
+  it("counts a retried batch once, exactly like the wire does", async () => {
+    // The same invariant this whole file is about: a failed POST is re-buffered
+    // and sent again, and neither the server nor the gate may see it twice.
+    let attempts = 0;
+    const h = start(
+      harness({
+        post: async () => {
+          attempts += 1;
+          if (attempts === 1) throw new Error("network down");
+        },
+      }),
+    );
+
+    h.sink.log("hover", "B1", { n: 1 });
+    await vi.advanceTimersByTimeAsync(WS_FLUSH_INTERVAL_MS);
+    h.sink.log("pickup", "B1", { n: 2 });
+    await vi.advanceTimersByTimeAsync(WS_FLUSH_INTERVAL_MS);
+
+    expect(delivered(h)).toEqual([1, 2]);
+    expect(h.sink.events.map((e) => e.payload.n)).toEqual([1, 2]);
+  });
+
+  it("hands out a record nothing outside can corrupt", () => {
+    const h = start(harness());
+    h.sink.log("hover", "B1", { n: 1 });
+
+    const snapshot = h.sink.events;
+    h.sink.log("pickup", "B1", { n: 2 });
+
+    // The gate reads this list while the session is still running; a caller
+    // must not be able to push a phantom event into the record.
+    expect(snapshot.map((e) => e.payload.n)).toEqual([1]);
+    expect(h.sink.events.map((e) => e.payload.n)).toEqual([1, 2]);
+  });
+});

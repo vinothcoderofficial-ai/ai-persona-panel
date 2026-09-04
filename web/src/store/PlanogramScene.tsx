@@ -2,10 +2,12 @@ import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "rea
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
 import { Canvas } from "@react-three/fiber";
 import type { Creative, Planogram, Sku, Slot } from "@/contracts/planogram.schema";
+import type { Session } from "@/contracts/session.schema";
 import { finishSession } from "@/api/client";
 import { CursorTracker, type CursorDwell } from "@/capture/CursorTracker";
 import { FixationFilter, fixationPayload, type Fixation } from "@/capture/FixationFilter";
 import type { GazeTracker } from "@/capture/GazeTracker";
+import { evaluate, summarise } from "@/capture/SessionGate";
 import type { EventSink } from "@/capture/SessionSocket";
 import { Bay } from "@/store/Bay";
 import { StationController } from "@/store/StationController";
@@ -39,6 +41,19 @@ export interface PlanogramSceneProps {
    * releases the camera at checkout and on unmount.
    */
   tracker?: GazeTracker | null;
+  /**
+   * What the shopper agreed to on the consent screen, carried down from
+   * main.tsx unchanged. The session gate needs it at checkout: a session
+   * without consent is not data, whatever else it managed to do, and
+   * `?skip_capture=1` development sessions record `false` here.
+   */
+  consent: boolean;
+  /**
+   * `webcam` or `cursor_only`, as the capture flow decided it. The gate holds
+   * only webcam sessions to the fixation-coverage floor - a cursor-only session
+   * has no fixations at all, so judging it on coverage would reject every one.
+   */
+  mode: Session["mode"];
 }
 
 function clamp(value: number, low: number, high: number): number {
@@ -62,7 +77,13 @@ function errorMessage(error: unknown): string {
  * session streams `gaze` and `fixation` events from here while the person
  * shops; nothing about them is drawn on this screen.
  */
-export function PlanogramScene({ planogram, logger, tracker }: PlanogramSceneProps) {
+export function PlanogramScene({
+  planogram,
+  logger,
+  tracker,
+  consent,
+  mode,
+}: PlanogramSceneProps) {
   const [stationIndex, setStationIndex] = useState(0);
   const [rects, setRects] = useState<ScreenRect[]>([]);
   const [hoveredSlotId, setHoveredSlotId] = useState<string | null>(null);
@@ -275,9 +296,24 @@ export function PlanogramScene({ planogram, logger, tracker }: PlanogramScenePro
     logger.log("checkout", stationId, {});
     setCheckedOut(true);
     setCardSlotId(null);
+    // Flush first: the gate must summarise the whole session, checkout event
+    // included, and the server must already hold every event it is about to be
+    // told a verdict on.
     await logger.flush();
+
+    // The gate lives in capture/SessionGate.ts and nowhere else - this reads
+    // the session it just recorded and asks; it decides nothing itself.
+    // `duration_s` is left to summarise's default, which is the last event's
+    // t_ms: the checkout that was logged a moment ago.
+    const verdict = evaluate(summarise(logger.events, { consent, mode }));
+
     try {
-      await finishSession(logger.sessionId, { ended_at: new Date().toISOString() });
+      await finishSession(logger.sessionId, {
+        ended_at: new Date().toISOString(),
+        quality: verdict.quality,
+        accepted: verdict.accepted,
+        reject_reason: verdict.reject_reason,
+      });
     } catch (error) {
       setFinishError(errorMessage(error));
     }

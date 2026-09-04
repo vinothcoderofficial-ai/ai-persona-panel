@@ -127,11 +127,17 @@ function Store({ variantId, fields }: { variantId: string; fields: SessionFields
       </div>
     );
   }
+  // consent and mode go down with the scene because checkout is where the
+  // session gate runs: it needs what the shopper agreed to and which tracker
+  // actually measured them, and both were decided by the capture flow long
+  // before the store mounted.
   return (
     <PlanogramScene
       planogram={state.planogram}
       logger={state.events}
       tracker={fields.tracker ?? null}
+      consent={fields.consent}
+      mode={fields.mode}
     />
   );
 }

@@ -55,7 +55,14 @@ export interface Fixation {
 }
 
 /**
- * SPEC 4.3: the `fixation` event payload, exactly these five fields.
+ * SPEC 4.3: the `fixation` event payload — those five fields, plus `ad_slot_id`
+ * on the one case SPEC 4.3 has no field for (see `fixationPayload`).
+ *
+ * `ad_slot_id` is optional and present only on an ad hit, so a product, shelf
+ * or miss payload still has exactly the five SPEC fields and nothing else.
+ * schemas/event.schema.json types `payload` as a bare `{"type": "object"}` with
+ * no `additionalProperties` restriction, so the extra key is schema-legal and
+ * `POST /sessions/{id}/events` accepts it unchanged.
  *
  * A type and not an interface, like `CursorDwell`: only a type alias gets an
  * implicit index signature, and without one it cannot be handed straight to
@@ -67,6 +74,8 @@ export type FixationPayload = {
   dur_ms: number;
   slot_id: string | null;
   shelf_id: string | null;
+  /** Set only when the centroid landed on an ad fixture; absent otherwise. */
+  ad_slot_id?: string;
 };
 
 /** One median-filtered sample. Confidence is spent by this point. */
@@ -283,10 +292,31 @@ export function filterFixations(samples: Iterable<GazeSample>): Fixation[] {
  * estimate that lands just off a facing was still a look at that facing.
  * `CursorTracker` passes 0 instead, because a mouse pointer is exact.
  *
- * An ad fixture is neither a slot nor a shelf, so a fixation on one reports
- * both fields null. It still counts as a fixation - toward `n_fixations` and
- * toward `fixation_coverage` - it simply names no target, because SPEC 4.3
- * gives this payload no field to name one with.
+ * **An ad hit names the ad in `slot_id`, and again in `ad_slot_id`.**
+ *
+ * This is the only event that can ever carry real ad exposure: the store's
+ * `hover` and `pickup` fire on product slots only, so a fixation is the one
+ * signal that a shopper looked at a creative. `analytics/lift.py:split_panel`
+ * decides who was exposed by matching the creative's ad slot ids against
+ * `payload["slot_id"]` on a `fixation`, `hover` or `pickup` - so the id has to
+ * be in `slot_id` for S18's Ad-to-Purchase Lift (PLAN 5's headline metric) to
+ * be able to report a `real` column at all. Leaving it null, as this used to,
+ * made real ad exposure unrecoverable while every test still passed.
+ *
+ * `ad_slot_id` carries the same id a second time, deliberately: it is what
+ * `api/app/prediction.py:occupied_slot_ids` documents the browser as reporting
+ * for an ad, and it lets any reader tell an ad look from a product look without
+ * having to recognise the shape of an id. Writing the ad id into `slot_id` is
+ * inert for `analytics/fusion.py`, which drops every `slot_id` outside the
+ * occupied-product vocabulary it is handed - and ad slot ids are never in that
+ * vocabulary, by construction of `occupied_slot_ids`.
+ *
+ * `shelf_id` stays null for an ad. `SlotMapper` hangs an ad rect off the bay
+ * rather than off a shelf, so there is no shelf band the gaze demonstrably fell
+ * inside; naming one would take a second, different hit test. Keeping it null
+ * also keeps "shelf_id names a shelf the gaze actually landed in" true, so
+ * shelf-level attention is not quietly inflated by ad looks, and it matches the
+ * exposure fixture `analytics/tests/test_lift.py` already commits to.
  */
 export function fixationPayload(
   fixation: Fixation,
@@ -294,11 +324,19 @@ export function fixationPayload(
   padPx?: number,
 ): FixationPayload {
   const hit = hitTest(rects, fixation.x, fixation.y, padPx);
-  return {
+  const payload: FixationPayload = {
     x: fixation.x,
     y: fixation.y,
     dur_ms: fixation.dur_ms,
     slot_id: hit?.slot_id ?? null,
     shelf_id: hit?.shelf_id ?? null,
   };
+  // hitTest returns exactly one identity per hit (SlotMapper.toHit copies only
+  // the non-null fields of the winning rect), so this never overwrites a real
+  // product slot id.
+  if (hit?.ad_slot_id !== undefined) {
+    payload.slot_id = hit.ad_slot_id;
+    payload.ad_slot_id = hit.ad_slot_id;
+  }
+  return payload;
 }
