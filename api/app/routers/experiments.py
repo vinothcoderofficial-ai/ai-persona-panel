@@ -3,12 +3,21 @@
 S5 wires this endpoint to the rest of the stack: resolve() the variant against
 its base planogram (api/app/resolve.py), run the vectorised simulator for
 each persona (sim/simulator.py) and combine() them into one share-weighted
-population SimResult, fuse the real session's events into a comparable
-per-slot attention vector (analytics/fusion.py -- the only implementation of
-that formula, per CLAUDE.md), and score the two against each other
-(analytics/metrics.py -- the only implementation of those metrics). Nothing
-here reimplements any of that maths; this module only wires it together and
-persists the result.
+population SimResult, fuse the real session's events into a per-slot attention
+vector and the population SimResult into the matching synthetic one
+(analytics/fusion.py -- the only implementation of that formula, per
+CLAUDE.md), and score the two against each other (analytics/metrics.py -- the
+only implementation of those metrics). Nothing here reimplements any of that
+maths; this module only wires it together and persists the result.
+
+Both sides go through analytics/fusion.py under the SESSION'S OWN `mode`, so
+the comparison is like-for-like. `synth_attention` used to be the population's
+raw `fixation_prob`, which models looking only, while `real_attention` fuses
+looking and interaction -- the Spearman was correlating two different
+quantities. It is now `fuse_synthetic` of the same population result, which
+adds the matching interaction channel out of `purchase_share`. The response
+key is unchanged, so the dashboard keeps working; what it holds is the fused
+vector.
 
 The response intentionally does NOT claim to satisfy schemas/metrics.schema.json.
 That schema is the full cross-variant evaluation (noise ceiling, decision
@@ -24,7 +33,7 @@ from typing import Any, Dict, List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 
-from analytics.fusion import fuse_session
+from analytics.fusion import fuse_session, fuse_synthetic
 from analytics.metrics import attention_spearman, purchase_share_mae
 from api.app.db import (
     ROOT,
@@ -111,6 +120,11 @@ def _build_experiment(variant_id: str, session_id: str, db_session: Session) -> 
     if session_record is None:
         raise HTTPException(status_code=404, detail=f"unknown session_id {session_id!r}")
 
+    # The capture mode selects the fusion weights for BOTH sides. It is a
+    # required field of schemas/session.schema.json and POST /sessions
+    # validates the body against that schema, so every stored session has one.
+    mode = json.loads(session_record.data)["mode"]
+
     variant = json.loads(variant_record.data)
     planogram_record = db_session.get(PlanogramRecord, variant["base_planogram_id"])
     if planogram_record is None:
@@ -141,10 +155,8 @@ def _build_experiment(variant_id: str, session_id: str, db_session: Session) -> 
     ).all()
     events = [json.loads(row.data) for row in event_rows]
 
-    real_attention = fuse_session(events, slot_ids)
-    synth_attention = {
-        slot_id: population["fixation_prob"].get(slot_id, 0.0) for slot_id in slot_ids
-    }
+    real_attention = fuse_session(events, slot_ids, mode=mode)
+    synth_attention = fuse_synthetic(population, resolved, slot_ids, mode=mode)
 
     real_purchase_share = _real_purchase_share(events)
     synth_purchase_share = population["purchase_share"]

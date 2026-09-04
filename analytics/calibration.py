@@ -13,6 +13,21 @@ The objective (PLAN S17), minimised over the grid:
 
 Both terms come from `analytics/metrics.py`; neither is reimplemented here.
 
+What the Spearman is taken against
+----------------------------------
+The real panel's attention is `fusion.fuse_session` output: looking AND
+interaction. The synthetic side used to be the population's raw
+`fixation_prob`, which models looking only, so the search compared two
+different quantities and had nowhere to put the difference except into the
+shares -- measured, ~0.15 of displaced share that did not shrink with panel
+size. Both sides are now fused the same way: the candidate mixture goes
+through `fusion.fuse_synthetic`, which gives the synthetic vector a matching
+interaction channel out of `purchase_share`. That is why `calibrate` and
+`evaluate` need the resolved `planogram` (it carries the sku -> slot map) and
+the `mode` the real panel was fused with.
+
+The purchase term is untouched: purchase shares were always like-for-like.
+
 Fit on ONE variant, evaluate the others
 ---------------------------------------
 `calibrate()` takes a single variant's real panel and a single variant's
@@ -36,6 +51,15 @@ real `combine()` rather than trusting this paragraph, and the guards below
 mirror `combine()`'s own preconditions (one variant, one seed) so the
 shortcut is never applied to inputs `combine()` would have refused.
 
+Fusing the synthetic side does not spend that speed. Fusion normalises, and
+normalisation is NOT linear -- each persona spends a different fraction of its
+fixations on ad slots, so mixing pre-fused per-persona vectors would give a
+different answer from fusing the mixture (pinned down by
+`test_mixing_then_fusing_is_not_the_same_as_fusing_then_mixing`). So the grid
+mixes first and fuses after, which is what `fuse_synthetic(combine(...))`
+computes -- and `fusion.fuse_synthetic_rows` fuses all 1,771 candidate rows in
+two array operations, so the exact order is also the fast one.
+
 Only four fields of each SimResult are read: `variant_id`, `seed`,
 `fixation_prob` and `purchase_share`. Pure: no I/O, no globals, no RNG. The
 same inputs always give the same shares, which is what lets a calibration be
@@ -46,6 +70,7 @@ from typing import Any, Dict, List, Mapping, Sequence, Tuple
 
 import numpy as np
 
+from analytics.fusion import DEFAULT_MODE, fuse_synthetic_rows, purchase_slot_matrix
 from analytics.metrics import attention_spearman, purchase_share_mae
 
 # PLAN S17 / §13: step 0.05 over the persona shares, objective weight 5 on MAE.
@@ -136,8 +161,10 @@ def evaluate(
     real_purchase_share: Mapping[str, float],
     per_persona: Mapping[str, Mapping[str, Any]],
     *,
+    planogram: Mapping[str, Any],
     slot_ids: Sequence[str],
     sku_ids: Sequence[str] | None = None,
+    mode: str = DEFAULT_MODE,
     mae_weight: float = DEFAULT_MAE_WEIGHT,
 ) -> Dict[str, Any]:
     """Score one variant under shares that are already frozen.
@@ -146,6 +173,11 @@ def evaluate(
     then `evaluate` the returned shares on B and on C. Nothing is fitted here
     -- the shares that come out are the shares that went in, and the caller's
     mapping is never mutated.
+
+    `planogram` is the RESOLVED planogram for the variant `per_persona` was
+    simulated over, and `mode` is the capture mode the real panel was fused
+    with; both feed `fusion.fuse_synthetic`, so a holdout is scored by exactly
+    the comparison the fit used.
 
     Returns `{variant_id, shares, objective, attention_spearman,
     purchase_share_mae}`, so a fit result and a holdout result are directly
@@ -158,10 +190,15 @@ def evaluate(
     attention = np.asarray(weights) @ _stack(per_persona, persona_ids, "fixation_prob", slot_ids)
     purchase = np.asarray(weights) @ _stack(per_persona, persona_ids, "purchase_share",
                                             sku_vocabulary)
+    # Explicit lengths rather than -1: an empty vocabulary is a legal (if
+    # useless) input, and reshape(1, -1) cannot infer a zero-width axis.
+    fused = _fused_rows(attention.reshape(1, len(slot_ids)),
+                        purchase.reshape(1, len(sku_vocabulary)),
+                        planogram, slot_ids, sku_vocabulary, mode)
 
     scored = _score(
         real_attention, real_purchase_share,
-        dict(zip(slot_ids, attention.tolist())),
+        dict(zip(slot_ids, fused[0].tolist())),
         dict(zip(sku_vocabulary, purchase.tolist())),
         slot_ids, sku_vocabulary, mae_weight,
     )
@@ -177,8 +214,10 @@ def calibrate(
     real_purchase_share: Mapping[str, float],
     per_persona: Mapping[str, Mapping[str, Any]],
     *,
+    planogram: Mapping[str, Any],
     slot_ids: Sequence[str],
     sku_ids: Sequence[str] | None = None,
+    mode: str = DEFAULT_MODE,
     step: float = DEFAULT_STEP,
     mae_weight: float = DEFAULT_MAE_WEIGHT,
 ) -> Dict[str, Any]:
@@ -192,6 +231,13 @@ def calibrate(
     longer be frozen with respect to B and C, and the numbers reported for
     them would stop being out-of-sample. The variant is echoed in the result
     so a report can state which one was fitted.
+
+    `planogram` is the RESOLVED planogram those SimResults were produced over
+    -- it carries the sku -> slot map the synthetic interaction channel needs,
+    and it must be the same variant, because a sku sits in different slots
+    under different variants. `mode` is the capture mode `real_attention` was
+    fused with, so both sides of the Spearman weight looking and interaction
+    identically.
 
     Every candidate is scored as `(1 - spearman) + mae_weight x mae` and the
     smallest wins. Candidates are visited in `share_grid`'s ascending
@@ -220,8 +266,13 @@ def calibrate(
     candidates = np.asarray(grid, dtype=float)
     # The whole reason this is fast: one matrix product replaces 1,771
     # simulations, because combine() is linear in the shares.
-    attention_rows = (candidates @ attention_basis).tolist()
-    purchase_rows = (candidates @ purchase_basis).tolist()
+    attention_matrix = candidates @ attention_basis
+    purchase_matrix = candidates @ purchase_basis
+    # ...and fusing all 1,771 mixed rows costs two more array operations, so
+    # the like-for-like comparison is free.
+    attention_rows = _fused_rows(attention_matrix, purchase_matrix,
+                                 planogram, slot_ids, sku_vocabulary, mode).tolist()
+    purchase_rows = purchase_matrix.tolist()
 
     best_shares: Tuple[float, ...] | None = None
     best_scored: Dict[str, float] = {}
@@ -245,6 +296,28 @@ def calibrate(
         "step": float(step),
         "mae_weight": float(mae_weight),
     }
+
+
+def _fused_rows(
+    attention_rows: np.ndarray,
+    purchase_rows: np.ndarray,
+    planogram: Mapping[str, Any],
+    slot_ids: Sequence[str],
+    sku_ids: Sequence[str],
+    mode: str,
+) -> np.ndarray:
+    """The synthetic vectors the Spearman is taken against, one row per mix.
+
+    `attention_rows` and `purchase_rows` are the mixed `fixation_prob` and
+    `purchase_share` -- (n_mixes, n_slots) and (n_mixes, n_skus). The
+    purchases are credited to slots and the two channels blended by
+    `analytics/fusion.py`, which owns that formula; this function only routes
+    the arrays into it, so `calibrate`'s 1,771 candidates and `evaluate`'s
+    single frozen mix are fused by identical code -- and by the same code
+    `api/app/routers/experiments.py` uses through `fuse_synthetic`.
+    """
+    slot_purchase_rows = purchase_rows @ purchase_slot_matrix(planogram, slot_ids, sku_ids)
+    return fuse_synthetic_rows(attention_rows, slot_purchase_rows, mode=mode)
 
 
 def _score(

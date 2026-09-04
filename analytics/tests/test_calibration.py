@@ -31,17 +31,23 @@ the Spearman is well below 1 and the MAE well above 0, so neither term of the
 objective is exactly satisfied by the right answer and neither can pin it
 alone.
 
-The baskets are deliberately NOT injected into the fused event stream as
-`add_to_cart` events. `fuse_session` gives interactions 0.3 of the fused
-weight, but the synthetic side of the comparison is `fixation_prob` (see
-`experiments.py`), which models looking only. Feeding purchases into the real
-attention vector therefore adds a whole component the synthetic vector cannot
-express, and the calibrator absorbs the difference into the shares: measured,
-that displaces the recovered mix by ~0.15 and does NOT shrink with panel size
-(still 0.15 at 600 sessions x 400 dwells). That is a real finding about the
-fusion/simulator interface, but it is a property of the two attention
-definitions, not of the search this module gates -- so looking and buying are
-kept as separate samples here.
+Each session's basket also enters that session's own event stream as
+`add_to_cart` events, because that is where a real basket is:
+`api/app/routers/experiments.py::_real_purchase_share` counts exactly the
+`add_to_cart` events `fuse_session` is fusing, so a real panel's attention
+always carries an interaction component alongside the looking one.
+
+That was not always true of this fixture. It used to hold the baskets out of
+the event stream, because the synthetic side of the comparison was the
+population's raw `fixation_prob` -- looking only -- so feeding purchases into
+the real vector added a component the synthetic vector could not express, and
+the search absorbed the difference into the shares. S17 measured that bias at
+~0.15 of displaced share, not shrinking with panel size. Rather than keep
+dodging it with a panel that cannot exist (shoppers who bought 240 items while
+touching nothing), the synthetic side is now fused the same way the real side
+is (`fusion.fuse_synthetic`), and the fixture is the realistic one.
+`test_fusing_the_synthetic_side_reduces_the_basket_injection_bias` runs both
+comparisons over this panel and reports the two displacements.
 """
 
 import json
@@ -51,8 +57,8 @@ from typing import Any, Dict, List, Mapping, Sequence
 import numpy as np
 import pytest
 
-from analytics.calibration import calibrate, evaluate, mixture, share_grid
-from analytics.fusion import fuse_session, trimmed_mean
+from analytics.calibration import DEFAULT_STEP, calibrate, evaluate, mixture, share_grid
+from analytics.fusion import fuse_session, fuse_synthetic, trimmed_mean
 from analytics.metrics import attention_spearman, purchase_share_mae
 from api.app import simcache
 from api.app.db import ROOT
@@ -149,6 +155,13 @@ def _fake_panel(
     The persona counts are exact (mix x n_sessions), so the panel's *composition*
     is the target mix and every deviation the calibrator has to survive comes
     from the finite dwell and basket samples, not from a mis-drawn panel.
+
+    Each session's basket goes into that session's own event stream as
+    `add_to_cart` events, because that is where a real basket is:
+    `api/app/routers/experiments.py::_real_purchase_share` derives the panel's
+    purchase share from exactly the `add_to_cart` events `fuse_session` is
+    fusing, so a real shopper's basket is *necessarily* in the fused stream and
+    the panel's attention *necessarily* carries an interaction component.
     """
     rng = np.random.default_rng(seed)
     slot_of_sku = _slot_of_sku(planogram)
@@ -178,12 +191,20 @@ def _fake_panel(
                     "station_id": bay_of_slot[slot_id],
                     "payload": {"slot_id": slot_id, "dur_ms": float(rng.lognormal(6.0, 0.4))},
                 })
-            fused_sessions.append(fuse_session(events, slot_ids))
 
             for index in rng.choice(len(sku_ids), size=basket, p=buy):
                 sku_id = sku_ids[index]
                 bought[sku_id] = bought.get(sku_id, 0) + 1
                 assert sku_id in slot_of_sku  # every purchasable sku sits in a slot
+                t_ms += 500
+                events.append({
+                    "t_ms": t_ms,
+                    "type": "add_to_cart",
+                    "station_id": bay_of_slot[slot_of_sku[sku_id]],
+                    "payload": {"sku_id": sku_id, "slot_id": slot_of_sku[sku_id]},
+                })
+
+            fused_sessions.append(fuse_session(events, slot_ids))
 
     total = sum(bought.values())
     return trimmed_mean(fused_sessions, slot_ids), {k: v / total for k, v in bought.items()}
@@ -205,6 +226,26 @@ def _synthetic_results(n: int, *, variant_id: str = "A", seed: int = 0) -> Dict[
         for i in range(n)
     }
 
+
+
+def _fake_planogram(slot_to_sku: Mapping[str, Any]) -> Dict[str, Any]:
+    """A minimal planogram for the hand-built persona results below: just the
+    bays -> shelves -> slots -> sku_id path `fusion.purchase_slot_matrix`
+    reads, so those tests need no seed data. A slot mapped to None is an empty
+    shelf position (CLAUDE.md: those are real slot objects)."""
+    return {
+        "planogram_id": "fake",
+        "bays": [{
+            "bay_id": "B1",
+            "shelves": [{
+                "shelf_id": "B1S1",
+                "slots": [{"slot_id": slot_id, "sku_id": sku_id, "facings": 1}
+                          for slot_id, sku_id in slot_to_sku.items()],
+            }],
+            "ad_slots": [],
+        }],
+        "skus": [],
+    }
 
 @pytest.fixture(scope="module")
 def variant_a() -> Dict[str, Any]:
@@ -318,7 +359,7 @@ def test_mixture_reproduces_combine_exactly(basis_a, vocabulary):
 # ---------------------------------------------------------------------------
 
 
-def test_calibration_recovers_the_generating_mix(basis_a, panel_a, vocabulary):
+def test_calibration_recovers_the_generating_mix(basis_a, panel_a, vocabulary, variant_a):
     """PLAN S17: fake sessions generated from mix [0.5, 0.2, 0.2, 0.1] ->
     calibration must recover EACH share within ±0.1. This gates Track D."""
     slot_ids, sku_ids = vocabulary
@@ -326,7 +367,7 @@ def test_calibration_recovers_the_generating_mix(basis_a, panel_a, vocabulary):
 
     started = time.perf_counter()
     result = calibrate(real_attention, real_purchase_share, basis_a,
-                       slot_ids=slot_ids, sku_ids=sku_ids)
+                       planogram=variant_a, slot_ids=slot_ids, sku_ids=sku_ids)
     elapsed = time.perf_counter() - started
 
     recovered = result["shares"]
@@ -348,7 +389,7 @@ def test_calibration_recovers_the_generating_mix(basis_a, panel_a, vocabulary):
     assert elapsed < 10.0, f"grid search took {elapsed:.1f} s -- is it re-simulating?"
 
 
-def test_the_fixture_is_noisy_in_both_terms(basis_a, panel_a, vocabulary):
+def test_the_fixture_is_noisy_in_both_terms(basis_a, panel_a, vocabulary, variant_a):
     """The anti-vacuity precondition for the gating test.
 
     A previous attempt at this fixture handed the calibrator a purchase vector
@@ -361,7 +402,7 @@ def test_the_fixture_is_noisy_in_both_terms(basis_a, panel_a, vocabulary):
     real_attention, real_purchase_share = panel_a
 
     at_truth = evaluate(TRUE_MIX, real_attention, real_purchase_share, basis_a,
-                        slot_ids=slot_ids, sku_ids=sku_ids)
+                        planogram=variant_a, slot_ids=slot_ids, sku_ids=sku_ids)
     print(f"\nat the true mix: rho {at_truth['attention_spearman']:+.4f} "
           f"mae {at_truth['purchase_share_mae']:.5f}")
 
@@ -378,7 +419,8 @@ def test_recovery_holds_across_panel_seeds(basis_a, truth_a, variant_a, vocabula
         real_attention, real_purchase_share = _fake_panel(
             truth_a, variant_a, slot_ids, sku_ids, TRUE_MIX, seed=seed)
         recovered = calibrate(real_attention, real_purchase_share, basis_a,
-                              slot_ids=slot_ids, sku_ids=sku_ids)["shares"]
+                              planogram=variant_a, slot_ids=slot_ids,
+                              sku_ids=sku_ids)["shares"]
         print(f"\nseed {seed}: {[round(recovered[p], 2) for p in sorted(recovered)]}")
 
         for persona_id, true_share in TRUE_MIX.items():
@@ -391,13 +433,14 @@ def test_recovery_holds_across_panel_seeds(basis_a, truth_a, variant_a, vocabula
 # ---------------------------------------------------------------------------
 
 
-def test_the_returned_objective_beats_the_true_and_uniform_mixes(basis_a, panel_a, vocabulary):
+def test_the_returned_objective_beats_the_true_and_uniform_mixes(
+        basis_a, panel_a, vocabulary, variant_a):
     """An exhaustive search cannot be beaten by any grid point, and both
     reference mixes are grid points. If the true mix scored better than the
     winner the search would be broken."""
     slot_ids, sku_ids = vocabulary
     real_attention, real_purchase_share = panel_a
-    kwargs = dict(slot_ids=slot_ids, sku_ids=sku_ids)
+    kwargs = dict(planogram=variant_a, slot_ids=slot_ids, sku_ids=sku_ids)
 
     best = calibrate(real_attention, real_purchase_share, basis_a, **kwargs)
     at_truth = evaluate(TRUE_MIX, real_attention, real_purchase_share, basis_a, **kwargs)
@@ -408,7 +451,7 @@ def test_the_returned_objective_beats_the_true_and_uniform_mixes(basis_a, panel_
 
 
 def test_the_attention_term_alone_moves_the_answer_toward_the_true_mix(
-        basis_a, panel_a, vocabulary):
+        basis_a, panel_a, vocabulary, variant_a):
     """VACUITY GUARD. With `mae_weight=0` the purchase term is switched off
     entirely, so nothing but the Spearman over slots can drive the search.
     The answer still lands much closer to the generating mix than uniform
@@ -418,7 +461,8 @@ def test_the_attention_term_alone_moves_the_answer_toward_the_true_mix(
     real_attention, real_purchase_share = panel_a
 
     attention_only = calibrate(real_attention, real_purchase_share, basis_a,
-                               slot_ids=slot_ids, sku_ids=sku_ids, mae_weight=0.0)["shares"]
+                               planogram=variant_a, slot_ids=slot_ids, sku_ids=sku_ids,
+                               mae_weight=0.0)["shares"]
     error = max(abs(attention_only[p] - TRUE_MIX[p]) for p in TRUE_MIX)
     uniform_error = max(abs(UNIFORM_MIX[p] - TRUE_MIX[p]) for p in TRUE_MIX)
     print(f"\nattention-only mix {[round(attention_only[p], 2) for p in sorted(attention_only)]} "
@@ -428,14 +472,15 @@ def test_the_attention_term_alone_moves_the_answer_toward_the_true_mix(
     assert error <= 0.15
 
 
-def test_the_recovered_mix_beats_uniform_on_the_attention_term(basis_a, panel_a, vocabulary):
+def test_the_recovered_mix_beats_uniform_on_the_attention_term(
+        basis_a, panel_a, vocabulary, variant_a):
     """VACUITY GUARD, the other direction: the mix the full objective picks is
     better than uniform on the Spearman *specifically*, not only on the
     combined score. A winner chosen by the MAE term alone would have no
     reason to be."""
     slot_ids, sku_ids = vocabulary
     real_attention, real_purchase_share = panel_a
-    kwargs = dict(slot_ids=slot_ids, sku_ids=sku_ids)
+    kwargs = dict(planogram=variant_a, slot_ids=slot_ids, sku_ids=sku_ids)
 
     best = calibrate(real_attention, real_purchase_share, basis_a, **kwargs)
     at_uniform = evaluate(UNIFORM_MIX, real_attention, real_purchase_share, basis_a, **kwargs)
@@ -443,14 +488,14 @@ def test_the_recovered_mix_beats_uniform_on_the_attention_term(basis_a, panel_a,
     assert best["attention_spearman"] > at_uniform["attention_spearman"]
 
 
-def test_the_objective_is_one_minus_rho_plus_five_mae(basis_a, panel_a, vocabulary):
+def test_the_objective_is_one_minus_rho_plus_five_mae(basis_a, panel_a, vocabulary, variant_a):
     """The formula PLAN S17 specifies, checked against the components the same
     call reports."""
     slot_ids, sku_ids = vocabulary
     real_attention, real_purchase_share = panel_a
 
     result = calibrate(real_attention, real_purchase_share, basis_a,
-                       slot_ids=slot_ids, sku_ids=sku_ids)
+                       planogram=variant_a, slot_ids=slot_ids, sku_ids=sku_ids)
 
     assert result["objective"] == pytest.approx(
         (1.0 - result["attention_spearman"]) + 5.0 * result["purchase_share_mae"])
@@ -459,13 +504,13 @@ def test_the_objective_is_one_minus_rho_plus_five_mae(basis_a, panel_a, vocabula
     assert result["n_candidates"] == 1771
 
 
-def test_calibrate_is_deterministic(basis_a, panel_a, vocabulary):
+def test_calibrate_is_deterministic(basis_a, panel_a, vocabulary, variant_a):
     """No RNG anywhere in the search: the same panel and basis give a
     bit-identical result, which is what lets a calibration be frozen and
     re-verified from the committed data."""
     slot_ids, sku_ids = vocabulary
     real_attention, real_purchase_share = panel_a
-    kwargs = dict(slot_ids=slot_ids, sku_ids=sku_ids)
+    kwargs = dict(planogram=variant_a, slot_ids=slot_ids, sku_ids=sku_ids)
 
     assert (calibrate(real_attention, real_purchase_share, basis_a, **kwargs)
             == calibrate(real_attention, real_purchase_share, basis_a, **kwargs))
@@ -479,7 +524,9 @@ def test_ties_break_to_the_lexicographically_smallest_share_tuple():
     per_persona = _synthetic_results(4)
 
     result = calibrate({"S1": 0.5, "S2": 0.3, "S3": 0.2}, {"K1": 0.6, "K2": 0.4},
-                       per_persona, slot_ids=["S1", "S2", "S3"], sku_ids=["K1", "K2"])
+                       per_persona,
+                       planogram=_fake_planogram({"S1": "K1", "S2": "K2", "S3": None}),
+                       slot_ids=["S1", "S2", "S3"], sku_ids=["K1", "K2"])
 
     assert result["shares"] == {"p0": 0.0, "p1": 0.0, "p2": 0.0, "p3": 1.0}
 
@@ -498,7 +545,7 @@ def test_evaluate_on_a_holdout_variant_leaves_the_frozen_shares_alone(
     real_attention, real_purchase_share = panel_a
 
     frozen = calibrate(real_attention, real_purchase_share, basis_a,
-                       slot_ids=slot_ids, sku_ids=sku_ids)["shares"]
+                       planogram=variant_a, slot_ids=slot_ids, sku_ids=sku_ids)["shares"]
     before = dict(frozen)
 
     variant_b = _resolved("B")
@@ -511,7 +558,7 @@ def test_evaluate_on_a_holdout_variant_leaves_the_frozen_shares_alone(
     panel_b = _fake_panel(truth_b, variant_b, slot_ids_b, sku_ids_b, TRUE_MIX, seed=PANEL_SEED)
 
     holdout = evaluate(frozen, panel_b[0], panel_b[1], basis_b,
-                       slot_ids=slot_ids_b, sku_ids=sku_ids_b)
+                       planogram=variant_b, slot_ids=slot_ids_b, sku_ids=sku_ids_b)
 
     assert frozen == before  # the caller's mapping is untouched
     assert holdout["shares"] == before  # and so are the shares it reports
@@ -522,13 +569,14 @@ def test_evaluate_on_a_holdout_variant_leaves_the_frozen_shares_alone(
         (1.0 - holdout["attention_spearman"]) + 5.0 * holdout["purchase_share_mae"])
 
 
-def test_calibrate_echoes_the_variant_it_was_fitted_on(basis_a, panel_a, vocabulary):
+def test_calibrate_echoes_the_variant_it_was_fitted_on(basis_a, panel_a, vocabulary, variant_a):
     """Fit-vs-holdout has to be reportable separately (PLAN S17: "always report
     fit and holdout separately"), so the result says which variant produced
     it. The caller passes A."""
     slot_ids, sku_ids = vocabulary
 
-    result = calibrate(panel_a[0], panel_a[1], basis_a, slot_ids=slot_ids, sku_ids=sku_ids)
+    result = calibrate(panel_a[0], panel_a[1], basis_a, planogram=variant_a,
+                       slot_ids=slot_ids, sku_ids=sku_ids)
 
     assert result["variant_id"] == "A"
 
@@ -546,6 +594,7 @@ def test_persona_results_from_different_variants_are_refused():
 
     with pytest.raises(ValueError, match="variant"):
         calibrate({"S1": 1.0}, {"K1": 1.0}, per_persona,
+                  planogram=_fake_planogram({"S1": "K1"}),
                   slot_ids=["S1"], sku_ids=["K1"])
 
 
@@ -556,12 +605,15 @@ def test_persona_results_from_different_seeds_are_refused():
 
     with pytest.raises(ValueError, match="seed"):
         calibrate({"S1": 1.0}, {"K1": 1.0}, per_persona,
+                  planogram=_fake_planogram({"S1": "K1"}),
                   slot_ids=["S1"], sku_ids=["K1"])
 
 
 def test_an_empty_persona_bundle_is_refused():
     with pytest.raises(ValueError, match="persona"):
-        calibrate({"S1": 1.0}, {"K1": 1.0}, {}, slot_ids=["S1"], sku_ids=["K1"])
+        calibrate({"S1": 1.0}, {"K1": 1.0}, {},
+                  planogram=_fake_planogram({"S1": "K1"}),
+                  slot_ids=["S1"], sku_ids=["K1"])
 
 
 def test_evaluate_refuses_shares_that_do_not_name_every_persona():
@@ -569,6 +621,7 @@ def test_evaluate_refuses_shares_that_do_not_name_every_persona():
 
     with pytest.raises(ValueError, match="persona"):
         evaluate({"p0": 1.0}, {"S1": 1.0}, {"K1": 1.0}, per_persona,
+                 planogram=_fake_planogram({"S1": "K1"}),
                  slot_ids=["S1"], sku_ids=["K1"])
 
 
@@ -577,6 +630,7 @@ def test_evaluate_refuses_shares_that_do_not_sum_to_one():
 
     with pytest.raises(ValueError, match="sum to 1"):
         evaluate({"p0": 0.5, "p1": 0.2}, {"S1": 1.0}, {"K1": 1.0}, per_persona,
+                 planogram=_fake_planogram({"S1": "K1"}),
                  slot_ids=["S1"], sku_ids=["K1"])
 
 
@@ -585,18 +639,195 @@ def test_evaluate_refuses_a_negative_share():
 
     with pytest.raises(ValueError, match="negative"):
         evaluate({"p0": 1.5, "p1": -0.5}, {"S1": 1.0}, {"K1": 1.0}, per_persona,
+                 planogram=_fake_planogram({"S1": "K1"}),
                  slot_ids=["S1"], sku_ids=["K1"])
 
 
-def test_calibrate_returns_plain_floats(basis_a, panel_a, vocabulary):
+def test_calibrate_returns_plain_floats(basis_a, panel_a, vocabulary, variant_a):
     """RESULTS.md and schemas/metrics.schema.json's `calibrated_shares` want
     JSON numbers, not numpy scalars."""
     slot_ids, sku_ids = vocabulary
 
-    result = calibrate(panel_a[0], panel_a[1], basis_a, slot_ids=slot_ids, sku_ids=sku_ids)
+    result = calibrate(panel_a[0], panel_a[1], basis_a, planogram=variant_a,
+                       slot_ids=slot_ids, sku_ids=sku_ids)
 
     assert all(isinstance(share, float) for share in result["shares"].values())
     assert isinstance(result["objective"], float)
     assert isinstance(result["attention_spearman"], float)
     assert isinstance(result["purchase_share_mae"], float)
     assert json.loads(json.dumps(result)) == result
+
+
+# ---------------------------------------------------------------------------
+# the metric mismatch this module used to absorb into the shares
+# ---------------------------------------------------------------------------
+
+
+def _legacy_calibrate(
+    real_attention: Mapping[str, float],
+    real_purchase_share: Mapping[str, float],
+    per_persona: Mapping[str, Mapping[str, Any]],
+    *,
+    slot_ids: Sequence[str],
+    sku_ids: Sequence[str],
+    mae_weight: float = 5.0,
+) -> Dict[str, float]:
+    """The comparison this change replaces, kept test-side so its bias can be
+    measured rather than asserted from memory.
+
+    Identical to `calibrate` in every respect -- same grid, same objective,
+    same tie rule -- except that the synthetic attention it scores is the
+    population's RAW `fixation_prob` (SPEC M5 as written), not the fused
+    synthetic vector. Nothing in analytics/ calls this; it exists only so
+    `test_fusing_the_synthetic_side_reduces_the_basket_injection_bias` can
+    report a before number next to an after number.
+    """
+    persona_ids = sorted(per_persona)
+    best_objective = None
+    best_shares: tuple = ()
+
+    for shares in share_grid(0.05, len(persona_ids)):
+        mixed = mixture(per_persona, dict(zip(persona_ids, shares)),
+                        slot_ids=slot_ids, sku_ids=sku_ids)
+        rho = attention_spearman(real_attention, mixed["fixation_prob"], slot_ids)
+        mae = purchase_share_mae(real_purchase_share, mixed["purchase_share"], sku_ids)
+        objective = (1.0 - rho) + mae_weight * mae
+        if best_objective is None or objective < best_objective - 1e-12:
+            best_objective, best_shares = objective, shares
+
+    return dict(zip(persona_ids, best_shares))
+
+
+def _max_share_error(recovered: Mapping[str, float]) -> float:
+    """The bar PLAN S17 states: worst per-share distance from the true mix."""
+    return max(abs(recovered[persona_id] - share) for persona_id, share in TRUE_MIX.items())
+
+
+def _total_share_error(recovered: Mapping[str, float]) -> float:
+    """How much share the recovered mix moved in total (L1), reported next to
+    the max because "displaced by 0.15" can mean either."""
+    return sum(abs(recovered[persona_id] - share) for persona_id, share in TRUE_MIX.items())
+
+
+def test_fusing_the_synthetic_side_reduces_the_basket_injection_bias(
+        basis_a, panel_a, vocabulary, variant_a):
+    """THE POINT OF THE CHANGE, measured rather than argued.
+
+    Same panel (the realistic one, baskets in the fused stream), same basis,
+    same objective, same grid. The ONLY difference between the two numbers is
+    which synthetic vector the Spearman is taken against: the population's raw
+    `fixation_prob`, or `fuse_synthetic` of the same population result.
+
+    Measured over the four panel seeds this file uses (max per-share error):
+
+        seed        7      11      23      31     mean
+        raw     0.100   0.150   0.100   0.200   0.1375
+        fused   0.050   0.000   0.050   0.050   0.0375
+
+    The raw comparison misses PLAN S17's +/-0.1 bar on half of them and
+    reproduces the ~0.15 S17 reported; the fused comparison is inside it on
+    every one.
+
+    A residual mismatch remains, and it shows up when the panel gets much
+    bigger than the one this project will collect. At 600 sessions x 400
+    dwells the fused comparison lands at 0.150 on seeds 7, 11 and 23 while the
+    raw one lands at 0.100, 0.050 and 0.100. The real interaction channel is a
+    trimmed mean of per-session MAX weights -- saturating (a slot bought twice
+    in one session still scores 1.0) and truncated (`trimmed_mean` drops the
+    top 10 % of sessions per slot, which is most of the non-zero ones for a
+    sparse channel) -- whereas the synthetic one is a smooth population
+    purchase share. At panel sizes near PLAN S21's ">= 60 accepted" that
+    second-order difference is well under the sampling noise; at 600 sessions
+    it is what is left. Closing it would mean changing how the REAL side
+    aggregates interactions, which is not this change.
+    """
+    slot_ids, sku_ids = vocabulary
+    real_attention, real_purchase_share = panel_a
+
+    before = _legacy_calibrate(real_attention, real_purchase_share, basis_a,
+                               slot_ids=slot_ids, sku_ids=sku_ids)
+    after = calibrate(real_attention, real_purchase_share, basis_a,
+                      planogram=variant_a, slot_ids=slot_ids, sku_ids=sku_ids)["shares"]
+
+    print(f"\ntrue mix                 {[TRUE_MIX[p] for p in sorted(TRUE_MIX)]}")
+    print(f"before (raw fixation)    {[round(before[p], 2) for p in sorted(before)]} "
+          f"max err {_max_share_error(before):.3f} "
+          f"total displaced {_total_share_error(before):.3f}")
+    print(f"after  (fused synthetic) {[round(after[p], 2) for p in sorted(after)]} "
+          f"max err {_max_share_error(after):.3f} "
+          f"total displaced {_total_share_error(after):.3f}")
+
+    # Closer by at least a full grid step -- the smallest improvement a 0.05
+    # grid can even express, so this is not a rounding artefact.
+    assert _max_share_error(after) <= _max_share_error(before) - DEFAULT_STEP + 1e-9
+    assert _total_share_error(after) < _total_share_error(before)
+    # ...and inside PLAN S17's +/-0.1 recovery tolerance, which is the bar the
+    # gating test holds the search to.
+    assert _max_share_error(after) <= TOLERANCE
+
+
+def test_the_grid_search_scores_the_fused_synthetic_vector(basis_a, panel_a, vocabulary,
+                                                           variant_a):
+    """`evaluate` must report the Spearman of the real panel against
+    `fuse_synthetic` of the combined population result -- not against raw
+    `fixation_prob`, and not against some third thing computed only here.
+
+    Checked against the real `combine()` and the real `fuse_synthetic`, so a
+    pass proves the wiring rather than the module agreeing with itself.
+    """
+    slot_ids, sku_ids = vocabulary
+    real_attention, real_purchase_share = panel_a
+    persona_ids = sorted(basis_a)
+    results = [basis_a[persona_id] for persona_id in persona_ids]
+
+    for shares in [(0.5, 0.2, 0.2, 0.1), (0.25, 0.25, 0.25, 0.25), (1.0, 0.0, 0.0, 0.0)]:
+        scored = evaluate(dict(zip(persona_ids, shares)), real_attention, real_purchase_share,
+                          basis_a, planogram=variant_a, slot_ids=slot_ids, sku_ids=sku_ids)
+        expected_vector = fuse_synthetic(combine(results, list(shares)), variant_a, slot_ids)
+
+        assert scored["attention_spearman"] == pytest.approx(
+            attention_spearman(real_attention, expected_vector, slot_ids), abs=1e-12)
+        assert scored["attention_spearman"] != pytest.approx(
+            attention_spearman(real_attention,
+                               combine(results, list(shares))["fixation_prob"], slot_ids))
+
+
+def test_mixing_then_fusing_is_not_the_same_as_fusing_then_mixing(basis_a, vocabulary,
+                                                                  variant_a):
+    """Why the grid fuses the MIXED vectors instead of mixing pre-fused ones.
+
+    `combine()` is linear in the shares, so the mixed `fixation_prob` and
+    `purchase_share` are one matrix product away -- but `fuse_synthetic`
+    normalises, and normalisation is not linear. Each persona spends a
+    different fraction of its fixations on ad slots, so restricting
+    `fixation_prob` to the product slots leaves each persona summing to a
+    different total (0.9903 to 0.9987 on variant A) and
+
+        sum_p share_p * (v_p / S_p)   !=   (sum_p share_p * v_p) / (sum_p share_p * S_p)
+
+    The right-hand side is what `fuse_synthetic(combine(...))` computes, and it
+    is what `calibrate` must reproduce for every candidate, so the grid mixes
+    first and fuses after. That order is exactly as fast -- the fusion is two
+    array operations over the whole candidate matrix, not 1,771 separate calls
+    -- so there is no correctness/speed trade-off to make here.
+
+    This test pins the inequivalence down so nobody "optimises" the order back.
+    """
+    slot_ids, _sku_ids = vocabulary
+    persona_ids = sorted(basis_a)
+    results = [basis_a[persona_id] for persona_id in persona_ids]
+    shares = (0.5, 0.2, 0.2, 0.1)
+
+    mix_then_fuse = fuse_synthetic(combine(results, list(shares)), variant_a, slot_ids)
+    per_persona_fused = [fuse_synthetic(result, variant_a, slot_ids) for result in results]
+    fuse_then_mix = {
+        slot_id: sum(share * fused[slot_id] for share, fused in zip(shares, per_persona_fused))
+        for slot_id in slot_ids
+    }
+
+    difference = max(abs(mix_then_fuse[s] - fuse_then_mix[s]) for s in slot_ids)
+    print(f"\nmax |mix-then-fuse - fuse-then-mix| = {difference:.3e}")
+
+    assert difference > 1e-9, "the two orders agree here -- the guard below is vacuous"
+    # The implemented order is the one that reproduces fuse_synthetic(combine(...)).
+    assert mix_then_fuse != pytest.approx(fuse_then_mix, abs=1e-9)

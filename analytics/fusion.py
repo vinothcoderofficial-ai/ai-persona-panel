@@ -1,5 +1,6 @@
 """Attention fusion -- the single formula for turning real shoppers' raw
-behavioural events into per-slot attention scores, and for aggregating those
+behavioural events into per-slot attention scores, for turning a simulated
+population into the matching synthetic vector, and for aggregating those
 scores across a panel of sessions.
 
 Per CLAUDE.md, this is the *only* place the fusion maths may live:
@@ -28,13 +29,42 @@ where, per slot:
 positional call in `api/app/routers/experiments.py` is unaffected: omitting
 `mode` gives cursor-only fusion, exactly as before.
 
+The synthetic side: `fuse_synthetic`
+------------------------------------
+Real attention fuses looking AND interaction. The synthetic side it is scored
+against used to be the population SimResult's raw `fixation_prob`, which
+models looking only -- so the Spearman correlated "looking plus touching and
+buying" against "looking only". That is not like-for-like, and calibration
+absorbed the difference into the persona shares instead of leaving it
+visible (~0.15 of displaced share, and it did not shrink with panel size).
+
+`fuse_synthetic` gives the synthetic side a matching interaction channel, so
+both sides are fused the same way:
+
+    mode="cursor_only":  0.7 * fixation_prob_norm + 0.3 * synth_interaction_norm
+    mode="webcam":       0.8 * fixation_prob_norm + 0.2 * synth_interaction_norm
+
+The synthetic side has ONE looking channel where the real side has two, so
+the real fixation and cursor weights collapse onto `fixation_prob` and the
+interaction weight carries across unchanged. Both numbers are derived from
+`_MODE_WEIGHTS` by `synthetic_weights`, never written down a second time:
+retuning the real weights moves the synthetic ones automatically, which is
+the whole point of the coupling.
+
+The synthetic interaction channel is `purchase_share`: a simulated shopper
+who buys a sku necessarily picked it up and added it to cart, which is what
+the real `interaction` channel records. Each sku's share is credited to the
+slot it occupies **in the resolved planogram passed in** -- a sku moves
+between slots from variant to variant, so the map is looked up per planogram
+and never assumed.
+
 Across sessions (SPEC M5): `trimmed_mean` (10 % per tail) is the panel's
 point estimate and `bootstrap_ci` (1,000 resamples -> 95 % CI) is its
 uncertainty. Those two use numpy for speed; `fuse_session` itself remains
 stdlib-only.
 """
 
-from typing import Mapping, Sequence
+from typing import Any, Mapping, Sequence
 
 import numpy as np
 
@@ -146,6 +176,155 @@ def fuse_session(
     }
 
 
+def synthetic_weights(mode: str = DEFAULT_MODE) -> tuple[float, float]:
+    """`(looking_weight, interaction_weight)` for the synthetic side of the
+    comparison, DERIVED from `_MODE_WEIGHTS` -- there is one weight table in
+    this module, never two.
+
+    The real formula has two looking channels (fixation dwell and cursor
+    dwell) and one interaction channel; a SimResult has one looking channel
+    (`fixation_prob`) and one interaction channel (`purchase_share`). So the
+    two real looking weights are summed onto the single synthetic looking
+    channel and the interaction weight is carried across unchanged:
+
+        cursor_only: (0.0 + 0.7, 0.3) -> (0.7, 0.3)
+        webcam:      (0.5 + 0.3, 0.2) -> (0.8, 0.2)
+
+    Retuning `_MODE_WEIGHTS` therefore retunes the synthetic side in the same
+    edit, which is what keeps the two sides comparable.
+    """
+    if mode not in _MODE_WEIGHTS:
+        raise ValueError(
+            f"unknown fusion mode {mode!r}; expected one of {sorted(_MODE_WEIGHTS)}"
+        )
+    fixation_weight, cursor_weight, interaction_weight = _MODE_WEIGHTS[mode]
+    return fixation_weight + cursor_weight, interaction_weight
+
+
+def purchase_slot_matrix(
+    planogram: Mapping[str, Any],
+    slot_ids: Sequence[str],
+    sku_ids: Sequence[str],
+) -> np.ndarray:
+    """`(len(sku_ids), len(slot_ids))` matrix crediting each sku's purchase
+    share to the slot it occupies in `planogram`.
+
+    This is the one place the sku -> slot credit rule is written down;
+    `fuse_synthetic` and `analytics/calibration.py` both go through it, so the
+    scalar and the vectorised paths cannot drift apart.
+
+    The map comes from the resolved planogram handed in, never from a cached
+    table: variant B moves SKU_008 from the bottom shelf to eye level, so the
+    same sku's purchases belong to a different slot under a different variant.
+
+    A sku in no slot of `slot_ids` gets an all-zero row and so contributes
+    nothing -- not to any slot, and not to the denominator. The planogram
+    model gives a sku at most one slot (`api/app/resolve.py`'s `move_sku`
+    relies on it), but if one were listed in several its share is divided
+    equally between them rather than counted once per slot, so the credit rule
+    is total-preserving either way.
+    """
+    slot_index = {slot_id: index for index, slot_id in enumerate(slot_ids)}
+
+    holders: dict[str, list[int]] = {}
+    for bay in planogram["bays"]:
+        for shelf in bay["shelves"]:
+            for slot in shelf["slots"]:
+                sku_id = slot.get("sku_id")
+                index = slot_index.get(slot["slot_id"])
+                if sku_id is None or index is None:
+                    continue
+                holders.setdefault(sku_id, []).append(index)
+
+    matrix = np.zeros((len(sku_ids), len(slot_ids)), dtype=float)
+    for row, sku_id in enumerate(sku_ids):
+        columns = holders.get(sku_id)
+        if columns:
+            matrix[row, columns] = 1.0 / len(columns)
+    return matrix
+
+
+def fuse_synthetic_rows(
+    fixation_rows: np.ndarray,
+    slot_purchase_rows: np.ndarray,
+    *,
+    mode: str = DEFAULT_MODE,
+) -> np.ndarray:
+    """The synthetic fusion formula, applied to a whole stack of candidates.
+
+    `fixation_rows` and `slot_purchase_rows` are both `(n, len(slot_ids))`
+    arrays already expressed over the same slot vocabulary -- raw
+    `fixation_prob` and purchase share already credited to slots by
+    `purchase_slot_matrix`. Each is normalised over its own row and the two
+    are blended by `synthetic_weights(mode)`.
+
+    `fuse_synthetic` is a one-row call into this function and
+    `analytics/calibration.py` passes all 1,771 grid candidates at once, so
+    the per-experiment answer and the per-candidate answer come from
+    identical arithmetic and the grid search costs two array operations
+    rather than 1,771 re-simulations.
+    """
+    looking_weight, interaction_weight = synthetic_weights(mode)
+    return (
+        looking_weight * _normalise_rows(fixation_rows)
+        + interaction_weight * _normalise_rows(slot_purchase_rows)
+    )
+
+
+def fuse_synthetic(
+    sim_result: Mapping[str, Any],
+    planogram: Mapping[str, Any],
+    slot_ids: Sequence[str],
+    *,
+    mode: str = DEFAULT_MODE,
+) -> dict[str, float]:
+    """Fuse one SimResult into a per-slot attention vector comparable, term
+    for term, with `fuse_session`'s output.
+
+    `sim_result` is a SimResult from `sim/simulator.py` -- usually the
+    share-weighted population result from `combine()`. Only two of its fields
+    are read: `fixation_prob` (the looking channel, keyed by slot id and
+    covering ad slots too) and `purchase_share` (the interaction channel,
+    keyed by sku id).
+
+    `planogram` is the RESOLVED planogram the SimResult was produced over; it
+    supplies the sku -> slot map (see `purchase_slot_matrix`).
+
+    `slot_ids` is the same slot vocabulary the real side was fused over, and
+    every id in it is a key of the returned dict. Entries of `fixation_prob`
+    outside that vocabulary (ad slots, or slots from another revision) are
+    dropped and do not enter any denominator, exactly as `fuse_session` drops
+    events naming an unknown slot.
+
+    `mode` selects the weights, and must be the mode the real side was fused
+    with -- comparing a webcam-fused panel against a cursor-only-fused
+    synthetic vector would reintroduce the mismatch this function exists to
+    remove. An unknown mode raises ValueError rather than fusing with the
+    wrong weights.
+
+    Every division is guarded the same way `fuse_session` guards its own: a
+    component with nothing in it normalises to an all-zero vector rather than
+    NaN, and the weights are NOT renormalised to compensate. A SimResult in
+    which nobody bought anything therefore sums to the looking weight alone,
+    not to 1 -- the same honest record that it carried less signal.
+    """
+    sku_ids = list(sim_result["purchase_share"])
+
+    fixation_rows = np.array(
+        [[float(sim_result["fixation_prob"].get(slot_id, 0.0)) for slot_id in slot_ids]],
+        dtype=float,
+    ).reshape(1, len(slot_ids))
+    purchase_rows = np.array(
+        [[float(sim_result["purchase_share"][sku_id]) for sku_id in sku_ids]],
+        dtype=float,
+    ).reshape(1, len(sku_ids))
+
+    slot_purchase_rows = purchase_rows @ purchase_slot_matrix(planogram, slot_ids, sku_ids)
+    fused = fuse_synthetic_rows(fixation_rows, slot_purchase_rows, mode=mode)
+
+    return dict(zip(slot_ids, fused[0].tolist()))
+
+
 def trimmed_mean(
     per_session: Sequence[Mapping[str, float]],
     slot_ids: Sequence[str],
@@ -238,6 +417,19 @@ def _normalise(totals: Mapping[str, float], slot_ids: Sequence[str]) -> dict[str
     if grand_total <= 0:
         return {slot_id: 0.0 for slot_id in slot_ids}
     return {slot_id: totals[slot_id] / grand_total for slot_id in slot_ids}
+
+
+def _normalise_rows(rows: np.ndarray) -> np.ndarray:
+    """The array form of `_normalise`: scale each row to sum to 1.
+
+    Identical rule, identical guard -- a row whose total is 0 or less becomes
+    an all-zero row rather than NaN -- so the synthetic side and the real side
+    normalise the same way. `_normalise` stays dict-based because
+    `fuse_session` runs on the live engine's hot path and is stdlib-only;
+    this one exists so the whole calibration grid normalises in one operation.
+    """
+    totals = rows.sum(axis=-1, keepdims=True)
+    return np.divide(rows, totals, out=np.zeros_like(rows), where=totals > 0)
 
 
 def _session_matrix(
