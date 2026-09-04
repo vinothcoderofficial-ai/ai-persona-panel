@@ -11,6 +11,7 @@ import { SessionSocket } from "@/capture/SessionSocket";
 import { PlanogramScene } from "@/store/PlanogramScene";
 import Experiment from "@/dashboard/Experiment";
 import { SpectatorView } from "@/spectator/SpectatorView";
+import { WhatIfPanel } from "@/whatif/WhatIfPanel";
 
 type LoadState =
   | { status: "loading" }
@@ -188,8 +189,24 @@ const isDashboard = window.location.hash.startsWith("#/dashboard");
 // query string, the way Experiment does.
 const isSpectator = window.location.hash.startsWith("#/spectator");
 
+// #/whatif is the S8 planning screen: change one thing about the shelf and
+// re-run 10,000 synthetic shoppers per persona against it. It creates no
+// session and measures nobody, so it needs none of the capture flow above; it
+// opens the base planogram through the patch-free variant A, because
+// POST /whatif applies its patches to the base planogram and the controls have
+// to reason about that same layout.
+const isWhatIf = window.location.hash.startsWith("#/whatif");
+
 // No StrictMode: its double-mounted effects would open two sessions, and write
 // two prediction locks, on every page load.
 createRoot(container).render(
-  isSpectator ? <SpectatorView /> : isDashboard ? <Experiment /> : <App />,
+  isWhatIf ? (
+    <WhatIfPanel />
+  ) : isSpectator ? (
+    <SpectatorView />
+  ) : isDashboard ? (
+    <Experiment />
+  ) : (
+    <App />
+  ),
 );
