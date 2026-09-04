@@ -4,7 +4,10 @@ Population-scale shopper behaviour: a browser 3D shelf store where real people s
 
 NIQ Innovation Council hackathon · team Media Mavericks.
 
-> Status: skeleton. Modules are built session by session per `docs/PLAN.md`.
+> Status: **Phase 0 baseline complete** (`v0.1-baseline`) — S1–S5 done. The 3D store,
+> the API with server-side `resolve()`, the vectorised simulator, fusion/metrics and the
+> experiment dashboard all work end to end. Phase 1's five parallel tracks start from this
+> tag. Remaining modules are built session by session per `docs/PLAN.md`.
 
 ## Three outputs, in increasing value
 
