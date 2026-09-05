@@ -61,6 +61,10 @@ make web        # terminal 2
 Open `http://localhost:5173/?skip_capture=1&variant=A` in the shopper window. Split-screen with
 `data/planograms/demo_aisle.json` in an editor.
 
+Keep `http://localhost:5173/#/home` open on the operator monitor for the whole recording. It links
+to every screen and to the last session this browser opened, so no URL and no uuid is ever typed on
+camera. Never put it on the shopper's monitor — that screen stays clean.
+
 - `?skip_capture=1` jumps straight to the store. It records `consent: false` — the truth, since
   nobody sat down and agreed to anything — which makes the session self-rejecting at the gate.
   **Say this on camera.** It is a developer shortcut, not a shopper.
@@ -82,11 +86,18 @@ a person shopping it, this is what happens if we move something.
 3. Camera check → **"Continue without the camera"**. This sets `mode: "cursor_only"` with
    `consent: true`: a real, gate-eligible session.
 4. The store opens. `POST /sessions` has already written `predictions/{session_id}.json`.
-5. Get the session id and open the spectator window on the second monitor at
-   `http://localhost:5173/#/spectator?session=<id>`. The id is generated in the browser and is
-   **not** in the URL and not logged to the console, so read it from one of these — decide which
-   before you start recording, and have the command ready:
-   - the newest file in `predictions/` (`ls -t predictions | head -1` → `{session_id}.json`), or
+5. On the second monitor, open `http://localhost:5173/#/spectator`. With no `?session=` it follows
+   the last session started in this browser, which is the one that just opened — so there is no id
+   to read and nothing to type. The screen says on itself that it is following that session.
+
+   Prefer `#/home` on that monitor if you want the id visible on camera: its **last session** box
+   shows the uuid and links straight through to both the spectator and the dashboard.
+
+   Fallbacks, if the second window is a different browser or profile (`localStorage` is per-origin
+   per-profile, so it will not carry across one) — decide which before you start recording:
+   - the newest file in `predictions/` (`ls -t predictions | head -1` → `{session_id}.json`); a
+     consented session lands there, while rehearsal runs go to `predictions/dev/` and cannot be
+     picked up by mistake, or
    - the `POST /sessions` request in the browser's DevTools Network tab.
 
    A spectator joining mid-session is sent the current snapshot on its first frame, so the badge

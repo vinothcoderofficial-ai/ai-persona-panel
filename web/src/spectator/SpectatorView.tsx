@@ -14,6 +14,7 @@ import {
   resolveLock,
   type LockView,
 } from "@/spectator/lock";
+import { readLastSession, type LastSession } from "@/session/lastSession";
 import {
   SpectatorSocket,
   type SpectatorSocketFactory,
@@ -25,6 +26,7 @@ import {
   FAKE,
   GREY,
   INK,
+  PANEL_BG,
   PANEL_BORDER,
   REAL,
   bigNumber,
@@ -161,6 +163,12 @@ export interface SpectatorViewProps {
    * never reject and never invent a lock: NO_LOCK is how "no lock" is said.
    */
   fetchPrediction?: (sessionId: string) => Promise<LockView>;
+  /**
+   * The last session this browser opened, used only when the URL names none.
+   * Injected in tests; otherwise the note `main.tsx` leaves in localStorage
+   * when the store creates a session.
+   */
+  readStoredSession?: () => LastSession | null;
   /** The spectator's clock, used to age the gaze trail. */
   now?: () => number;
   /** The wall clock on the recording. */
@@ -180,7 +188,30 @@ export function SpectatorView(props: SpectatorViewProps) {
   }
   const query = fromQuery.current;
 
-  const sessionId = props.sessionId === undefined ? query.sessionId : props.sessionId;
+  /**
+   * The session id, and where it came from.
+   *
+   * It is generated in the browser by `crypto.randomUUID()` when the store
+   * opens, and this window is a different window - usually on a different
+   * monitor - so "which session?" used to be answered by reading a uuid off a
+   * network tab and typing it in. When the URL names no session, this page
+   * follows the last session the store opened in this browser instead.
+   *
+   * A named session always wins, and a followed one is never silent: the note
+   * below says which session is on screen and that nobody asked for it by name.
+   * Showing one session's gaze under another session's name is the one failure
+   * this page must not have.
+   */
+  const storedSession = useRef<LastSession | null | undefined>(undefined);
+  if (storedSession.current === undefined) {
+    storedSession.current = (props.readStoredSession ?? readLastSession)();
+  }
+  const stored = storedSession.current ?? null;
+  const namedSessionId = props.sessionId === undefined ? query.sessionId : props.sessionId;
+  const named =
+    namedSessionId !== null && namedSessionId.length > 0 ? namedSessionId : null;
+  const followed = named === null ? stored : null;
+  const sessionId = named ?? followed?.session_id ?? null;
   const askedForFake = props.fake ?? query.fake;
   const queryLock = props.lock ?? query.lock;
   const lockUrl = props.lockUrl === undefined ? query.lockUrl : props.lockUrl;
@@ -336,6 +367,16 @@ export function SpectatorView(props: SpectatorViewProps) {
         <ClockOverlay now={props.wallClock} />
       </header>
 
+      {followed !== null && (
+        <div data-testid="spectator-followed-session" style={followedPanelStyle}>
+          This URL named no session, so this screen is following the last session started in
+          this browser: <code style={mono}>{followed.session_id}</code> — variant{" "}
+          {followed.variant_id}, started {followed.started_at}. Open{" "}
+          <code style={mono}>#/spectator?session=&lt;session_id&gt;</code> to watch a
+          different one.
+        </div>
+      )}
+
       {!hasSession && (
         <div data-testid="spectator-no-session" style={alertPanelStyle}>
           No session to watch. Open this page as{" "}
@@ -476,6 +517,21 @@ const alertPanelStyle: CSSProperties = {
   borderRadius: 8,
   border: `1px solid ${ALERT}`,
   background: "#2a1512",
+  color: INK,
+  fontSize: 14,
+};
+
+/**
+ * Not the red alert panel: nothing is wrong. It says the screen is following
+ * rather than obeying, which a viewer has to be able to see - a session id in
+ * the header is otherwise indistinguishable from one somebody asked for.
+ */
+const followedPanelStyle: CSSProperties = {
+  margin: "0 0 14px",
+  padding: "10px 14px",
+  borderRadius: 8,
+  border: `1px solid ${PANEL_BORDER}`,
+  background: PANEL_BG,
   color: INK,
   fontSize: 14,
 };

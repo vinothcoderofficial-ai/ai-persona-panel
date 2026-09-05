@@ -168,15 +168,23 @@ validation, vitest with `tsc`, and a third job that re-runs `scripts/eval.py` an
 the repo describing numbers the code no longer produces. `LLM_OFFLINE=1` is set for the whole
 workflow: nothing in CI may contact a model.
 
-Screens, once both servers are up:
+Screens, once both servers are up. **Start at `#/home`** — it links to everything below and
+carries the id of the last session this browser opened, so no UUID is ever typed by hand.
+Parameters may be written on either side of the `#`; on a collision the hash wins.
 
 | URL | What it is |
 |---|---|
-| `http://localhost:5173/` | The capture flow, then the store. This is the shopper's screen: no gaze dot, no metrics. |
+| `http://localhost:5173/#/home` | Operator launcher. Every screen below, the four arms described from `data/variants/`, and the last session this browser opened. Nobody is measured on this page. |
+| `http://localhost:5173/` | The capture flow, then the store. This is the shopper's screen: no gaze dot, no metrics, no navigation. |
+| `…/?variant=<A\|B\|C\|D>` | The store on one arm — the shape `scripts/collect_link.py` emits. |
+| `…/?variant=<id>&skip_capture=1` | Rehearsal only: straight to the shelves in `cursor_only`, recording `consent: false`, which SessionGate rejects as `no_consent`. Its prediction lock goes to the gitignored `predictions/dev/`, never into the committed evidence. |
 | `…/#/spectator?session=<id>` | Second monitor. Gaze trail, live heatmap vs the locked prediction, agreement meter, prediction badge, clock. |
+| `…/#/spectator` | The same, following the last session started in this browser. It says on screen that it is doing so. |
 | `…/#/spectator?session=demo&fake=1` | The server's synthetic demo stream, for when no session is running. It draws itself with a yellow border and a banner so a fake frame can never be mistaken for a real one. |
 | `…/#/whatif` | Move a SKU or a creative, re-run the population, read the lift. |
 | `…/#/dashboard?session=<id>&variant=<id>` | Real vs synthetic attention bars, Spearman, purchase-share MAE for one session. |
+| `…/#/dashboard?experiment=<id>` | An experiment that has already been run. |
+| `…/#/dashboard` | Follows the last session started in this browser, and says so. |
 
 Copy `.env.example` to `.env` and add an LLM key before generating persona policies or traces.
 `LLM_OFFLINE=1` serves everything from `data/cache/` with no network.

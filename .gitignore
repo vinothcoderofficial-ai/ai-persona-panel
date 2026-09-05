@@ -15,5 +15,6 @@ docs/figures/*.png
 web/public/textures/*.png
 data/vision/*.mp4
 data/vision/overlay_frames/
+predictions/dev/
 .idea/
 .vscode/

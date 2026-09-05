@@ -1,5 +1,13 @@
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
+import {
+  Component,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import type { CSSProperties, PointerEvent as ReactPointerEvent, ReactNode } from "react";
 import { Canvas } from "@react-three/fiber";
 import type { Creative, Planogram, Sku, Slot } from "@/contracts/planogram.schema";
 import type { Session } from "@/contracts/session.schema";
@@ -69,6 +77,86 @@ function errorMessage(error: unknown): string {
 }
 
 /**
+ * Mounts once every suspended descendant inside the same `<Suspense>`
+ * boundary has resolved - concretely, once every `ProductSlot` below it has
+ * finished loading its pack texture through `useTexture`. React does not
+ * create this fiber, and does not run this effect, while any sibling is
+ * still suspended: the boundary swaps from fallback to real children in a
+ * single commit, all together, never partially. That makes the mount effect
+ * below a genuine readiness signal read from React's own bookkeeping, rather
+ * than a guess - unlike a fixed delay, it cannot fire early on a slow
+ * connection and cannot fire late on a fast one.
+ */
+function SceneReadySentinel({ onReady }: { onReady: () => void }) {
+  useEffect(() => {
+    onReady();
+  }, [onReady]);
+  return null;
+}
+
+interface SceneErrorBoundaryProps {
+  onError: (error: unknown) => void;
+  children: ReactNode;
+}
+
+interface SceneErrorBoundaryState {
+  failed: boolean;
+}
+
+/**
+ * The one class component in a file otherwise built entirely from function
+ * components: `componentDidCatch`/`getDerivedStateFromError` have no hook
+ * equivalent, so an error boundary has to be a class.
+ *
+ * It has to live *inside* `<Canvas>`, wrapping `<Suspense>`, not outside it in
+ * the DOM tree. `@react-three/fiber` renders its children through its own
+ * `react-reconciler` instance, with its own fiber tree - an error boundary
+ * sitting in the outer DOM tree cannot see an error thrown by a component the
+ * R3F reconciler is rendering, no matter how the two are nested as DOM
+ * elements. This is also why its fallback below is `null` rather than a
+ * `<div>`: a plain HTML element is not a three.js object, and the R3F
+ * reconciler would throw trying to construct one, right back inside the
+ * boundary that just caught the last error.
+ *
+ * The pack textures under `web/public/textures/` are `.gitignore`d and built
+ * by `make seed` - not committed - so a fresh clone (a judge's checkout, or
+ * anyone who runs `make web` before `make setup`) has none. `ProductSlot`'s
+ * `useTexture` then 404s for real: `suspend-react` throws a *pending promise*
+ * first (which `<Suspense>` handles correctly, see `SceneReadySentinel`
+ * above), but once that promise settles as a rejection, the retry throws the
+ * rejection itself - a plain `Error`, not a thenable - which `<Suspense>`
+ * does not catch and passes straight through to here. Before this component
+ * existed, nothing caught it anywhere in `web/src`, and React unmounted the
+ * entire tree to a blank white page, taking the HUD, cart and checkout down
+ * with it even though none of them touched a texture.
+ *
+ * This reports outward through a plain `onError` callback prop instead of
+ * rendering its own message - exactly how `StationController`, a few lines up
+ * in this same file, already reports rects and station changes outward
+ * through callback props from inside the same Canvas tree. `PlanogramScene`
+ * turns that report into the visible, actionable overlay, in the DOM tree
+ * where an actual message can be shown.
+ */
+class SceneErrorBoundary extends Component<SceneErrorBoundaryProps, SceneErrorBoundaryState> {
+  state: SceneErrorBoundaryState = { failed: false };
+
+  static getDerivedStateFromError(): SceneErrorBoundaryState {
+    return { failed: true };
+  }
+
+  componentDidCatch(error: unknown): void {
+    // Not swallowed: still on the console for whoever is at a terminal, in
+    // addition to the on-screen message this hands to PlanogramScene.
+    console.error("PlanogramScene: the 3D scene failed to render", error);
+    this.props.onError(error);
+  }
+
+  render(): ReactNode {
+    return this.state.failed ? null : this.props.children;
+  }
+}
+
+/**
  * The shop screen: the 3D store plus the shopper's own controls.
  *
  * It renders the resolved planogram exactly as the server sent it — there is no
@@ -91,6 +179,22 @@ export function PlanogramScene({
   const [cart, setCart] = useState<CartLine[]>([]);
   const [checkedOut, setCheckedOut] = useState(false);
   const [finishError, setFinishError] = useState<string | null>(null);
+  // False until `SceneReadySentinel` proves every pack texture below the
+  // <Suspense> boundary has resolved. Before this gate existed,
+  // `<Suspense fallback={null}>` meant the canvas was blank and had nothing
+  // for the raycaster to hit for the 1-3 seconds textures take to load, and a
+  // click in that window vanished with no error and no feedback - reproduced
+  // by hand, twice, on a real store. See the overlay this gates, below.
+  const [sceneReady, setSceneReady] = useState(false);
+  const onSceneReady = useCallback(() => setSceneReady(true), []);
+  // Set only by `SceneErrorBoundary`, when every texture below it has failed
+  // to load rather than merely being slow. `sceneReady` is stuck `false`
+  // forever once this happens - the boundary's fallback is `null`, so
+  // `SceneReadySentinel` can never mount again - which is exactly why the
+  // overlay below checks `sceneError` first: a permanent "Loading shelves…"
+  // over a scene that has already failed for good would be its own bug.
+  const [sceneError, setSceneError] = useState<string | null>(null);
+  const onSceneError = useCallback((error: unknown) => setSceneError(errorMessage(error)), []);
   const nextLineKey = useRef(1);
 
   const cursorRef = useRef<CursorTracker | null>(null);
@@ -360,22 +464,78 @@ export function PlanogramScene({
           onExit={onStationExit}
           onRects={setRects}
         />
-        <Suspense fallback={null}>
-          {planogram.bays.map((bay, bayIndex) => (
-            <Bay
-              key={bay.bay_id}
-              planogram={planogram}
-              bayIndex={bayIndex}
-              skus={skus}
-              creatives={creatives}
-              hoveredSlotId={hoveredSlotId}
-              onSlotEnter={onSlotEnter}
-              onSlotLeave={onSlotLeave}
-              onSlotSelect={onSlotSelect}
-            />
-          ))}
-        </Suspense>
+        <SceneErrorBoundary onError={onSceneError}>
+          <Suspense fallback={null}>
+            {planogram.bays.map((bay, bayIndex) => (
+              <Bay
+                key={bay.bay_id}
+                planogram={planogram}
+                bayIndex={bayIndex}
+                skus={skus}
+                creatives={creatives}
+                hoveredSlotId={hoveredSlotId}
+                onSlotEnter={onSlotEnter}
+                onSlotLeave={onSlotLeave}
+                onSlotSelect={onSlotSelect}
+              />
+            ))}
+            <SceneReadySentinel onReady={onSceneReady} />
+          </Suspense>
+        </SceneErrorBoundary>
       </Canvas>
+
+      {/*
+        Placed in DOM order right after <Canvas> and before the HUD, cart,
+        card and chevron panels below, so those keep painting on top of it and
+        stay clickable throughout - this only ever covers the canvas, which is
+        the one thing behind all of them. Overlaying the canvas with a real,
+        visible, hit-testable element (rather than leaving it bare) is what
+        stops the swallowed click: a pointer event during loading now always
+        lands on *something* - this div - instead of falling through to a
+        <canvas> whose scene graph has nothing in it yet for the raycaster to
+        hit. It carries the default `pointerEvents: "auto"` for exactly that
+        reason; setting it to "none" would look identical and reintroduce the
+        bug.
+
+        `sceneError` is checked first and is exclusive with the loading state
+        below, never layered under it: once SceneErrorBoundary has caught,
+        `sceneReady` can never become true (its <Suspense> subtree, sentinel
+        included, is gone for good), so without this ordering the loading
+        overlay would sit on screen forever, claiming to load a scene that has
+        already permanently failed.
+      */}
+      {sceneError !== null ? (
+        <div style={sceneOverlayStyle} data-testid="scene-error-overlay">
+          <div style={sceneOverlayPanelStyle}>
+            <div style={{ fontSize: 18, fontWeight: 600, color: "#ff9a8a" }}>
+              The shelves could not be loaded
+            </div>
+            <div style={{ marginTop: 8, opacity: 0.85 }}>
+              The product pack textures failed to load. They are generated,
+              not committed to the repo, so a fresh clone has none until{" "}
+              <code>make seed</code> has run.
+            </div>
+            <div style={{ marginTop: 10, opacity: 0.6 }}>
+              Run <code>make seed</code> (Windows: <code>make.bat seed</code>
+              ), then reload this page.
+            </div>
+            <div style={{ marginTop: 12, opacity: 0.45, fontSize: 12 }}>
+              {sceneError}
+            </div>
+          </div>
+        </div>
+      ) : (
+        !sceneReady && (
+          <div style={sceneOverlayStyle} data-testid="scene-loading-overlay">
+            <div style={sceneOverlayPanelStyle}>
+              <div style={{ fontSize: 18, fontWeight: 600 }}>Loading shelves…</div>
+              <div style={{ marginTop: 8, opacity: 0.7, fontWeight: 400 }}>
+                Product packs are still loading. One moment.
+              </div>
+            </div>
+          </div>
+        )
+      )}
 
       <div style={hudStyle}>
         <div style={{ fontSize: 18, fontWeight: 600 }}>{planogram.name}</div>
@@ -582,6 +742,29 @@ const cartLineStyle: CSSProperties = {
   gap: 8,
   alignItems: "center",
   padding: "3px 0",
+};
+
+// Shared shell for both scene overlays - "still loading" and "failed to
+// load" - which are mutually exclusive states of the same canvas-covering
+// gate (see the `sceneError`/`sceneReady` branch above), never shown at once.
+const sceneOverlayStyle: CSSProperties = {
+  position: "absolute",
+  inset: 0,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  // Opaque, and the same colour as the scene's own `<color attach="background">`
+  // (set outside the Suspense boundary, so it is already applied while this
+  // shows): the handoff from overlay to shelves is a colour match, not a flash.
+  background: "#151920",
+};
+
+const sceneOverlayPanelStyle: CSSProperties = {
+  padding: "24px 32px",
+  borderRadius: 12,
+  background: "#12151b",
+  border: "1px solid rgba(232,234,237,0.2)",
+  textAlign: "center",
 };
 
 const doneOverlayStyle: CSSProperties = {

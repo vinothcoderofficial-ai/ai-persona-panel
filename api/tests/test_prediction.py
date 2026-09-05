@@ -25,11 +25,12 @@ from api.app.db import SessionRecord
 ROOT = Path(__file__).resolve().parents[2]
 
 
-def valid_session_body(variant_id: str = "A", mode: str = "cursor_only") -> dict:
+def valid_session_body(variant_id: str = "A", mode: str = "cursor_only",
+                       consent: bool = True) -> dict:
     return {
         "session_id": str(uuid.uuid4()),
         "variant_id": variant_id,
-        "consent": True,
+        "consent": consent,
         "started_at": datetime.now(timezone.utc).isoformat(),
         "screen_w": 1440,
         "screen_h": 900,
@@ -44,8 +45,8 @@ def prediction_validator() -> Draft7Validator:
     return Draft7Validator(schema)
 
 
-def create_session(client, variant_id: str = "A") -> tuple[str, dict]:
-    body = valid_session_body(variant_id)
+def create_session(client, variant_id: str = "A", *, consent: bool = True) -> tuple[str, dict]:
+    body = valid_session_body(variant_id, consent=consent)
     resp = client.post("/sessions", json=body)
     assert resp.status_code == 201, resp.text
     return body["session_id"], resp.json()
@@ -53,6 +54,12 @@ def create_session(client, variant_id: str = "A") -> tuple[str, dict]:
 
 def read_lock(predictions_dir: Path, session_id: str) -> dict:
     return json.loads((predictions_dir / f"{session_id}.json").read_text(encoding="utf-8"))
+
+
+def read_dev_lock(predictions_dir: Path, session_id: str) -> dict:
+    return json.loads(
+        (predictions_dir / "dev" / f"{session_id}.json").read_text(encoding="utf-8")
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -121,6 +128,119 @@ def test_no_lock_check_does_not_replace_the_existing_404_and_422(client, predict
         json=[{"t_ms": 1000, "type": "not_a_real_type", "station_id": "B1", "payload": {}}],
     )
     assert resp.status_code == 422
+
+
+# ---------------------------------------------------------------------------
+# DEV SESSIONS: `consent: false` locks land in predictions/dev/, never
+# predictions/ (the bug this session fixes - a rehearsal or dev page load
+# must not be able to move RESULTS.md, because predictions/ is committed
+# evidence and predictions/dev/ is gitignored). The ordering invariant above
+# must hold identically for these sessions - only the directory differs.
+# ---------------------------------------------------------------------------
+
+
+def test_consenting_sessions_lock_lands_in_predictions_not_dev(client, predictions_dir):
+    """The unchanged path: a real shopper's lock is committed evidence and
+    belongs directly under predictions/, never under the gitignored dev/."""
+    session_id, _ = create_session(client, consent=True)
+
+    assert (predictions_dir / f"{session_id}.json").is_file()
+    assert not (predictions_dir / "dev" / f"{session_id}.json").exists()
+
+
+def test_non_consenting_sessions_lock_lands_in_dev_not_predictions(client, predictions_dir):
+    """`consent: false` means this session can never be evidence -
+    scripts/anonymise_sessions.py withholds it entirely and SessionGate (S11)
+    rejects it with `no_consent` - so its lock must not sit in the directory
+    scripts/eval.py treats as committed evidence. Otherwise a rehearsal or
+    development page load changes `RESULTS.md`'s lock count, exactly the bug
+    this test guards against.
+    """
+    session_id, created = create_session(client, consent=False)
+
+    assert (predictions_dir / "dev" / f"{session_id}.json").is_file()
+    assert not (predictions_dir / f"{session_id}.json").exists()
+
+    # Otherwise identical to a consenting lock: a valid SPEC 4.6 document,
+    # still returned in the POST /sessions response.
+    lock = read_dev_lock(predictions_dir, session_id)
+    errors = sorted(prediction_validator().iter_errors(lock), key=str)
+    assert not errors, [e.message for e in errors]
+    assert created["prediction_id"] == lock["prediction_id"]
+
+
+def test_lock_exists_and_read_lock_find_locks_in_either_directory(client, predictions_dir):
+    """The three production readers - the events gate, the websocket ingest
+    and GET /sessions/{id}/prediction - are keyed by session_id alone and
+    never see the consent flag, so they must find a lock regardless of which
+    directory write_lock chose for it."""
+    canonical_id, _ = create_session(client, consent=True)
+    dev_id, _ = create_session(client, consent=False)
+
+    assert prediction_module.lock_exists(canonical_id)
+    assert prediction_module.lock_exists(dev_id)
+
+    assert prediction_module.read_lock(canonical_id) == read_lock(predictions_dir, canonical_id)
+    assert prediction_module.read_lock(dev_id) == read_dev_lock(predictions_dir, dev_id)
+
+
+def test_lock_is_written_before_any_event_is_accepted_for_a_dev_session(client, predictions_dir):
+    """The ordering invariant (CLAUDE.md, non-negotiable) holds identically for
+    a dev session: consent picks the directory, never the ordering. A developer
+    session still has to exercise the real locking mechanism end to end."""
+    session_id, _created = create_session(client, consent=False)
+    lock_file = predictions_dir / "dev" / f"{session_id}.json"
+
+    # The dev lock exists the moment POST /sessions has returned - before this
+    # test (or a rehearsal) has had any chance to post an event.
+    assert lock_file.exists(), "POST /sessions must write the dev lock before it returns"
+    locked_before_events = json.loads(lock_file.read_text(encoding="utf-8"))
+
+    resp = client.post(
+        f"/sessions/{session_id}/events",
+        json=[{"t_ms": 1000, "type": "station_enter", "station_id": "B1", "payload": {}}],
+    )
+    assert resp.status_code == 200, resp.text
+    assert resp.json() == {"accepted": 1}
+
+    # And the accepted event did not change it.
+    assert json.loads(lock_file.read_text(encoding="utf-8")) == locked_before_events
+
+
+def test_events_rejected_after_the_dev_lock_is_removed(client, predictions_dir):
+    """Mirrors test_events_rejected_after_the_lock_is_removed for the dev
+    directory: the events gate must not special-case either location."""
+    session_id, _ = create_session(client, consent=False)
+    (predictions_dir / "dev" / f"{session_id}.json").unlink()
+
+    resp = client.post(
+        f"/sessions/{session_id}/events",
+        json=[{"t_ms": 1000, "type": "station_enter", "station_id": "B1", "payload": {}}],
+    )
+    assert resp.status_code == 409, resp.text
+
+
+def test_reposting_a_dev_session_does_not_rewrite_or_relocate_its_lock(client, predictions_dir):
+    """Re-registering a dev session must reuse the existing dev/ lock exactly
+    as a consenting session reuses its predictions/ lock: never rewritten, and
+    never quietly promoted into the committed evidence directory on a second
+    POST just because write_lock's existing-lock check runs through
+    read_lock."""
+    body = valid_session_body(consent=False)
+    session_id = body["session_id"]
+    assert client.post("/sessions", json=body).status_code == 201
+    original = read_dev_lock(predictions_dir, session_id)
+
+    client.post(f"/sessions/{session_id}/events",
+                json=[{"t_ms": 5, "type": "station_enter", "station_id": "B1", "payload": {}}])
+
+    body["screen_w"] = 1920
+    resp = client.post("/sessions", json=body)
+    assert resp.status_code == 201, resp.text
+
+    assert read_dev_lock(predictions_dir, session_id) == original
+    assert not (predictions_dir / f"{session_id}.json").exists()
+    assert resp.json()["prediction_id"] == original["prediction_id"]
 
 
 # ---------------------------------------------------------------------------

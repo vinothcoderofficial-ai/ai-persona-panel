@@ -7,9 +7,11 @@ What this router *does* own is the ordering CLAUDE.md calls non-negotiable:
 **the prediction lock is written on POST /sessions, before any event is
 accepted.** Two things enforce it structurally rather than by convention:
 
-  1. `create_session` writes `predictions/{session_id}.json` BEFORE it writes
-     the session row, so a session that exists in the database always has a
-     lock, and a failed simulation leaves neither.
+  1. `create_session` writes `predictions/{session_id}.json` (or, for a
+     `consent: false` development/rehearsal session, the gitignored
+     `predictions/dev/{session_id}.json` - see api/app/prediction.py's module
+     docstring) BEFORE it writes the session row, so a session that exists in
+     the database always has a lock, and a failed simulation leaves neither.
   2. `post_events` refuses (409) a session with no lock, so an event can never
      be recorded ahead of the commitment it will be judged against. The same
      check guards the websocket ingest in `routers/ws.py`.
@@ -78,6 +80,11 @@ def create_session(body: Dict[str, Any], session: Session = Depends(get_session)
     the session document, where schemas/session.schema.json has a field for it)
     plus the badge the spectator screen displays - the first 8 hex characters
     of the hash and `created_at` (SPEC 4.6).
+
+    `body["consent"]` decides which directory the lock is written to, not
+    whether it is written: see api/app/prediction.py's module docstring for
+    why a `consent: false` session still needs a real lock, just not one
+    sitting in the committed evidence directory.
     """
     validator = get_validator("session.schema.json")
     errors = sorted(validator.iter_errors(body), key=str)
@@ -92,8 +99,11 @@ def create_session(body: Dict[str, Any], session: Session = Depends(get_session)
 
     # Before the session row exists, so no event can ever precede it. Returns
     # the original document unchanged if this session was registered before -
-    # a lock is evidence and is never re-timestamped.
-    lock = prediction.write_lock(session_id, variant_id, resolved)
+    # a lock is evidence and is never re-timestamped. `consent` decides only
+    # *where* this lands: predictions/ for a real shopper, the gitignored
+    # predictions/dev/ for a consent: false development or rehearsal session -
+    # see api/app/prediction.py's module docstring.
+    lock = prediction.write_lock(session_id, variant_id, resolved, consent=body["consent"])
 
     stored = {**body, "prediction_id": lock["prediction_id"]}
     record = session.get(SessionRecord, session_id)

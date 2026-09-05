@@ -14,6 +14,31 @@ structurally rather than by convention (CLAUDE.md):
     file, because re-timestamping a commitment after events had been recorded
     would destroy the very thing the lock is evidence of.
 
+
+Evidence lives in two places, never one
+----------------------------------------
+`predictions/` is committed evidence: every file in it is a claim that a real
+shopper was scored against a prediction locked before they started. But
+`POST /sessions` fires on every page load of the store, including development
+and rehearsal loads, and `web/src/main.tsx` marks exactly those with
+`consent: false` - nobody sat down and agreed to anything. That is also
+exactly what `scripts/anonymise_sessions.py` withholds from the panel entirely
+(`raw.get("consent") is not True`) and what the session gate (S11) rejects
+with `no_consent`. A session that can never be evidence must not sit in the
+evidence directory, so `write_lock()` sends a `consent: false` lock to
+`predictions/dev/` instead - gitignored, and invisible to `scripts/eval.py`'s
+non-recursive `predictions_dir.glob("*.json")` without eval.py needing to know
+this directory exists at all.
+
+`consent` picks *where* a lock is written, never *whether* or *when*: a dev
+session still runs through this exact function, in the exact ordering above,
+because exercising the real mechanism end to end is the whole reason to write
+its lock rather than skip it. And because `lock_exists()` and `read_lock()`
+are called with nothing but a `session_id` - the events endpoint and the
+websocket ingest do not carry the consent flag, and were not changed to - both
+check the canonical directory first and then `dev/`, so a caller never has to
+know or guess which one a given session landed in.
+
 The document is schemas/prediction.schema.json (SPEC 4.6).
 
 
@@ -98,22 +123,54 @@ def _directory(predictions_dir: Optional[Path]) -> Path:
     return Path(predictions_dir) if predictions_dir is not None else PREDICTIONS_DIR
 
 
+def _dev_directory(predictions_dir: Optional[Path]) -> Path:
+    """Where a `consent: false` session's lock goes (see module docstring).
+
+    Nested inside the canonical directory, so the one `predictions_dir`
+    override every test - and `scripts/eval.py --predictions-dir` - already
+    supports relocates the dev subdirectory right along with it.
+    """
+    return _directory(predictions_dir) / "dev"
+
+
 def lock_path(session_id: str, *, predictions_dir: Optional[Path] = None) -> Path:
     return _directory(predictions_dir) / f"{session_id}.json"
 
 
+def dev_lock_path(session_id: str, *, predictions_dir: Optional[Path] = None) -> Path:
+    return _dev_directory(predictions_dir) / f"{session_id}.json"
+
+
 def lock_exists(session_id: str, *, predictions_dir: Optional[Path] = None) -> bool:
-    """Is this session allowed to record events yet?"""
-    return lock_path(session_id, predictions_dir=predictions_dir).is_file()
+    """Is this session allowed to record events yet?
+
+    Checked in both directories (see module docstring): the events endpoint
+    and the websocket ingest call this with nothing but a `session_id`, so it
+    must not matter to them whether `write_lock` filed this one under
+    `predictions/` or `predictions/dev/`.
+    """
+    return (
+        lock_path(session_id, predictions_dir=predictions_dir).is_file()
+        or dev_lock_path(session_id, predictions_dir=predictions_dir).is_file()
+    )
 
 
 def read_lock(session_id: str, *,
               predictions_dir: Optional[Path] = None) -> Optional[Dict[str, Any]]:
-    """The locked prediction for this session, or None if it has none."""
-    path = lock_path(session_id, predictions_dir=predictions_dir)
-    if not path.is_file():
-        return None
-    return json.loads(path.read_text(encoding="utf-8"))
+    """The locked prediction for this session, or None if it has none.
+
+    Tried in the canonical directory first and then `dev/` (see module
+    docstring) - same reasoning as `lock_exists`: a bare `session_id` carries
+    no consent flag, so a reader that only has the id must be able to find
+    either.
+    """
+    for path in (
+        lock_path(session_id, predictions_dir=predictions_dir),
+        dev_lock_path(session_id, predictions_dir=predictions_dir),
+    ):
+        if path.is_file():
+            return json.loads(path.read_text(encoding="utf-8"))
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -122,12 +179,23 @@ def read_lock(session_id: str, *,
 
 
 def write_lock(session_id: str, variant_id: str, resolved_planogram: Dict[str, Any], *,
+               consent: bool = True,
                predictions_dir: Optional[Path] = None) -> Dict[str, Any]:
     """Snapshot the current population prediction for `variant_id` and lock it.
 
     Returns the SPEC 4.6 document, whether it was just written or already
     existed: a lock is written once and never revised, so calling this again
-    for a session that already has one returns the original file untouched.
+    for a session that already has one returns the original file untouched -
+    `read_lock` finds it in whichever directory it was first filed under, so a
+    dev session cannot be duplicated into the canonical directory by a second
+    POST /sessions either.
+
+    `consent` decides only *where* the lock lands (see module docstring),
+    never whether it is written or in what order relative to the session row:
+    `consent is not True` - the same test `scripts/anonymise_sessions.py`
+    uses to withhold a session from the panel - sends it to `predictions/dev/`
+    instead of `predictions/`, so a development or rehearsal page load can
+    never masquerade as committed evidence.
     """
     existing = read_lock(session_id, predictions_dir=predictions_dir)
     if existing is not None:
@@ -152,7 +220,11 @@ def write_lock(session_id: str, variant_id: str, resolved_planogram: Dict[str, A
         "git_commit": git_commit(),
     }
 
-    _write_atomically(lock_path(session_id, predictions_dir=predictions_dir), document)
+    destination = (
+        lock_path(session_id, predictions_dir=predictions_dir) if consent is True
+        else dev_lock_path(session_id, predictions_dir=predictions_dir)
+    )
+    _write_atomically(destination, document)
     return document
 
 
