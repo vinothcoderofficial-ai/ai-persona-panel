@@ -18,6 +18,7 @@ import json
 import os
 import pathlib
 import sys
+import time
 from typing import Any
 
 import httpx
@@ -41,6 +42,14 @@ DEFAULT_MODEL = "claude-haiku-4-5-20251001"
 ANTHROPIC_VERSION = "2023-06-01"
 DEFAULT_MAX_TOKENS = 1024
 DEFAULT_TIMEOUT_S = 30.0
+
+# A dropped connection is not a bad answer -- the prompt was fine and the
+# network was not -- so it is retried on its own budget, separate from the
+# schema-correction budget. Without this a single blip kills a multi-hour run:
+# a real `slow_agent --all --n 20` against Ollama Cloud died on
+# `RemoteProtocolError: Server disconnected` after one of four personas.
+DEFAULT_TRANSPORT_RETRIES = 3
+TRANSPORT_BACKOFF_BASE_S = 1.0
 
 # Providers. `LLM_PROVIDER` selects one; Anthropic stays the default so no
 # existing configuration changes meaning.
@@ -192,6 +201,29 @@ def resolve_timeout() -> float:
     return value if value > 0 else DEFAULT_TIMEOUT_S
 
 
+def _post_with_retry(transport, url, payload, headers, timeout_s, *, attempts, sleep):
+    """POST, retrying transport failures with exponential backoff.
+
+    Retries only failures to *reach* the service. A reply that arrives and is
+    unusable -- bad JSON, wrong shape -- is the caller's retry path, because
+    that one changes the prompt and this one must not.
+
+    `raise_for_status` stays outside this loop deliberately: a 401 is a wrong
+    key and retrying it is pointless noise.
+    """
+    last = None
+    for attempt in range(attempts):
+        try:
+            return transport.post(url, json=payload, headers=headers, timeout=timeout_s)
+        except (httpx.HTTPError, OSError) as exc:
+            last = exc
+            if attempt + 1 < attempts:
+                sleep(TRANSPORT_BACKOFF_BASE_S * (2 ** attempt))
+    raise LLMUnavailableError(
+        f"transport failure after {attempts} attempt(s): {type(last).__name__}: {last}"
+    )
+
+
 def _default_model_for(provider: str) -> str:
     return DEFAULT_OLLAMA_MODEL if provider == PROVIDER_OLLAMA else DEFAULT_MODEL
 
@@ -232,6 +264,8 @@ def complete_json(
     temperature: float = 0.0,
     retries: int = 3,
     client: Any = None,
+    transport_retries: int = DEFAULT_TRANSPORT_RETRIES,
+    sleep: Any = time.sleep,
 ) -> dict:
     """Complete `prompt`, returning JSON that validates against `schema`.
 
@@ -276,7 +310,10 @@ def complete_json(
             temperature=temperature,
             api_key=api_key,
         )
-        response = transport.post(url, json=payload, headers=headers, timeout=timeout_s)
+        response = _post_with_retry(
+            transport, url, payload, headers, timeout_s,
+            attempts=transport_retries, sleep=sleep,
+        )
         raise_for_status = getattr(response, "raise_for_status", None)
         if callable(raise_for_status):
             raise_for_status()

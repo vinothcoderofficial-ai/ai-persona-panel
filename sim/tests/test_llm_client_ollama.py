@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json as json_module
 
+import httpx
 import pytest
 
 from sim import llm_client
@@ -383,3 +384,89 @@ def test_an_unparsable_timeout_falls_back_to_the_default(monkeypatch):
     transport = OllamaTransport([VALID_TEXT])
     complete_json("hi", SCHEMA, client=transport)
     assert transport.calls[0]["timeout"] == llm_client.DEFAULT_TIMEOUT_S
+
+
+# --- transport failures ----------------------------------------------------
+#
+# The retry loop handled JSON and schema failures and nothing else, so a single
+# dropped connection killed the caller. That is not hypothetical: a real
+# `slow_agent --all --n 20` run against Ollama Cloud died on
+# `httpx.RemoteProtocolError: Server disconnected without sending a response`
+# after one of four personas, losing the rest of a multi-hour run.
+
+
+class FlakyTransport:
+    """Raises `failures` transport errors, then answers normally."""
+
+    def __init__(self, failures, texts, error=None):
+        self._left = failures
+        self._texts = list(texts)
+        self._error = error or httpx.RemoteProtocolError("Server disconnected")
+        self.calls = 0
+        self.answered = 0
+
+    def post(self, url, **kwargs):
+        self.calls += 1
+        if self._left > 0:
+            self._left -= 1
+            raise self._error
+        text = self._texts[self.answered]
+        self.answered += 1
+        return FakeResponse({"message": {"role": "assistant", "content": text}})
+
+
+def test_a_dropped_connection_is_retried_and_then_succeeds(monkeypatch):
+    use_ollama(monkeypatch)
+    transport = FlakyTransport(2, [VALID_TEXT])
+    slept = []
+
+    result = complete_json("hi", SCHEMA, client=transport, sleep=slept.append)
+
+    assert result["value"] == 0.5
+    assert transport.calls == 3
+    assert len(slept) == 2, "a retry storm with no pause is not a retry"
+
+
+def test_transport_retries_back_off_rather_than_hammering(monkeypatch):
+    use_ollama(monkeypatch)
+    slept = []
+    complete_json("hi", SCHEMA, client=FlakyTransport(2, [VALID_TEXT]), sleep=slept.append)
+    assert slept == sorted(slept) and slept[0] < slept[-1], f"not increasing: {slept}"
+
+
+def test_transport_retries_are_bounded_and_then_raise(monkeypatch):
+    use_ollama(monkeypatch)
+    transport = FlakyTransport(99, [VALID_TEXT])
+
+    with pytest.raises(LLMUnavailableError, match="transport"):
+        complete_json("hi", SCHEMA, client=transport, sleep=lambda _s: None)
+
+    assert transport.calls == llm_client.DEFAULT_TRANSPORT_RETRIES
+
+
+def test_an_oserror_is_treated_as_a_transport_failure(monkeypatch):
+    """A socket-level failure is the same class of problem as a dropped HTTP call."""
+    use_ollama(monkeypatch)
+    transport = FlakyTransport(1, [VALID_TEXT], error=OSError("connection reset"))
+    assert complete_json("hi", SCHEMA, client=transport, sleep=lambda _s: None)["value"] == 0.5
+
+
+def test_transport_retries_do_not_consume_the_schema_retry_budget(monkeypatch):
+    """A flaky network must not eat the model's chances to fix its own JSON."""
+    use_ollama(monkeypatch)
+    # One drop, then two schema-invalid answers, then a good one. With a shared
+    # budget of 3 this would raise; with separate budgets it succeeds.
+    transport = FlakyTransport(1, [INVALID_TEXT, INVALID_TEXT, VALID_TEXT])
+
+    result = complete_json("hi", SCHEMA, retries=3, client=transport,
+                           sleep=lambda _s: None)
+
+    assert result["value"] == 0.5
+
+
+def test_the_raised_transport_error_is_one_report_py_already_catches(monkeypatch):
+    """analytics/report.py catches LLMClientError; the headline must still degrade."""
+    use_ollama(monkeypatch)
+    with pytest.raises(llm_client.LLMClientError):
+        complete_json("hi", SCHEMA, client=FlakyTransport(99, [VALID_TEXT]),
+                      sleep=lambda _s: None)
