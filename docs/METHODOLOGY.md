@@ -715,10 +715,10 @@ building*, and nothing here widens that.
 
 ### 12.13 The optimizer's ranking is not resolved
 
-S24 (placement optimizer) is built; S25 (ad slot value) is not, so PLAN §1's "three outputs, in
-increasing value" describes two built outputs and one partly built.
+S24 (placement optimizer) and S25 (ad slot value) are both built, so PLAN §1's "three outputs,
+in increasing value" now describes three built outputs. What follows is what they do *not* show.
 
-Two limits on what the optimizer's ranking can be said to show:
+Three limits on what the optimizer's ranking and its price tag can be said to show:
 
 * **The order is not settled.** Re-rolling the same 10,000-shopper simulation at seeds 42-46 moves
   the top pick between +6.2% and +14.2% and the current placement between +1.3% and +8.9%. Those
@@ -732,3 +732,11 @@ Two limits on what the optimizer's ranking can be said to show:
   shares and `n_runs` counts shoppers rather than purchase events, so bootstrapping those fields
   returns an interval narrower than the truth. The module, its docstrings and its printed output all
   say which of the two it is.
+* **The slot value is mostly assumption by construction.** S25 multiplies the measured lift by a
+  baseline unit volume, a margin per unit and a store-week footprint. None of those three exist in
+  this repository: `schemas/` and `data/` carry no margin and no traffic, and a `SimResult`'s arms
+  are normalised shares. They are required parameters with no defaults, and every printed figure
+  carries a `basis` line naming them as assumed. So the *ranking* is the result and the money is
+  "what it would be worth if these were your numbers". The value spreads overlap worse than the
+  lifts do -- top pick 2,883-6,651 against the current placement's 602-4,150 over seeds 42-46 --
+  because the unresolved ordering above propagates straight through the multiplication.
