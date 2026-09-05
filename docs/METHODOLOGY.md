@@ -108,16 +108,23 @@ rule is webcam-only.
 ### 2.4 The Day-7 freeze
 
 PLAN §6 requires these parameters to be frozen at the end of Day 7 and the freeze commit hash
-recorded here. **That commit does not exist yet**: the only tag in this repository is
-`v0.1-baseline`, and the freeze had not been made when this document was written. Recording a
-hash we do not have would be the exact kind of decoration this project has avoided everywhere
-else, so instead:
+recorded here. **The freeze has been made.**
 
-- every parameter above is a named exported constant with exactly one definition site;
-- the file it lives in is named next to it;
-- the freeze, when it happens, is a tag over those files and nothing else.
+```
+tag     freeze-noise-params
+commit  dc95a7b9d5c4135daac7499ed09d30f1453a341f
+```
 
-Fill the hash in here at freeze time; until then, the values above *are* the contract.
+The annotated tag lists all nine values, and they were checked against this section at tag time
+rather than assumed to still agree. The three files carrying them —
+`web/src/capture/calibrationMath.ts`, `FixationFilter.ts` and `SessionGate.ts` — had not changed
+since `69302fd`; the tag fixes the point at which they stop changing.
+
+The freeze is what makes a collected panel meaningful: every session is measured through these
+exact thresholds, so changing one retroactively changes what every earlier session *was*. Any
+later edit to a value above is therefore a new tag and a new panel, never an amendment to this
+one. Each parameter remains a named exported constant with exactly one definition site, so there
+is nowhere for a second, drifting copy to hide.
 
 ---
 
