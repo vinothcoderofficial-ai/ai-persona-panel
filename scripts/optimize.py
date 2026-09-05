@@ -84,6 +84,22 @@ def assumptions_from(args: argparse.Namespace) -> slot_value.Assumptions | None:
     )
 
 
+def format_skipped(skipped) -> str:
+    """One line for a candidate the planogram could not express.
+
+    `Skipped` carries candidate_id / kind / reason / detail -- and no `label`.
+    This printed `skipped.label`, which raised AttributeError the moment
+    anything was skipped. Nothing caught it because the default candidate space
+    on the committed aisle skips nothing, so the loop body never ran in any
+    test or in any run I made.
+
+    The reason is the part worth printing: a level silently missing from a
+    ranking reads as "we tried it and it was bad", which is a different and far
+    more useful-sounding claim than "there was no move to try".
+    """
+    return f"  skipped: {skipped.candidate_id} ({skipped.kind}) -- {skipped.reason}"
+
+
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     assumptions = assumptions_from(args)
@@ -115,7 +131,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"  {entry.rank:2d}. {entry.candidate.label:<58} {value}{marker}")
 
     for skipped in ranking.skipped:
-        print(f"  skipped: {skipped.label} -- {skipped.reason}")
+        print(format_skipped(skipped))
 
     if assumptions is not None:
         priced = slot_value.price_ranking(

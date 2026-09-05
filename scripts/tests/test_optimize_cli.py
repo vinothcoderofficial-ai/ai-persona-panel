@@ -85,3 +85,44 @@ def test_commercial_flags_list_matches_the_assumptions_dataclass():
         f"Assumptions has {len(fields)} fields but the CLI exposes "
         f"{len(optimize.COMMERCIAL_FLAGS)} commercial flags"
     )
+
+
+# --- the skip line ----------------------------------------------------------
+#
+# `Skipped` carries candidate_id / kind / reason / detail and has no `label`.
+# main() printed `skipped.label`, so the CLI raised AttributeError the moment a
+# candidate was skipped. The default space on the committed aisle skips nothing,
+# so the loop body never ran in any earlier test and the bug shipped.
+
+
+def test_format_skipped_uses_fields_that_exist_on_skipped():
+    from analytics.optimizer import Skipped
+
+    skipped = Skipped(candidate_id="sku:SKU_008@above_eye", kind="sku",
+                      reason="bay B1 has no shelf at level above_eye", detail={})
+    line = optimize.format_skipped(skipped)
+
+    assert "sku:SKU_008@above_eye" in line
+    assert "no shelf at level above_eye" in line
+
+
+def test_format_skipped_names_every_public_field_it_can():
+    """A skip line that omits the reason is useless; that is the whole point of
+    reporting skips rather than dropping them silently."""
+    from analytics.optimizer import Skipped
+
+    skipped = Skipped(candidate_id="c1", kind="sku", reason="nowhere to send it",
+                      detail={"level": "top"})
+    line = optimize.format_skipped(skipped)
+    assert "c1" in line and "nowhere to send it" in line
+
+
+def test_format_skipped_survives_every_field_of_a_real_skipped_object():
+    """Guards the actual failure mode: touching an attribute that is not there."""
+    import dataclasses
+    from analytics.optimizer import Skipped
+
+    names = {f.name for f in dataclasses.fields(Skipped)}
+    assert "label" not in names, "if Skipped gains a label, revisit format_skipped"
+    skipped = Skipped(candidate_id="c", kind="k", reason="r", detail={})
+    assert isinstance(optimize.format_skipped(skipped), str)
