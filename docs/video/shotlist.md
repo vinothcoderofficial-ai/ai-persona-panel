@@ -93,6 +93,13 @@ a person shopping it, this is what happens if we move something.
    and the heatmap populate immediately — you do not have to have it open from the first event.
 6. Shop for at least 45 seconds across at least two stations with at least one interaction, or the
    session gate will reject it — and say so as you do it.
+7. **Move the cursor from pack to pack, deliberately.** The agreement meter needs fifteen cursor
+   dwells, and a dwell is not elapsed time on the shelf. `CursorTracker` opens one when the pointer
+   enters a *product* rectangle and emits it only when the pointer **leaves** that rectangle having
+   been inside it for 300 ms or more. Fifteen dwells is therefore fifteen separate packs touched by
+   the cursor; parking on one pack for the whole take produces exactly one, and the meter would stay
+   grey through a session that otherwise passes the gate. Shelf space between packs, the ad panels
+   and the HUD carry no `slot_id`, so time over them counts for nothing.
 
 **What the spectator window will and will not show, in a cursor-only session:**
 
@@ -102,32 +109,34 @@ a person shopping it, this is what happens if we move something.
 | `ClockOverlay` | Running wall clock. |
 | `LiveHeatmap` | Builds from cursor dwell and interactions. Works. |
 | `GazeTrail` | **Stays empty.** Only `gaze` and `fixation` events carry a screen position and a cursor-only session emits neither. |
-| `AgreementMeter` | **Turns on mid-shot.** `meaningful` counts 15 events of the session's own evidence channel, which in a cursor-only session is cursor dwells, not fixations. The label counts up ("9 of 15 cursor dwells") and ρ appears once it reaches 15 — so shop long enough to cross it on camera. |
+| `AgreementMeter` | **Turns on mid-shot.** `meaningful` counts 15 events of the session's own evidence channel, which in a cursor-only session is cursor dwells, not fixations. The label counts up ("9 of 15 cursor dwells") and ρ appears once it reaches 15 — so cross it on camera, which is a matter of how many packs you hover, not how long you shop (step 7). |
 
 Do not hide the empty gaze trail, and do not let the meter coming on pass without saying what it
 counted. Narrate both (see `script.md`).
 
-**Optional, and only after the live take has ended**, cut to the labelled demo stream. This beat
-existed because the meter used to stay grey for the whole cursor-only take; it now comes on once
-the shopper crosses fifteen cursor dwells, so cut this unless the take fell short of that. If it
-is kept it is a separate ~10-second beat inside shot 4's time budget; it is **not** part of the
-one-take segment, and the edit point must land after the live take is finished so nothing is
-spliced into it.
+**The `?fake=1` cutaway is cut from this shot.** It existed for one reason — the meter stayed grey
+for the whole of a cursor-only take, so a stream built to fake one was the only way to show a live
+meter — and that reason is gone. Shot 4 now ends when the live take ends. If a take finishes short
+of fifteen dwells, retake it: retakes are free, an internal edit is not, and splicing a frame
+labelled "fake" into the one shot whose whole argument is *this is real and it was locked first*
+costs more than it pays.
 
-```
-http://localhost:5173/#/spectator?session=demo&fake=1
-```
+Shot 4 keeps its 1:25–2:35 budget. The ten seconds the beat used to take returns to the live take,
+which needs them: consent, three intake questions, the camera check and 45 seconds of shopping do
+not sit comfortably in seventy.
 
-It draws itself with a yellow border and a banner, its `session_id` is the constant
-`fake-session` and its `prediction_id` is `fake-prediction`, which matches no lock on disk. Keep
-the banner in frame for the entire time it is on screen and say the word "fake" out loud.
+The fake stream still exists as a route, and the rule governing it is unchanged — see
+[Things that will ruin a take](#things-that-will-ruin-a-take).
 
 **If a laptop's webcam calibration passes on the day**, prefer the webcam variant of this shot: at
 the camera check choose "Turn the camera on", complete the 9-point calibration and the 4-point
 validation, and if the validation error is at or under 12 % of screen width the session runs in
-`webcam` mode — the gaze trail draws and the agreement meter can become meaningful. Then shot 4
-needs no caveat and the fake-stream cutaway can be dropped. Do not plan on it: the S9 pilot was
-never run and no webcam session has ever been recorded.
+`webcam` mode. Two things change, and whether the meter turns on is not one of them — it turns on
+in either mode. The gaze trail draws instead of staying empty, and the evidence channel becomes
+fixations, so the meter reads "9 of 15 fixations" and the cursor-proxy caveat drops out of the
+narration. A fixation needs 100 ms against a dwell's 300 ms, so the threshold arrives sooner and
+step 7's deliberate hovering stops mattering. Do not plan on it: the S9 pilot was never run and no
+webcam session has ever been recorded.
 
 ### Shot 5 — what-if (2:35–3:15)
 
@@ -219,7 +228,8 @@ Slides only.
 - [ ] Two browser windows placed; spectator on the second monitor with the clock visible
 - [ ] Shopper window shows no dashboard, no gaze dot, no metrics
 - [ ] Notifications, badges and any personal browser profile off screen
-- [ ] A stopwatch on the desk — shot 4 needs a session over 45 seconds
+- [ ] A stopwatch on the desk — shot 4 needs a session over 45 seconds, and fifteen separate pack
+      hovers before the agreement meter comes off grey
 - [ ] Team names on the closing slide
 
 ## Things that will ruin a take
@@ -228,6 +238,9 @@ Slides only.
   see their own gaze dot, on camera or off.
 - Cutting inside a live take. A live segment with an internal edit is worth nothing here; the
   whole point is that the clock and the badge are continuous.
-- Using `?fake=1` without the banner in frame.
+- Letting `?fake=1` into the cut. No shot calls for it any more. If it reaches the screen for any
+  reason, all three of its labels stay in frame — the yellow border, the banner, and the
+  `fake-session` / `fake-prediction` ids, which match no lock on disk — and the word "fake" is
+  said out loud.
 - Reading a number off the screen that is not on the screen. If `elapsed_ms` shows 9, say nine.
 - Saying "the personas match real shoppers". They have not been compared to any.

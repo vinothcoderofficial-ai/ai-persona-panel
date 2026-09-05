@@ -101,25 +101,19 @@ Timings are the outer edge of each shot. Speak under them; the live shots need s
 > not against gaze. That is a weaker claim than the one we would make with a webcam panel, and it
 > is the honest one to make here.
 
-*(End of the one-take segment. The cutaway below is a separate beat, spliced on after it — never
-into it. It is now optional: the meter comes on during the live take, so cut this beat unless the
-take crossed fewer than fifteen cursor dwells.)*
+*(End of the one-take segment, and the end of shot 4 — there is no cutaway. The `?fake=1` beat
+that used to follow existed only because the meter stayed grey for the whole of a cursor-only
+take; it comes on during the take itself now, so the beat has nothing left to show. `shotlist.md`
+carries the reasoning, and the rule that still governs that stream.)*
 
-> Here is that meter again on a stream built to exercise it.
->
-> *(Cut to `#/spectator?session=demo&fake=1`, yellow border and banner in frame.)*
->
-> This is the server's **fake** demo stream, and it is labelled fake in three places: this border,
-> this banner, and the session id, which is the literal string "fake-session". Its prediction id
-> matches no lock on disk. No real measurement is on this screen.
-
-*If the webcam variant was recorded instead, replace the last two paragraphs with:*
+*If the webcam variant was recorded instead, replace the last two paragraphs above with:*
 
 > The gaze trail is drawing from the webcam. Nothing but x, y, a derived confidence and a
 > timestamp ever leaves this laptop — the video element is off, prediction points are off, and
-> WebGazer's "remember the face model" setting is explicitly disabled. The agreement meter comes
-> off grey after fifteen fixations, and what it is showing is a running correlation between what I
-> am doing and a prediction that was hashed before I sat down.
+> WebGazer's "remember the face model" setting is explicitly disabled. And the meter is counting
+> fixations rather than cursor dwells — fifteen of them, the same threshold — so the correlation
+> it is showing is against where I actually looked, and against a prediction that was hashed
+> before I sat down.
 
 ## Shot 5 — what-if · 2:35–3:15 · LIVE
 
