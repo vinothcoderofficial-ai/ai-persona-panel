@@ -1,0 +1,98 @@
+# CI (SPEC M8)
+#
+# Three jobs. The first two are the ordinary ones -- tests on both sides of the
+# stack. The third is the one that matters for this project: it re-runs
+# `scripts/eval.py` and fails if `RESULTS.md` changes by a single byte.
+#
+# That check is what makes the committed evidence trustworthy. RESULTS.md is
+# generated from `data/sessions/anon/` and `predictions/`, and SPEC's own
+# acceptance line asks for "`make eval` reproduces RESULTS.md byte-identically
+# from committed data". Without it, a stale RESULTS.md could sit in the repo
+# describing numbers the code no longer produces, and nobody would know.
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+env:
+  # Nothing in CI may contact a language model. `sim/llm_client.py` raises
+  # LLMUnavailableError under this flag rather than reaching the network, and
+  # the callers that can serve a cache do so. A test that needs a model is a
+  # test that would fail on a fork with no secret.
+  LLM_OFFLINE: "1"
+  PYTHONUTF8: "1"
+
+jobs:
+  python:
+    name: pytest + schema validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: python -m pip install --upgrade pip && pip install -r requirements.txt
+
+      - name: Validate every data file against its schema
+        run: python scripts/validate_data.py
+
+      - name: Run the Python suite
+        run: python -m pytest -q
+
+  web:
+    name: vitest + tsc
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npx tsc --noEmit -p web/tsconfig.json
+
+      - name: Run the web suite
+        run: npm test
+
+  evidence:
+    name: eval reproduces RESULTS.md byte-identically
+    runs-on: ubuntu-latest
+    needs: python
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: python -m pip install --upgrade pip && pip install -r requirements.txt
+
+      - name: Regenerate the report from committed evidence
+        # eval.py verifies each prediction lock's SHA-256 and that its
+        # created_at precedes the session's first event, then rewrites
+        # RESULTS.md. A non-zero exit here means the evidence itself failed
+        # its integrity check, which is a harder failure than a red test.
+        run: python scripts/eval.py
+
+      - name: Fail if RESULTS.md moved
+        # docs/figures/*.png is gitignored, so only the report is compared.
+        run: |
+          if ! git diff --exit-code -- RESULTS.md; then
+            echo "::error::RESULTS.md is not reproducible from the committed evidence." >&2
+            echo "Run 'make eval' locally and commit the result." >&2
+            exit 1
+          fi
