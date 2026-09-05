@@ -57,6 +57,7 @@ from typing import Any, Iterable, Mapping, Sequence
 
 import numpy as np
 
+from sim import llm_client
 from sim.llm_client import LLMUnavailableError, LLMValidationError, complete_json
 from sim.saliency import compute_saliency
 
@@ -444,7 +445,12 @@ def run_persona(persona: Mapping, planogram: Mapping, *,
         "n_shoppers": n_shoppers,
         "seed": seed,
         "temperature": temperature,
-        "model": model,
+        # The model that actually answered, not the caller's override. The
+        # override is None whenever the model comes from LLM_MODEL, which is
+        # the normal case, and these traces are shown on screen as evidence of
+        # persona reasoning -- one that cannot name its model is weaker
+        # evidence than it looks.
+        "model": llm_client.resolve_model(model),
         "time_budget_s": time_budget,
         "max_turns": max_turns,
         "max_reasks": max_reasks,

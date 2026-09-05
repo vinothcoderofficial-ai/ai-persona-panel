@@ -48,6 +48,12 @@ PROVIDER_ANTHROPIC = "anthropic"
 PROVIDER_OLLAMA = "ollama"
 PROVIDERS = (PROVIDER_ANTHROPIC, PROVIDER_OLLAMA)
 
+# The on-the-wire request/response shape, which is not one-to-one with the
+# provider: ollama.com serves both its native API and an OpenAI-compatible one.
+WIRE_ANTHROPIC = "anthropic"
+WIRE_OLLAMA = "ollama"
+WIRE_OPENAI = "openai"
+
 # Ollama's daemon listens here and needs no key. This is what makes the S13
 # persona traces producible without an Anthropic account.
 DEFAULT_OLLAMA_BASE_URL = "http://localhost:11434"
@@ -96,16 +102,20 @@ def resolve_provider() -> str:
     return name
 
 
-def _extract_text(body: Any, provider: str = PROVIDER_ANTHROPIC) -> str:
-    """Pull the assistant's text out of a response body for `provider`.
+def _extract_text(body: Any, wire: str = WIRE_ANTHROPIC) -> str:
+    """Pull the assistant's text out of a response body in `wire` format.
 
     Raises (KeyError/IndexError/TypeError/ValueError) on a malformed envelope, which the caller
     folds into the same retry path as "the model's text was not valid JSON" -- both mean this
     attempt did not produce a usable completion.
     """
-    if provider == PROVIDER_OLLAMA:
+    if wire == WIRE_OLLAMA:
         # /api/chat with stream=false: {"message": {"role": ..., "content": ...}}
         return body["message"]["content"]
+
+    if wire == WIRE_OPENAI:
+        # /v1/chat/completions: {"choices": [{"message": {"content": ...}}]}
+        return body["choices"][0]["message"]["content"]
 
     for block in body["content"]:
         if block.get("type") == "text":
@@ -114,13 +124,29 @@ def _extract_text(body: Any, provider: str = PROVIDER_ANTHROPIC) -> str:
 
 
 def _request_for(provider: str, *, model: str, prompt: str, temperature: float, api_key: str):
-    """The (url, headers, payload) triple this provider expects."""
+    """The (url, headers, payload, wire) this provider expects."""
     if provider == PROVIDER_OLLAMA:
         base_url = (os.environ.get("LLM_BASE_URL") or DEFAULT_OLLAMA_BASE_URL).rstrip("/")
         headers = {"content-type": "application/json"}
         # A local daemon takes no key. Ollama Cloud does, as a bearer token.
         if api_key:
             headers["Authorization"] = f"Bearer {api_key}"
+
+        # ollama.com serves both APIs: the native one at the root and an
+        # OpenAI-compatible one under /v1. A base ending in /v1 is the caller
+        # asking for the second, and posting {base}/api/chat there would 404.
+        # Both shapes were checked against the live service before this branch
+        # was written; both honour a JSON-mode request.
+        if base_url.endswith("/v1"):
+            payload = {
+                "model": model,
+                "messages": [{"role": "user", "content": prompt}],
+                "stream": False,
+                "response_format": {"type": "json_object"},
+                "temperature": temperature,
+            }
+            return f"{base_url}/chat/completions", headers, payload, WIRE_OPENAI
+
         payload = {
             "model": model,
             "messages": [{"role": "user", "content": prompt}],
@@ -131,7 +157,7 @@ def _request_for(provider: str, *, model: str, prompt: str, temperature: float, 
             "format": "json",
             "options": {"temperature": temperature},
         }
-        return f"{base_url}/api/chat", headers, payload
+        return f"{base_url}/api/chat", headers, payload, WIRE_OLLAMA
 
     base_url = (os.environ.get("LLM_BASE_URL") or DEFAULT_BASE_URL).rstrip("/")
     headers = {
@@ -145,11 +171,24 @@ def _request_for(provider: str, *, model: str, prompt: str, temperature: float, 
         "temperature": temperature,
         "messages": [{"role": "user", "content": prompt}],
     }
-    return f"{base_url}/messages", headers, payload
+    return f"{base_url}/messages", headers, payload, WIRE_ANTHROPIC
 
 
 def _default_model_for(provider: str) -> str:
     return DEFAULT_OLLAMA_MODEL if provider == PROVIDER_OLLAMA else DEFAULT_MODEL
+
+
+def resolve_model(model: str | None = None) -> str:
+    """The model `complete_json` would actually send, given the same override.
+
+    Public because callers need to *record* it. `sim/slow_agent.py` writes the
+    model into every trace, and those traces are shown on screen as evidence of
+    persona reasoning; recording the caller's override meant recording `None`
+    whenever the model came from `LLM_MODEL`, which is the normal case. A trace
+    that cannot name the model that produced it is weaker evidence than it
+    looks.
+    """
+    return model or os.environ.get("LLM_MODEL") or _default_model_for(resolve_provider())
 
 
 def _validation_error_summary(errors: list) -> str:
@@ -203,7 +242,7 @@ def complete_json(
             "or set LLM_OFFLINE=1 to serve cached results instead."
         )
 
-    model_name = model or os.environ.get("LLM_MODEL") or _default_model_for(provider)
+    model_name = resolve_model(model)
     transport = client if client is not None else httpx
     validator = Draft7Validator(schema)
 
@@ -211,7 +250,7 @@ def complete_json(
     last_error = "no attempts were made"
 
     for _ in range(retries):
-        url, headers, payload = _request_for(
+        url, headers, payload, wire = _request_for(
             provider,
             model=model_name,
             prompt=current_prompt,
@@ -225,7 +264,7 @@ def complete_json(
 
         try:
             body = response.json()
-            text = _extract_text(body, provider)
+            text = _extract_text(body, wire)
             data = json.loads(text)
         except (ValueError, KeyError, TypeError, IndexError) as exc:
             last_error = f"response was not valid JSON: {exc}"

@@ -64,10 +64,22 @@ class FakeTransport:
 
 @pytest.fixture(autouse=True)
 def _api_key(monkeypatch):
-    """Every test here injects its own transport, so a real key is never used -- but
-    complete_json still requires *something* configured before it will build a request."""
+    """Pin the whole LLM configuration these tests assume.
+
+    Every test here injects its own transport, so a real key is never used --
+    but complete_json still requires *something* configured before it will
+    build a request, and these tests assert the **Anthropic** shape.
+
+    LLM_PROVIDER, LLM_BASE_URL and LLM_MODEL are cleared rather than left
+    alone, because `sim/llm_client.py` loads `.env` at import: a developer with
+    a working `.env` (say `LLM_PROVIDER=ollama` for the persona traces) would
+    otherwise see this file fail for a reason that has nothing to do with the
+    code. Found exactly that way, with a real Ollama `.env` in place.
+    """
     monkeypatch.setenv("LLM_API_KEY", "test-key")
     monkeypatch.setenv("LLM_OFFLINE", "0")
+    for name in ("LLM_PROVIDER", "LLM_BASE_URL", "LLM_MODEL"):
+        monkeypatch.delenv(name, raising=False)
 
 
 def test_valid_response_on_first_call_returns_parsed_dict_and_calls_once():

@@ -473,3 +473,44 @@ def test_llm_unavailable_still_propagates_out_of_the_library_functions(
     monkeypatch.delenv("LLM_API_KEY", raising=False)
     with pytest.raises(LLMUnavailableError):
         run_persona(personas["mission"], planogram, n_shoppers=1)
+
+
+# --- provenance -------------------------------------------------------------
+#
+# Traces are shown on screen as evidence of persona reasoning, so each file has
+# to name the model that produced it. `run_persona` used to record the caller's
+# `model` override, which is None in the normal case where the model comes from
+# LLM_MODEL -- so real traces were written with "model": null.
+
+
+def test_the_trace_records_the_model_that_actually_answered(planogram, personas,
+                                                            monkeypatch):
+    monkeypatch.setenv("LLM_PROVIDER", "ollama")
+    monkeypatch.setenv("LLM_MODEL", "deepseek-v4-pro:cloud")
+
+    trace = run_persona(personas["mission"], planogram, n_shoppers=1, seed=7,
+                        client=FakeLLM([CHECKOUT]))
+
+    assert trace["model"] == "deepseek-v4-pro:cloud"
+
+
+def test_an_explicit_model_override_still_wins_in_the_trace(planogram, personas,
+                                                            monkeypatch):
+    monkeypatch.setenv("LLM_MODEL", "from-env")
+
+    trace = run_persona(personas["mission"], planogram, n_shoppers=1, seed=7,
+                        client=FakeLLM([CHECKOUT]), model="from-the-caller")
+
+    assert trace["model"] == "from-the-caller"
+
+
+def test_the_trace_never_records_a_null_model(planogram, personas, monkeypatch):
+    """With nothing configured it must still name the provider default."""
+    monkeypatch.delenv("LLM_MODEL", raising=False)
+    monkeypatch.delenv("LLM_PROVIDER", raising=False)
+
+    trace = run_persona(personas["mission"], planogram, n_shoppers=1, seed=7,
+                        client=FakeLLM([CHECKOUT]))
+
+    assert trace["model"] is not None
+    assert isinstance(trace["model"], str) and trace["model"]

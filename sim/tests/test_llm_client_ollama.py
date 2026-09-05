@@ -236,3 +236,122 @@ def test_provider_name_is_case_insensitive_and_trimmed(monkeypatch):
     transport = OllamaTransport([VALID_TEXT])
     complete_json("hi", SCHEMA, client=transport)
     assert transport.calls[0]["url"].endswith("/api/chat")
+
+
+# --- Ollama Cloud's OpenAI-compatible endpoint -----------------------------
+#
+# https://ollama.com serves both: the native API at the root, and an
+# OpenAI-compatible one under /v1. A base URL ending in /v1 means the caller
+# asked for the second, and posting {base}/api/chat there would 404.
+
+
+class OpenAITransport:
+    """Replies in the OpenAI shape: {"choices": [{"message": {"content": ...}}]}."""
+
+    def __init__(self, texts):
+        self._texts = list(texts)
+        self.calls = []
+
+    def post(self, url, **kwargs):
+        self.calls.append({"url": url, **kwargs})
+        text = self._texts[len(self.calls) - 1]
+        return FakeResponse({"choices": [{"index": 0,
+                                          "message": {"role": "assistant", "content": text}}]})
+
+
+def test_a_v1_base_posts_to_chat_completions(monkeypatch):
+    use_ollama(monkeypatch, LLM_BASE_URL="https://ollama.com/v1")
+    transport = OpenAITransport([VALID_TEXT])
+    complete_json("hi", SCHEMA, client=transport)
+    assert transport.calls[0]["url"] == "https://ollama.com/v1/chat/completions"
+
+
+def test_a_v1_base_with_a_trailing_slash_still_works(monkeypatch):
+    use_ollama(monkeypatch, LLM_BASE_URL="https://ollama.com/v1/")
+    transport = OpenAITransport([VALID_TEXT])
+    complete_json("hi", SCHEMA, client=transport)
+    assert transport.calls[0]["url"] == "https://ollama.com/v1/chat/completions"
+
+
+def test_a_v1_base_asks_for_json_the_openai_way(monkeypatch):
+    use_ollama(monkeypatch, LLM_BASE_URL="https://ollama.com/v1")
+    transport = OpenAITransport([VALID_TEXT])
+    complete_json("hi", SCHEMA, client=transport)
+    payload = transport.calls[0]["json"]
+    assert payload["response_format"] == {"type": "json_object"}
+    assert "format" not in payload
+
+
+def test_a_v1_base_puts_temperature_at_the_top_level(monkeypatch):
+    """OpenAI takes temperature top-level; only the native API nests it."""
+    use_ollama(monkeypatch, LLM_BASE_URL="https://ollama.com/v1")
+    transport = OpenAITransport([VALID_TEXT])
+    complete_json("hi", SCHEMA, temperature=0.3, client=transport)
+    payload = transport.calls[0]["json"]
+    assert payload["temperature"] == 0.3
+    assert "options" not in payload
+
+
+def test_a_v1_base_reads_the_text_from_choices(monkeypatch):
+    use_ollama(monkeypatch, LLM_BASE_URL="https://ollama.com/v1")
+    transport = OpenAITransport([VALID_TEXT])
+    assert complete_json("hi", SCHEMA, client=transport)["value"] == 0.5
+
+
+def test_a_v1_base_still_sends_the_bearer_token(monkeypatch):
+    use_ollama(monkeypatch, LLM_BASE_URL="https://ollama.com/v1", LLM_API_KEY="cloud-key")
+    transport = OpenAITransport([VALID_TEXT])
+    complete_json("hi", SCHEMA, client=transport)
+    assert transport.calls[0]["headers"]["Authorization"] == "Bearer cloud-key"
+
+
+def test_a_non_v1_base_still_uses_the_native_api(monkeypatch):
+    """Regression: the local-daemon path must not move."""
+    use_ollama(monkeypatch, LLM_BASE_URL="https://ollama.com")
+    transport = OllamaTransport([VALID_TEXT])
+    complete_json("hi", SCHEMA, client=transport)
+    assert transport.calls[0]["url"] == "https://ollama.com/api/chat"
+    assert transport.calls[0]["json"]["format"] == "json"
+
+
+def test_a_v1_base_retries_a_schema_violation(monkeypatch):
+    use_ollama(monkeypatch, LLM_BASE_URL="https://ollama.com/v1")
+    transport = OpenAITransport([INVALID_TEXT, VALID_TEXT])
+    assert complete_json("hi", SCHEMA, client=transport)["value"] == 0.5
+    assert len(transport.calls) == 2
+
+
+# --- which model actually answered -----------------------------------------
+#
+# Traces are shown on screen as evidence of persona reasoning. A trace that
+# does not name the model that produced it is weaker evidence than it looks,
+# and `slow_agent` records whatever the caller passed -- which is None whenever
+# the model comes from LLM_MODEL rather than --model.
+
+
+def test_resolve_model_prefers_an_explicit_override(monkeypatch):
+    use_ollama(monkeypatch, LLM_MODEL="from-env")
+    assert llm_client.resolve_model("from-the-caller") == "from-the-caller"
+
+
+def test_resolve_model_falls_back_to_the_environment(monkeypatch):
+    use_ollama(monkeypatch, LLM_MODEL="deepseek-v4-pro:cloud")
+    assert llm_client.resolve_model(None) == "deepseek-v4-pro:cloud"
+
+
+def test_resolve_model_falls_back_to_the_provider_default(monkeypatch):
+    use_ollama(monkeypatch)
+    assert llm_client.resolve_model(None) == llm_client.DEFAULT_OLLAMA_MODEL
+
+
+def test_resolve_model_provider_default_differs_by_provider(monkeypatch):
+    monkeypatch.setenv("LLM_API_KEY", "k")
+    assert llm_client.resolve_model(None) == llm_client.DEFAULT_MODEL
+
+
+def test_complete_json_sends_exactly_what_resolve_model_reports(monkeypatch):
+    """The recorded name and the sent name must not be able to drift apart."""
+    use_ollama(monkeypatch, LLM_MODEL="deepseek-v4-pro:cloud")
+    transport = OllamaTransport([VALID_TEXT])
+    complete_json("hi", SCHEMA, client=transport)
+    assert transport.calls[0]["json"]["model"] == llm_client.resolve_model(None)
