@@ -114,6 +114,24 @@ opt-in behind `--llm-headline` (see below).
 * **S21's collection scripts** — `collect_link.py`, `anonymise_sessions.py`.
 * **An Ollama provider**, which unblocked S13's persona traces without an Anthropic key, and with
   it a transport-retry fix after a real run died on a dropped connection.
+
+* **S13's personas were not the simulator's personas.** This is the most consequential thing Phase
+  3 found, and the traces found it the first time they were ever generated. One loyalist shopper,
+  inside a single trip, said *"I always buy Orchid"*, then Crunch, then Zapp, then Nimbus. The
+  model was not failing: `render_prompt` passed only the persona's `description` — "Strong affinity
+  to one brand" — and never said which brand. The policy carrying
+  `brand_affinity {Crunch: 0.95, ...}` and `goal_categories` was loaded and, per its own docstring,
+  used "only to supply the shopper's time budget".
+
+  So the LLM agents shared a *name* with the simulator's personas and nothing else, which
+  undercuts the premise that both panels shop the same store as the same people. The policy now
+  reaches the prompt. A brand is announced as dominant only at ≥2× the runner-up, because the
+  other three personas have near-flat affinities and claiming loyalty for them would put a
+  falsehood in the prompt.
+
+  The symptom was visible in the aggregate too: `loyalist` completed 4 of 20 trips, the other 16
+  running out of time while picking up items it had no reason to choose between. `mission`,
+  `browser` and `switcher` completed 20 of 20.
 * **`eval.py` determinism restored.** Loading `.env` gave the process a key, so the headline came
   from a live model — a non-reproducible string in a committed file. It stayed stable only while
   the grounding check kept rejecting the sentence, which is luck, not the guarantee SPEC's
