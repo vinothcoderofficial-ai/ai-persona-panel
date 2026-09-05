@@ -211,12 +211,22 @@ synthetic panel recovers it: fused attention **0.0267 → 0.0497, uplift +0.86**
 side of this comparison — and therefore the `same_direction` flag that makes it a *check* rather
 than a number — is not yet collected.
 
-**Ad-to-Purchase Lift**, synthetic side only (the 95 % interval is a bootstrap over the real
-panel's shoppers, so there is none):
+**Ad-to-Purchase Lift**, synthetic side only — the `95 % CI` column in `RESULTS.md` is a
+bootstrap over the *real* panel's shoppers and stays empty until that panel exists. What the
+synthetic side can report is a **Monte Carlo spread**: resample this run's own purchase events and
+see whether the number is resolved at this run size. It is not a confidence interval, and
+`RESULTS.md` says so in those words; the synthetic panel is not a sample drawn from a population.
 
 | Segment | browser | switcher | population | loyalist | mission |
 |---|---|---|---|---|---|
 | Synthetic lift | 0.32 | 0.11 | 0.04 | 0.02 | −0.08 |
+| MC spread | 0.19 … 0.46 | 0.03 … 0.19 | −0.03 … 0.12 | −0.01 … 0.06 | −0.33 … 0.18 |
+
+**Three of those five straddle zero.** Only browser and switcher are resolved at n = 10,000; the
+population row, loyalist and mission are not, so their sign is not established by this run. That
+became visible only once `sim/simulator.py` began emitting each arm's purchase count — the arm
+vectors are normalised shares, so before that there was nothing to resample. A wide spread means
+too few synthetic purchase events, not a disagreement with the real panel.
 
 Lift is **not** monotonic in `ad_receptivity` for the mission and loyalist personas on this aisle;
 it is strictly monotonic on a single-bay symmetric store where the mechanism is isolated. Both
