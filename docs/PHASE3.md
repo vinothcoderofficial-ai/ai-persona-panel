@@ -132,6 +132,7 @@ opt-in behind `--llm-headline` (see below).
   The symptom was visible in the aggregate too: `loyalist` completed 4 of 20 trips, the other 16
   running out of time while picking up items it had no reason to choose between. `mission`,
   `browser` and `switcher` completed 20 of 20.
+
 * **`eval.py` determinism restored.** Loading `.env` gave the process a key, so the headline came
   from a live model — a non-reproducible string in a committed file. It stayed stable only while
   the grounding check kept rejecting the sentence, which is luck, not the guarantee SPEC's
