@@ -16,10 +16,24 @@ from __future__ import annotations
 
 import json
 import os
+import pathlib
+import sys
 from typing import Any
 
 import httpx
 from jsonschema import Draft7Validator
+
+_ROOT = pathlib.Path(__file__).resolve().parent.parent
+if str(_ROOT) not in sys.path:  # the pattern scripts/ already uses
+    sys.path.insert(0, str(_ROOT))
+
+import envfile  # noqa: E402
+
+# Load `.env` once, at import, so LLM_PROVIDER / LLM_MODEL / LLM_API_KEY can be
+# configured the way .env.example has always claimed they could. Once rather
+# than per call is deliberate: a test that clears one of these must stay
+# cleared. A real environment variable always beats the file (envfile.py).
+envfile.load()
 
 DEFAULT_BASE_URL = "https://api.anthropic.com/v1"
 # Mirrors the default in .env.example -- keep the two in sync if that file changes.

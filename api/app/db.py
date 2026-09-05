@@ -11,6 +11,7 @@ sqlite:///./shoppertwin.db.
 """
 import json
 import os
+import sys
 from pathlib import Path
 from typing import Iterator, Optional
 
@@ -21,6 +22,15 @@ ROOT = Path(__file__).resolve().parents[2]
 SCHEMAS_DIR = ROOT / "schemas"
 PLANOGRAMS_DIR = ROOT / "data" / "planograms"
 VARIANTS_DIR = ROOT / "data" / "variants"
+
+if str(ROOT) not in sys.path:  # the pattern scripts/ already uses
+    sys.path.insert(0, str(ROOT))
+
+import envfile  # noqa: E402
+
+# Before DATABASE_URL is read: .env.example carries it, and until now nothing
+# on the Python side loaded that file. A real environment variable still wins.
+envfile.load()
 
 DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///./shoppertwin.db")
 
