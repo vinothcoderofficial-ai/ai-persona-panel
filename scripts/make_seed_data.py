@@ -3,7 +3,7 @@
 Run once after cloning:  python scripts/make_seed_data.py
 Writes:
   data/planograms/demo_aisle.json   3 bays x 5 shelves, 24 SKUs, 3 ad slots
-  data/variants/A.json B.json C.json
+  data/variants/A.json B.json C.json D.json
   data/personas/*.json
   web/public/textures/*.png         (needs Pillow; skipped with a warning if absent)
 """
@@ -142,6 +142,21 @@ VARIANTS = [
         "patches": [
             {"op": "set_ad_creative", "ad_slot_id": "B3_ENDCAP", "creative_id": None},
             {"op": "set_ad_creative", "ad_slot_id": "B1_TALKER", "creative_id": "AD_1"},
+        ],
+    },
+    {
+        "variant_id": "D",
+        "base_planogram_id": "demo_aisle",
+        "name": "Control arm - no ad creative anywhere",
+        # A, B and C all carry AD_1 -- C only relocates it -- so before D there
+        # was no unexposed arm anywhere in the data and no Brand Lift was
+        # possible. D is A with every ad slot blanked, so it controls the ad and
+        # nothing else. The slots survive with creative_id: null, mirroring the
+        # rule for empty shelf positions.
+        "patches": [
+            {"op": "set_ad_creative", "ad_slot_id": "B1_TALKER", "creative_id": None},
+            {"op": "set_ad_creative", "ad_slot_id": "B2_DECAL", "creative_id": None},
+            {"op": "set_ad_creative", "ad_slot_id": "B3_ENDCAP", "creative_id": None},
         ],
     },
 ]
