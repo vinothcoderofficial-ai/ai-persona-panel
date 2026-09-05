@@ -155,12 +155,15 @@ the store will render.
 | `make validate` | Check every data file against `schemas/` — currently **12 files, 0 errors** |
 | `make gen-types` | Regenerate `web/src/contracts/` and `api/app/schemas.py` from `schemas/` |
 | `make api` / `make web` | FastAPI on `:8000` / Vite on `:5173` |
-| `make test` | `pytest` + `vitest` — **535 Python tests and 315 web tests across 30 files, all green** at the time of writing |
+| `make test` | `pytest` + `vitest` — **554 Python tests and 315 web tests across 30 files, all green** at the time of writing |
 | `make eval` | Regenerate `RESULTS.md` and `docs/figures/*.png` from committed evidence |
 
 There is no `make demo` and no `make readme-gif` (PLAN §13 cut Docker Compose and `make demo`;
-the GIF target was never built). There is **no CI workflow** — SPEC M8 asks for
-`.github/workflows/ci.yml` and it was not built, so there is no badge to put here.
+the GIF target was never built). CI is `.github/workflows/ci.yml`: pytest with schema
+validation, vitest with `tsc`, and a third job that re-runs `scripts/eval.py` and fails if
+`RESULTS.md` moves by a single byte — SPEC's own acceptance line, so a stale report cannot sit in
+the repo describing numbers the code no longer produces. `LLM_OFFLINE=1` is set for the whole
+workflow: nothing in CI may contact a model.
 
 Screens, once both servers are up:
 
@@ -264,10 +267,9 @@ whose bars would all be zero, because an axis of zero-height bars reads as a mea
 | | Why |
 |---|---|
 | **The real panel** (S9 pilot, S21 collection) | Needs people and laptops — this is the only thing left that code cannot supply. `data/sessions/anon/` is empty and `predictions/` holds no locks. The **tooling is built**: `scripts/collect_link.py` hands out balanced, seed-reproducible links and `scripts/anonymise_sessions.py` exports the database into the corpus `make eval` reads, verified end to end (link → session → lock → events → anonymise → `eval.py` exit 0). What is missing is shoppers. |
-| **Persona decision traces** (S13 output) | No `LLM_API_KEY`. The loop is built and tested against an injected fake; it will not write a trace a test double produced, because those traces appear on screen. Run `python -m sim.slow_agent --all --n 20` once a key exists. |
+| **Persona decision traces** (S13 output) | No model has been run yet. The loop is built and tested against an injected fake, and it will not write a trace a test double produced, because those traces appear on screen. **No Anthropic key is needed:** set `LLM_PROVIDER=ollama` and `LLM_MODEL` to a model your daemon already has and a local daemon serves it with no key and no account. Then run `python -m sim.slow_agent --all --n 20`. |
 | **Video → planogram** (S20) | Dropped under PLAN §5's own four-hour CUDA timebox. No aisle clip was recorded and the available GPU (GeForce MX250) is far below what fp16 Grounding DINO needs. `vision/` is a package stub; `web/src/vision/` is empty. |
 | **The GLB store shell** (S6) | Cut under PLAN §9's drop order ("GLB shell → back to procedural"). `data/models/` is empty. **This means the portal's "sample 3D model from github or huggingface" requirement is not met.** |
-| **CI workflow** | SPEC M8 asks for one; it was not built. |
 
 The persona policies in `data/cache/policies/` were **written by hand** in S2. The LLM policy
 generator (S12) is built and tested against a mocked model but has not authored the policies in
