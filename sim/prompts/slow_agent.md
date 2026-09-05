@@ -25,6 +25,7 @@ Station {station_id} ({station_index} of {n_stations}, {station_type}).
 Visible this turn, in random order -- "prominence" is how much the shelf itself pulls the eye:
 {slots}
 Empty gaps here, nothing to pick up: {empty_slots}
+In your hands, picked up but not yet in the basket: {held}
 In your cart: {cart}
 Time left: {time_left_s}s. This is turn {turn} of at most {max_turns}.
 Choose your single next action.

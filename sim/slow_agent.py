@@ -249,12 +249,15 @@ def preferences_block(policy: Mapping | None) -> str:
 
 def render_prompt(persona: Mapping, station: Station, ordered_targets: Sequence[str], *,
                   n_stations: int, cart: Sequence[Mapping], time_left_s: float, turn: int,
-                  max_turns: int, policy: Mapping | None = None) -> str:
+                  max_turns: int, policy: Mapping | None = None,
+                  held: Sequence[Mapping] = ()) -> str:
     """Render `prompts/slow_agent.md` for one turn. `ordered_targets` is already shuffled."""
     template = PROMPT_TEMPLATE_PATH.read_text(encoding="utf-8")
     return template.format(
         description=persona["description"],
         preferences=preferences_block(policy),
+        held=(", ".join(f"{item['sku_id']} ({item['name']})" for item in held)
+              if held else "nothing"),
         station_id=station.bay_id,
         station_index=station.index + 1,
         n_stations=n_stations,
@@ -349,6 +352,7 @@ def run_shopper(persona: Mapping, stations: Sequence[Station], skus: Mapping[str
     turns: list[dict] = []
     rejections: list[dict] = []
     cart: list[dict] = []
+    held: list[dict] = []   # picked up, not yet in the basket
     visited = [stations[0].bay_id]
 
     station_index = 0
@@ -361,6 +365,7 @@ def run_shopper(persona: Mapping, stations: Sequence[Station], skus: Mapping[str
         base_prompt = render_prompt(
             persona, station, order, n_stations=len(stations), cart=cart,
             time_left_s=time_left, turn=turn, max_turns=max_turns, policy=policy,
+            held=held,
         )
 
         turn_rejections: list[dict] = []
@@ -405,11 +410,22 @@ def run_shopper(persona: Mapping, stations: Sequence[Station], skus: Mapping[str
             "time_left_s": round(max(time_left, 0.0), 1),
         })
 
+        if action["action"] == "pickup":
+            # A shopper who picks something up is holding it. Before this the
+            # action changed nothing the model could see, so a persona with one
+            # decisive target repeated it until its time ran out.
+            sku = skus[station.purchasable[action["target"]]]
+            if not any(item["slot_id"] == action["target"] for item in held):
+                held.append({"sku_id": sku["sku_id"], "name": sku["name"],
+                             "slot_id": action["target"]})
+
         if action["action"] == "add_to_cart":
             sku = skus[station.purchasable[action["target"]]]
             cart.append({"sku_id": sku["sku_id"], "name": sku["name"], "brand": sku["brand"],
                          "category": sku["category"], "price": sku["price"],
                          "slot_id": action["target"]})
+            # It is in the basket now, not in your hands.
+            held[:] = [item for item in held if item["slot_id"] != action["target"]]
 
         if action["action"] == "checkout":
             return _shopper_record(turns, rejections, cart, visited, "checkout", None)

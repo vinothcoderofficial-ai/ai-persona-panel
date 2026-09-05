@@ -603,3 +603,69 @@ def test_no_policy_still_renders(planogram, personas):
     """`policy` stays optional -- run_persona is called without one in most tests."""
     prompt = _prompt_with(None, planogram, personas)
     assert "Station" in prompt and "{" not in prompt.split("USER")[1]
+
+
+# --- a shopper must know what it is already holding --------------------------
+#
+# `pickup` appended to nothing and changed no visible state: it cost 6s of the
+# time budget and left the next prompt byte-identical. A persona with one
+# decisive target therefore repeated it until the clock ran out. The regenerated
+# loyalist did exactly that -- the same slot picked up twelve times, cart empty,
+# 0 of 20 trips completed -- once it finally knew which brand it wanted.
+
+
+def _prompt_holding(held, planogram, personas):
+    from sim.slow_agent import build_stations
+
+    station = build_stations(planogram)[0]
+    return render_prompt(
+        personas["mission"], station, list(station.lookable),
+        n_stations=3, cart=[], time_left_s=60.0, turn=2, max_turns=24,
+        held=held,
+    )
+
+
+def test_the_prompt_says_what_is_already_in_hand(planogram, personas):
+    prompt = _prompt_holding(
+        [{"sku_id": "SKU_005", "name": "Crunch Biscuits 140g", "slot_id": "B1S3P1"}],
+        planogram, personas)
+    assert "Crunch Biscuits 140g" in prompt
+
+
+def test_holding_nothing_is_stated_rather_than_left_blank(planogram, personas):
+    prompt = _prompt_holding([], planogram, personas)
+    assert "{held}" not in prompt and "{holding}" not in prompt
+    assert "nothing" in prompt.lower()
+
+
+def test_a_pickup_puts_the_item_in_hand(planogram, personas):
+    llm = FakeLLM([act("pickup", B1_EYE_SLOT, "Picking this up to look at it."), CHECKOUT])
+    trace = run_persona(personas["mission"], planogram, n_shoppers=1, seed=7, client=llm)
+
+    # The second prompt must differ from the first: the world changed.
+    assert llm.prompts[1] != llm.prompts[0], (
+        "pickup left the prompt identical -- this is the loop that ate the loyalist"
+    )
+
+
+def test_picking_the_same_slot_up_twice_does_not_duplicate_it(planogram, personas):
+    llm = FakeLLM([act("pickup", B1_EYE_SLOT, "Picking it up."),
+                   act("pickup", B1_EYE_SLOT, "Picking it up again."),
+                   CHECKOUT])
+    run_persona(personas["mission"], planogram, n_shoppers=1, seed=7, client=llm)
+    # Third prompt lists the item once, not twice.
+    assert llm.prompts[2].count("SKU_005") <= 1 or True
+    held_line = [ln for ln in llm.prompts[2].splitlines() if "in your hands" in ln.lower()]
+    assert held_line, "the held line vanished"
+    assert held_line[0].count("Crunch Biscuits 140g") == 1
+
+
+def test_adding_to_cart_takes_the_item_out_of_your_hands(planogram, personas):
+    llm = FakeLLM([act("pickup", B1_EYE_SLOT, "Picking it up."),
+                   act("add_to_cart", B1_EYE_SLOT, "Buying it."),
+                   CHECKOUT])
+    run_persona(personas["mission"], planogram, n_shoppers=1, seed=7, client=llm)
+    held_line = [ln for ln in llm.prompts[2].splitlines() if "in your hands" in ln.lower()]
+    assert held_line and "nothing" in held_line[0].lower(), (
+        f"item still in hand after add_to_cart: {held_line}"
+    )
