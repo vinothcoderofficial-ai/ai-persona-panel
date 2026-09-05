@@ -7,6 +7,25 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
+    // `root` above is `web/`, so `data/models/WaterBottle.glb` — the CC0
+    // Khronos sample model `AisleDisplay.tsx` renders — sits outside it and
+    // the dev server will not serve it. The alternative is a second copy of an
+    // 8.6 MB binary under `web/public/`, and this repo is not carrying the
+    // same asset twice: `data/models/` is where the layout puts data, it is
+    // where the provenance README lives, and that README documents that path.
+    //
+    // Allowing the repository root instead means the `?url` import in
+    // `AisleDisplay.tsx` resolves the same way in both modes without any
+    // copying: in `npm run dev` Vite serves it through `/@fs/`, and in
+    // `npm run build` Rollup emits it into `dist/assets/` with a content hash
+    // (8.6 MB is far over `assetsInlineLimit`, so it is always a file, never
+    // a data URI) and rewrites the import to that path. Neither needs the file
+    // to be under `web/`.
+    //
+    // Vite's default here is the workspace root it infers from the lockfile,
+    // which happens to be this same directory — but that is inference about a
+    // file layout, and this asset is load-bearing enough to say out loud.
+    fs: { allow: [resolve(__dirname, "..")] },
     proxy: {
       "/api": {
         target: "http://localhost:8000",

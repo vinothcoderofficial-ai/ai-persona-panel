@@ -727,10 +727,35 @@ working ingest path.
 
 ### 12.11 The store shell is procedural
 
-PLAN §9's drop order permits "GLB shell (back to procedural)" and that is what happened.
-`data/models/` is empty and nothing in `web/src/store/` loads a GLB. Consequence, stated because
-it is a scored criterion and not only an aesthetic one: **the portal's "sample 3D model from
-github or huggingface" requirement is not met.**
+PLAN §9's drop order permits "GLB shell (back to procedural)" and that is what happened. The
+bays, shelves, facings and ad slots are all generated from `web/src/store/geometry.ts`. **No
+modelled shop interior exists**, and none is planned.
+
+One glTF asset is now loaded, and the distinction matters. `data/models/WaterBottle.glb` — the
+Khronos Group's own CC0 reference asset for metal/roughness PBR, taken from
+[glTF-Sample-Assets](https://github.com/KhronosGroup/glTF-Sample-Assets) — stands on a display
+plinth in the aisle gap between bay 1 and bay 2, rendered by `web/src/store/AisleDisplay.tsx`.
+That satisfies the portal's "sample 3D model from github or huggingface" criterion. It is **not**
+the S6 shell: one prop in an aisle is not a modelled store, and reading it as one would overstate
+what is built.
+
+The prop is deliberately inert, for the same reason the two panels are served one resolved
+planogram document:
+
+* **It is not a SKU and not in the planogram.** `data/planograms/demo_aisle.json` is unchanged.
+  A test walks all 30 slots and asserts the bottle's bounding box overlaps none of them; it is
+  nowhere near `B1S3P2`, the deliberately empty eye-level position the known-effect variant
+  moves `SKU_008` into.
+* **It cannot be measured.** `SlotMapper` builds screen rectangles from the planogram document
+  alone, so the prop can never enter one, and it carries no pointer handlers — react-three-fiber
+  raycasts only objects registered as interactive, and registration follows from having a
+  handler. It cannot emit a `hover` or a `pickup`.
+* **Nothing under `sim/`, `analytics/` or `scripts/` reads `data/models/`.** Adding it moved no
+  number: `RESULTS.md` is byte-identical across the change.
+
+It also loads in its own `<Suspense>` boundary, so the 8.6 MB download cannot delay the shelves,
+and its failure path renders nothing rather than an error overlay — a decoration that fails
+should cost a decoration, not the store.
 
 ### 12.12 The CPS / Brand Lift integration is a design plus code, not a result
 

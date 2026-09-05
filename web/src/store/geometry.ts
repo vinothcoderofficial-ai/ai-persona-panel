@@ -52,6 +52,11 @@ export interface Size2 {
   h: number;
 }
 
+/** A box: `Size2`'s face plus the depth along z. */
+export interface Size3 extends Size2 {
+  d: number;
+}
+
 /** Bay i is centred on its own station x, so look_at lines up with the bay. */
 export function bayCenterX(planogram: Planogram, bayIndex: number): number {
   const bay = planogram.bays[bayIndex];
@@ -158,6 +163,154 @@ export function adSlotSize(planogram: Planogram, bayIndex: number, ad: AdSlot): 
   if (shelf) return { w: ad.width_m, h: AD_TALKER_HEIGHT_M };
   if (isFlatAd(ad)) return { w: ad.width_m, h: FLOOR_DECAL_DEPTH_M };
   return { w: ad.width_m, h: AD_HEADER_HEIGHT_M };
+}
+
+/**
+ * ---------------------------------------------------------------------------
+ * The aisle display: where the one third-party 3D asset in this repo stands.
+ * ---------------------------------------------------------------------------
+ *
+ * `data/models/WaterBottle.glb` is the Khronos CC0 sample model (see that
+ * directory's README for licence, source and hash). It is scenery. It is *not*
+ * a SKU, it is not in `data/planograms/`, and nothing below is read by `sim/`,
+ * `analytics/` or `scripts/eval.py` — `SlotMapper` builds its rectangles from
+ * the planogram document alone, so the prop cannot enter a screen rect, cannot
+ * be hovered, clicked or dwelled on, and cannot move a measured number.
+ *
+ * Everything about the placement follows from three things that are not
+ * obvious until you do the maths against this camera (fov 50, at
+ * `[bx, 1.5, 2.2]` looking at `[bx, 1.1, 0]`):
+ *
+ *  - **The floor is off-screen.** The floor at the bay front, `(bx, 0, 0.2)`,
+ *    projects to ndc y = -1.07 — below the bottom of the frame at every
+ *    aspect ratio. A prop standing on the aisle floor would be visible only
+ *    from the waist up, which is exactly the "bottle lying on the floor reads
+ *    as a bug" failure in a different costume.
+ *  - **The top of the gondola does not fit.** It is the obvious retail answer
+ *    and it is wrong here. The top shelf sits at 1.70 m with 0.22 m products
+ *    on it, so the fixture's visual top is 1.92 m, not the carcass's 1.80 m;
+ *    and the top of the frame at the shelf plane is y ≈ 2.08 m. Worse, the
+ *    camera is *below* the carcass top, so the top-shelf facings occlude
+ *    anything standing behind them up to y ≈ 1.96 m. That leaves an 11 cm
+ *    visible band for a 26 cm bottle.
+ *  - **The gap between two bays is the one generous piece of empty frame.**
+ *    It is 0.30 m wide (`BAY_GAP_M`), it belongs to no bay, it holds no slot,
+ *    and it is in frame from *both* neighbouring stations at every aspect
+ *    ratio from 16:9 down to a square window.
+ *
+ * So: a display plinth standing in the aisle gap between bay 1 and bay 2, with
+ * the bottle on its deck. A promotional plinth beside a gondola run is real
+ * retail furniture, it is unmistakably not shelf stock, and its own colour
+ * (below, in AisleDisplay.tsx) keeps it from reading as another bay.
+ *
+ * The plinth is also narrow enough to hide nothing. Projecting the deck's
+ * corners onto the shelf-face plane z = `FRONT_Z` from each of the three
+ * station cameras, its silhouette spans x ∈ [0.556, 0.893] at worst. Bay 1's
+ * rightmost slot ends at x = 0.5 and bay 2's leftmost begins at x = 0.95, so
+ * no slot is occluded from any station. It is deliberately motionless for the
+ * same reason the shopper's own gaze dot is hidden: movement in the periphery
+ * would pull attention and corrupt the measurement it sits next to.
+ */
+
+/** Which gap the display stands in: between bay `n` and bay `n + 1`. */
+export const AISLE_DISPLAY_GAP_INDEX = 0;
+/** Plinth column: a slim square section, 5 cm clear of each bay in a 30 cm gap. */
+export const AISLE_DISPLAY_COLUMN_W = 0.2;
+export const AISLE_DISPLAY_COLUMN_D = 0.2;
+/** The deck overhangs the column, exactly as a shelf board overhangs its carcass. */
+export const AISLE_DISPLAY_DECK_W = 0.26;
+export const AISLE_DISPLAY_DECK_D = 0.26;
+export const AISLE_DISPLAY_DECK_THICKNESS_M = 0.04;
+/**
+ * Height of the deck's top surface, which is where the bottle's base sits.
+ *
+ * Two constraints pick this number, and both were found by looking at the
+ * rendered store rather than at the maths:
+ *
+ *  - It must clear the eye-level shelf band. `B1S3` runs 1.20–1.42 m and
+ *    `B1S3P2` — the deliberately empty position the whole "move a SKU to eye
+ *    level" story is built on — is the second half of it. Nothing about this
+ *    prop may read as an answer to what belongs in that gap.
+ *  - It must not line up with a shelf board. The obvious 1.45 m does clear the
+ *    eye-level band, but it is also exactly `B1S2`'s height, and a deck level
+ *    with a board reads as the shelf carrying on through the gap — which is
+ *    the "it looks like stock" failure arriving by the back door. 1.55 m
+ *    matches none of 1.70 / 1.45 / 1.20 / 0.85 / 0.40, and it puts the top of
+ *    the bottle at 1.81 m, crowning level with the 1.80 m top of the gondola
+ *    run. That reads as composed, which is the whole idea.
+ */
+export const AISLE_DISPLAY_DECK_TOP_Y = 1.55;
+/**
+ * Front faces flush with the bay carcass front, so the plinth lines up with
+ * the gondola run rather than jutting into the aisle.
+ */
+export const AISLE_DISPLAY_Z = FRONT_Z - AISLE_DISPLAY_COLUMN_D / 2;
+
+/**
+ * The model's own bounding box, in metres, read from the `POSITION` accessor's
+ * `min`/`max` in the GLB itself: x and z ±0.05445001, y ±0.130220339. It is
+ * centred on its origin, so the y half-extent is what lifts its base onto the
+ * deck. Rendered at scale 1: the asset is already modelled life-size, and a
+ * water bottle that is not 26 cm tall is a worse advertisement for the
+ * renderer than one that is.
+ */
+export const AISLE_DISPLAY_MODEL_SIZE: Size3 = {
+  w: 2 * 0.05445001,
+  h: 2 * 0.130220339,
+  d: 2 * 0.0544500239,
+};
+
+export interface AisleDisplayPlacement {
+  column: Vec3;
+  columnSize: Size3;
+  deck: Vec3;
+  deckSize: Size3;
+  /** Centre of the model's bounding box, which is the model's own origin. */
+  model: Vec3;
+  modelSize: Size3;
+}
+
+/** Centre of the aisle gap between bay `leftBayIndex` and the bay after it. */
+export function gapCenterX(planogram: Planogram, leftBayIndex: number): number {
+  return (
+    bayLeftX(planogram, leftBayIndex) +
+    planogram.bays[leftBayIndex].width_m +
+    BAY_GAP_M / 2
+  );
+}
+
+/** Column, deck and model placement for the aisle display. See the note above. */
+export function aisleDisplayPlacement(planogram: Planogram): AisleDisplayPlacement {
+  const x = gapCenterX(planogram, AISLE_DISPLAY_GAP_INDEX);
+  const deckBottom = AISLE_DISPLAY_DECK_TOP_Y - AISLE_DISPLAY_DECK_THICKNESS_M;
+
+  return {
+    // The column runs from the floor to the underside of the deck. Its foot is
+    // below the bottom of the frame, exactly as the bays' feet are, so it is
+    // cropped by the viewport rather than hovering in it.
+    column: { x, y: deckBottom / 2, z: AISLE_DISPLAY_Z },
+    columnSize: {
+      w: AISLE_DISPLAY_COLUMN_W,
+      h: deckBottom,
+      d: AISLE_DISPLAY_COLUMN_D,
+    },
+    deck: {
+      x,
+      y: AISLE_DISPLAY_DECK_TOP_Y - AISLE_DISPLAY_DECK_THICKNESS_M / 2,
+      z: AISLE_DISPLAY_Z,
+    },
+    deckSize: {
+      w: AISLE_DISPLAY_DECK_W,
+      h: AISLE_DISPLAY_DECK_THICKNESS_M,
+      d: AISLE_DISPLAY_DECK_D,
+    },
+    model: {
+      x,
+      y: AISLE_DISPLAY_DECK_TOP_Y + AISLE_DISPLAY_MODEL_SIZE.h / 2,
+      z: AISLE_DISPLAY_Z,
+    },
+    modelSize: AISLE_DISPLAY_MODEL_SIZE,
+  };
 }
 
 /** The four corners of a quad, upright in the xy plane or flat in the xz plane. */

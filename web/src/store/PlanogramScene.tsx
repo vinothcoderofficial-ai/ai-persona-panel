@@ -17,6 +17,7 @@ import { FixationFilter, fixationPayload, type Fixation } from "@/capture/Fixati
 import type { GazeTracker } from "@/capture/GazeTracker";
 import { evaluate, summarise } from "@/capture/SessionGate";
 import type { EventSink } from "@/capture/SessionSocket";
+import { AisleDisplay } from "@/store/AisleDisplay";
 import { Bay } from "@/store/Bay";
 import { StationController } from "@/store/StationController";
 import type { ScreenRect } from "@/store/SlotMapper";
@@ -482,6 +483,18 @@ export function PlanogramScene({
             <SceneReadySentinel onReady={onSceneReady} />
           </Suspense>
         </SceneErrorBoundary>
+
+        {/*
+          A sibling of the shelves, never a child of them. `AisleDisplay` loads
+          an 8.6 MB glTF binary and brings its own <Suspense> and its own error
+          boundary; inside the pair above it would hold `sceneReady` — and with
+          it the "Loading shelves…" overlay covering this canvas — hostage to
+          that download, and a failure to fetch it would raise the shelves'
+          "run make seed" message over a store whose shelves are perfectly
+          fine. It is decoration: it loads late, it fails quietly, and neither
+          costs the shopper anything. See AisleDisplay.tsx.
+        */}
+        <AisleDisplay planogram={planogram} />
       </Canvas>
 
       {/*

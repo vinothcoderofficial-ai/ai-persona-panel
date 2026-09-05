@@ -90,6 +90,18 @@ vi.mock("@/store/Bay", () => ({
   },
 }));
 
+// The aisle display prop hangs off its own <Suspense> boundary, deliberately
+// separate from the shelf one this file is about, so it is not part of what is
+// under test here. Left real it would still run drei's `useGLTF` against the
+// GLB's `/@fs/...` dev URL, which jsdom's fetch rejects outright ("Failed to
+// parse URL"), and the caught failure would print a stack into this file's
+// output on every run. Stubbing it is the same move already made above for
+// StationController and Bay: keep the 3D children that are not under test out
+// of the way, so a failure here means the readiness gate broke and nothing else.
+vi.mock("@/store/AisleDisplay", () => ({
+  AisleDisplay: () => null,
+}));
+
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT =
   true;
 
