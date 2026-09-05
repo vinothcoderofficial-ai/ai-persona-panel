@@ -706,7 +706,22 @@ seed the persona shares. **No CPS data has been obtained, licensed or used; no B
 has been run; no persona has answered the survey.** PLAN §8 lists real CPS data under *not
 building*, and nothing here widens that.
 
-### 12.13 Phase 2 is not started
+### 12.13 The optimizer's ranking is not resolved
 
-S24 (placement optimizer) and S25 (ad slot value) are unbuilt. PLAN §1's "three outputs, in
-increasing value" therefore describes two built outputs and one intention.
+S24 (placement optimizer) is built; S25 (ad slot value) is not, so PLAN §1's "three outputs, in
+increasing value" describes two built outputs and one partly built.
+
+Two limits on what the optimizer's ranking can be said to show:
+
+* **The order is not settled.** Re-rolling the same 10,000-shopper simulation at seeds 42-46 moves
+  the top pick between +6.2% and +14.2% and the current placement between +1.3% and +8.9%. Those
+  ranges overlap, so "AD_1 on B1_TALKER at +12.7% beats B3_ENDCAP at +4.5%" is a seed-42 result and
+  not a settled ordering. `Ranking.top_pick_is_resolved` is `False` on the committed planogram and
+  `summary()` names every candidate the top pick is unresolved against.
+* **`SeedSpread` is not a confidence interval,** and PLAN §6's example sentence ("+11% (CI 8-14)")
+  is not reproduced. It is Monte Carlo run-to-run variability: the spread of the objective when the
+  same simulation is re-rolled at different seeds. A confidence interval would measure sampling
+  error, and §12.7 records why a committed `SimResult` cannot support one -- its arms are normalised
+  shares and `n_runs` counts shoppers rather than purchase events, so bootstrapping those fields
+  returns an interval narrower than the truth. The module, its docstrings and its printed output all
+  say which of the two it is.

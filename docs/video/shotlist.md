@@ -30,7 +30,7 @@ SPEC M8 specifies seven shots. Two of them cannot be recorded honestly:
 |---|---|---|
 | `0:40–1:40` Phone clip → `VisionProgress`, boxes per frame, store assembling | **Cannot record.** S20 was dropped under PLAN §5's four-hour CUDA timebox. No aisle clip was shot; `vision/` is a stub and `web/src/vision/` is empty. | Shot 3: the seed planogram becoming the 3D store, live. |
 | `1:40–2:55` Colleague shops with webcam gaze; agreement meter climbs | **Partly.** There is no collected panel and the S9 webcam pilot never ran, so a webcam take cannot be promised. | Shot 4 as written below: a real, consented, **cursor-only** session. The agreement meter does turn on — it counts cursor dwells rather than fixations — but say on camera that this is agreement against a cursor-only proxy, not gaze. |
-| PLAN §6's optimizer recommendation | **Cannot record.** S24 is not started. | Cut. The runtime it would have used goes to the honesty panel. |
+| PLAN §6's optimizer recommendation | **Recordable.** S24 landed; the ranking runs in ~6 s. | Kept, with the seed spread on screen: the top pick's range overlaps the current placement's, so it is stated as a seed-42 result, not a settled ordering. |
 
 Everything else is recorded as specified.
 

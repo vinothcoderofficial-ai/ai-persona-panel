@@ -152,7 +152,7 @@ the store will render.
 | `make validate` | Check every data file against `schemas/` — currently **12 files, 0 errors** |
 | `make gen-types` | Regenerate `web/src/contracts/` and `api/app/schemas.py` from `schemas/` |
 | `make api` / `make web` | FastAPI on `:8000` / Vite on `:5173` |
-| `make test` | `pytest` + `vitest` — **433 Python tests and 315 web tests across 30 files, all green** at the time of writing |
+| `make test` | `pytest` + `vitest` — **463 Python tests and 315 web tests across 30 files, all green** at the time of writing |
 | `make eval` | Regenerate `RESULTS.md` and `docs/figures/*.png` from committed evidence |
 
 There is no `make demo` and no `make readme-gif` (PLAN §13 cut Docker Compose and `make demo`;
