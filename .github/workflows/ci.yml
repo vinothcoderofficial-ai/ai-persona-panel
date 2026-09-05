@@ -13,7 +13,10 @@ name: CI
 
 on:
   push:
-    branches: [master]
+    # `master` was renamed to `main`; both are listed so the rename cannot
+    # silently switch CI off, and so a push to the old name still runs it for
+    # as long as that branch exists.
+    branches: [main, master]
   pull_request:
   workflow_dispatch:
 
