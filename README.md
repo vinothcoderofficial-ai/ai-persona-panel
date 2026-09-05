@@ -154,10 +154,10 @@ the store will render.
 |---|---|
 | `make setup` | Install, seed, validate |
 | `make seed` | Regenerate planogram, variants, personas, textures |
-| `make validate` | Check every data file against `schemas/` — currently **12 files, 0 errors** |
+| `make validate` | Check every data file against `schemas/` — currently **13 files, 0 errors** (variant D added a fourth variant) |
 | `make gen-types` | Regenerate `web/src/contracts/` and `api/app/schemas.py` from `schemas/` |
 | `make api` / `make web` | FastAPI on `:8000` / Vite on `:5173` |
-| `make test` | `pytest` + `vitest` — **554 Python tests and 315 web tests across 30 files, all green** at the time of writing |
+| `make test` | `pytest` + `vitest` — **685 Python tests and 315 web tests across 30 files, all green** at the time of writing |
 | `make eval` | Regenerate `RESULTS.md` and `docs/figures/*.png` from committed evidence |
 
 There is no `make demo` and no `make readme-gif` (PLAN §13 cut Docker Compose and `make demo`;
