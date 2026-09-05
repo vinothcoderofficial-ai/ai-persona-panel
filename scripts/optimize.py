@@ -92,7 +92,11 @@ def main(argv: list[str] | None = None) -> int:
     variant = json.loads((VARIANTS / f"{args.variant}.json").read_text(encoding="utf-8"))
     resolved = resolve(base, variant)
 
-    candidates = optimizer.ad_placement_candidates(resolved, creative_ids=[args.creative])
+    # Every creative, not just the one being scored. Moving AD_2 can displace
+    # AD_1, so a search restricted to AD_1's own placements would hide the
+    # candidate that makes the advertised brand worse. `--creative` selects the
+    # objective; it does not narrow the search space.
+    candidates = optimizer.ad_placement_candidates(resolved)
     if args.focal_sku:
         candidates = candidates + optimizer.sku_level_candidates(resolved, args.focal_sku)
 

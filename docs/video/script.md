@@ -141,7 +141,37 @@ take crossed fewer than fifteen cursor dwells.)*
 > eye level is one of the few things in shopper research nobody argues about. If our pipeline
 > could not recover it, nothing else it said would be worth reading.
 
-## Shot 6 — the honesty panel · 3:15–4:05 · terminal + slides
+## Shot 6 — the recommendation · 3:15–3:45 · LIVE
+
+*(Terminal. Run `python scripts/optimize.py --creative AD_1 --focal-sku SKU_008`.)*
+
+> A what-if answers a question you already thought to ask. This searches. Thirteen
+> configurations — every ad slot against every creative, plus the focal product at every shelf
+> level — each one a full ten-thousand-shopper simulation, scored on purchase lift rather than
+> attention. Six seconds.
+>
+> Today's planogram comes **fifth of thirteen**.
+>
+> And read this line, because it is the honest half: *the order is not resolved.* Re-roll the same
+> simulation at four more seeds and the top pick's range overlaps four other candidates'. So the
+> recommendation is "the shelf talker looks better than the endcap at this seed", not "the shelf
+> talker is better". A tool that hid that line would be easier to sell and worse to trust.
+
+*(Re-run with the commercial flags.)*
+
+> Now the same ranking with money on it. And notice what the command made me do: it refused to
+> print a single rand until I supplied all six commercial inputs — baseline volume, margin, stores,
+> weeks, currency, and a basis line saying where they came from. Mine says ILLUSTRATIVE ONLY,
+> because this project has no client's margin and no store traffic, and there is nowhere in this
+> repository those numbers could have come from.
+>
+> So the lift column is measured. The money column is that lift multiplied by numbers I typed in.
+> The footer says exactly that, every time it prints. Swap in a real planner's numbers and the
+> ranking does not move — only the scale does.
+
+---
+
+## Shot 7 — the honesty panel · 3:45–4:25 · terminal + slides
 
 *(Run `make eval`, scroll `RESULTS.md`.)*
 
@@ -178,7 +208,7 @@ take crossed fewer than fifteen cursor dwells.)*
 > effectively binary. The persona policies in this repository were written by hand, not by a
 > language model — the generator exists, the key does not.
 
-## Shot 7 — value, roadmap, and what is missing · 4:05–4:35 · slides
+## Shot 8 — value, roadmap, and what is missing · 4:25–4:55 · slides
 
 *(Cost/time slide, marked indicative.)*
 
@@ -198,8 +228,9 @@ take crossed fewer than fifteen cursor dwells.)*
 >
 > And here is what we did not finish. There is no collected panel. There are no LLM persona traces,
 > because there is no key. Video-to-planogram was dropped inside its own four-hour timebox. The
-> store shell is procedural, which means the sample-3D-model requirement is not met. The placement
-> optimizer is not started. There is no CI.
+> store shell is procedural, which means the sample-3D-model requirement is not met. There is no CI.
+> And the optimizer you just watched ranks placements it cannot yet separate — the seed spreads
+> overlap, so the ordering is not settled.
 >
 > What is built is a pre-registered experimental design with the evidence checks wired into the
 > build, a synthetic panel that recovers the effect it should, and a store two panels can shop

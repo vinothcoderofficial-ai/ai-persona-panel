@@ -43,10 +43,11 @@ Everything else is recorded as specified.
 | 3 | 0:45–1:25 | **The store.** Seed planogram JSON on the left, the rendered aisle on the right. Arrow-key between the three shelf stations; hover a pack, pick it up, add to cart. Point at the empty eye-level slot. | **live, one take** | shopper window |
 | 4 | 1:25–2:35 | **Live session against a locked prediction.** Consent → intake → "Continue without the camera" → shop. Spectator window shows the prediction badge (hash prefix + `created_at`) *before* the first event, then the heatmap building beside the locked prediction. | **live, one take** | both windows, spectator in picture-in-picture |
 | 5 | 2:35–3:15 | **What-if.** `#/whatif`, move `SKU_008` from the bottom shelf to eye level. `elapsed_ms` on screen; per-persona lift bars animate. Change the creative's ad slot and re-run. | **live** | shopper window at `#/whatif` |
-| 6 | 3:15–4:05 | **Honesty panel.** `RESULTS.md` scrolled in the terminal: the `not yet collected` rows, the zero lock count, the figures `eval.py` refused to draw. Then the noise-ceiling explanation and the known-effect table. | terminal + slides | — |
-| 7 | 4:05–4:35 | Cost and time comparison (labelled indicative); Brand Lift / CPS roadmap; the list of what is not built; repo URL | slides | — |
+| 6 | 3:15–3:45 | **The recommendation.** `python scripts/optimize.py --creative AD_1 --focal-sku SKU_008` in the terminal. The ranking prints; point at the current placement sitting 5th of 13. Then re-run with the commercial flags to show the priced table, and say out loud that the money column is assumed and the lift column is not. | **live** | terminal |
+| 7 | 3:45–4:25 | **Honesty panel.** `RESULTS.md` scrolled in the terminal: the `not yet collected` rows, the zero lock count, the figures `eval.py` refused to draw. Then the noise-ceiling explanation and the known-effect table. | terminal + slides | — |
+| 8 | 4:25–4:55 | Cost and time comparison (labelled indicative); Brand Lift / CPS roadmap; the list of what is not built; repo URL | slides | — |
 
-Total **4:35**.
+Total **4:55**, inside SPEC's assumed 5-minute limit.
 
 ## Per-shot setup
 
@@ -142,7 +143,35 @@ reports about **+0.78 focal attention** and **+1.15 focal purchase share** relat
 and the same move sits between +0.75 and +0.81 across seeds 7 / 8 / 42 / 99 / 2024. `elapsed_ms`
 should be single- to low-double-digit milliseconds warm; the first call after startup is slower.
 
-### Shot 6 — honesty panel (3:15–4:05)
+### Shot 6 — the recommendation (3:15–3:45)
+
+The one shot SPEC M8 asked for that could not be recorded until S24 and S25 landed. Two commands,
+both in the terminal, both fast enough to run live (~6 s each).
+
+```
+python scripts/optimize.py --creative AD_1 --focal-sku SKU_008
+```
+
+Thirteen configurations ranked by ad-to-purchase lift. Point at two things and nothing else:
+
+* the current placement sits **5th of 13**, and
+* the line that begins `The order is not resolved against` — the top pick's seed spread overlaps
+  four other candidates', so this is a seed-42 ordering, not a settled one. Say that on camera.
+  It is the difference between a recommendation engine and a slot machine.
+
+Then price it:
+
+```
+python scripts/optimize.py --creative AD_1     --baseline-units 120 --margin-per-unit 7.5 --stores 4 --weeks 13     --currency INR --basis "ILLUSTRATIVE ONLY -- no client volume or margin data exists"
+```
+
+The table gains a money column. **The `basis` line is the point of this half of the shot**, not the
+number: margin and store traffic exist nowhere in this repository, the command refuses to run
+unless the presenter supplies all six commercial inputs, and the printed footer says which column
+was measured and which was assumed. Read that footer aloud. Do not round the money up, and do not
+call it a forecast.
+
+### Shot 7 — honesty panel (3:45–4:25)
 
 No dashboard page carries this. The M7 "Noise Dashboard" was never built — `web/src/dashboard/`
 holds one page, the per-session experiment view — so this shot is the terminal plus slides.
@@ -164,7 +193,7 @@ Then scroll `RESULTS.md` on camera and stop on:
 Then two slides: the noise-ceiling explanation (see `script.md`) and the limitations that are
 already written down in [`METHODOLOGY.md §12`](../METHODOLOGY.md#12-limitations).
 
-### Shot 7 — close (4:05–4:35)
+### Shot 8 — close (4:25–4:55)
 
 Slides only.
 
