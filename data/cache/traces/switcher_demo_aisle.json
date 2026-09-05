@@ -1,0 +1,2716 @@
+{
+  "trace_version": 1,
+  "persona_id": "switcher",
+  "archetype": "switcher",
+  "description": "Price and promotion driven, compares options, switches brand readily.",
+  "planogram_id": "demo_aisle",
+  "n_shoppers": 20,
+  "seed": 42,
+  "temperature": 0.7,
+  "model": "deepseek-v4-pro:cloud",
+  "time_budget_s": 90.0,
+  "max_turns": 24,
+  "max_reasks": 3,
+  "generated_by": "sim/slow_agent.py",
+  "shoppers": [
+    {
+      "shopper_index": 0,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S1P1",
+          "reason": "Crunch chips are on promotion and cheapest chips here, grabbing them.",
+          "time_left_s": 84.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S1P1",
+          "reason": "Crunch chips are on promotion at 25, best chip value here.",
+          "time_left_s": 80.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S5P1",
+          "reason": "Orchid Nuts 120g at 25 is the cheapest nuts here, grabbing it.",
+          "time_left_s": 74.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S5P1",
+          "reason": "Orchid nuts are cheapest nuts here, so they go in the cart.",
+          "time_left_s": 70.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B1",
+          "action": "next_station",
+          "target": null,
+          "reason": "Already got the cheapest chips and nuts here; check next bay for better deals.",
+          "time_left_s": 62.0
+        },
+        {
+          "turn": 6,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S4P2",
+          "reason": "Nimbus nuts are 140g for 25, cheaper per gram than Orchid; switching.",
+          "time_left_s": 58.0
+        },
+        {
+          "turn": 7,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S1P2",
+          "reason": "Zapp chips are on promotion and a bigger bag; worth switching.",
+          "time_left_s": 54.0
+        },
+        {
+          "turn": 8,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S1P1",
+          "reason": "Crunch Chips 130g at 30 is cheaper per gram than Zapp, adding it.",
+          "time_left_s": 50.0
+        },
+        {
+          "turn": 9,
+          "station_id": "B2",
+          "action": "next_station",
+          "target": null,
+          "reason": "Checking next bay for better chip or nut deals before finalizing.",
+          "time_left_s": 42.0
+        },
+        {
+          "turn": 10,
+          "station_id": "B3",
+          "action": "checkout",
+          "target": null,
+          "reason": "I've compared prices and have enough chips and nuts; checking out now.",
+          "time_left_s": 37.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_001",
+        "SKU_008",
+        "SKU_015",
+        "SKU_010",
+        "SKU_009"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_001",
+          "name": "Crunch Chips 100g",
+          "brand": "Crunch",
+          "category": "chips",
+          "price": 25.0,
+          "slot_id": "B1S1P1"
+        },
+        {
+          "sku_id": "SKU_008",
+          "name": "Orchid Nuts 120g",
+          "brand": "Orchid",
+          "category": "nuts",
+          "price": 25.0,
+          "slot_id": "B1S5P1"
+        },
+        {
+          "sku_id": "SKU_015",
+          "name": "Nimbus Nuts 140g",
+          "brand": "Nimbus",
+          "category": "nuts",
+          "price": 25.0,
+          "slot_id": "B2S4P2"
+        },
+        {
+          "sku_id": "SKU_010",
+          "name": "Zapp Chips 140g",
+          "brand": "Zapp",
+          "category": "chips",
+          "price": 35.0,
+          "slot_id": "B2S1P2"
+        },
+        {
+          "sku_id": "SKU_009",
+          "name": "Crunch Chips 130g",
+          "brand": "Crunch",
+          "category": "chips",
+          "price": 30.0,
+          "slot_id": "B2S1P1"
+        }
+      ],
+      "stations_visited": [
+        "B1",
+        "B2",
+        "B3"
+      ],
+      "end_reason": "checkout",
+      "end_note": null,
+      "n_turns": 10,
+      "n_rejections": 0
+    },
+    {
+      "shopper_index": 1,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S5P1",
+          "reason": "Cheapest nuts here, 25 for 120g, better value than Nimbus.",
+          "time_left_s": 84.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S5P1",
+          "reason": "Orchid nuts are bigger and cheaper than Nimbus, so they go in.",
+          "time_left_s": 80.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S1P1",
+          "reason": "Crunch Chips are on promotion and cheaper per gram than Zapp, grabbing them.",
+          "time_left_s": 74.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S1P1",
+          "reason": "Crunch Chips are on promotion and cheaper per gram than Zapp, so they go in the cart.",
+          "time_left_s": 70.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B1",
+          "action": "next_station",
+          "target": null,
+          "reason": "Need to check next bay for better chip and nut prices.",
+          "time_left_s": 62.0
+        },
+        {
+          "turn": 6,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S4P2",
+          "reason": "Nimbus nuts 140g at 25 is cheaper per gram than Orchid, picking up to compare.",
+          "time_left_s": 56.0
+        },
+        {
+          "turn": 7,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S4P2",
+          "reason": "Nimbus nuts are cheaper per gram than Orchid, so I'm switching.",
+          "time_left_s": 52.0
+        },
+        {
+          "turn": 8,
+          "station_id": "B2",
+          "action": "next_station",
+          "target": null,
+          "reason": "Already have cheaper nuts and chips; checking next bay for better deals.",
+          "time_left_s": 44.0
+        },
+        {
+          "turn": 9,
+          "station_id": "B3",
+          "action": "add_to_cart",
+          "target": "B3S4P2",
+          "reason": "Nimbus nuts 120g at 30 is cheapest per gram, better than Orchid 35.",
+          "time_left_s": 40.0
+        },
+        {
+          "turn": 10,
+          "station_id": "B3",
+          "action": "add_to_cart",
+          "target": "B3S1P1",
+          "reason": "Crunch chips are 35 for 110g, cheaper per gram than Zapp; grabbing them.",
+          "time_left_s": 36.0
+        },
+        {
+          "turn": 11,
+          "station_id": "B3",
+          "action": "checkout",
+          "target": null,
+          "reason": "I have chips and nuts at good prices; nothing here beats what I already picked.",
+          "time_left_s": 31.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_008",
+        "SKU_001",
+        "SKU_015",
+        "SKU_023",
+        "SKU_017"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_008",
+          "name": "Orchid Nuts 120g",
+          "brand": "Orchid",
+          "category": "nuts",
+          "price": 25.0,
+          "slot_id": "B1S5P1"
+        },
+        {
+          "sku_id": "SKU_001",
+          "name": "Crunch Chips 100g",
+          "brand": "Crunch",
+          "category": "chips",
+          "price": 25.0,
+          "slot_id": "B1S1P1"
+        },
+        {
+          "sku_id": "SKU_015",
+          "name": "Nimbus Nuts 140g",
+          "brand": "Nimbus",
+          "category": "nuts",
+          "price": 25.0,
+          "slot_id": "B2S4P2"
+        },
+        {
+          "sku_id": "SKU_023",
+          "name": "Nimbus Nuts 120g",
+          "brand": "Nimbus",
+          "category": "nuts",
+          "price": 30.0,
+          "slot_id": "B3S4P2"
+        },
+        {
+          "sku_id": "SKU_017",
+          "name": "Crunch Chips 110g",
+          "brand": "Crunch",
+          "category": "chips",
+          "price": 35.0,
+          "slot_id": "B3S1P1"
+        }
+      ],
+      "stations_visited": [
+        "B1",
+        "B2",
+        "B3"
+      ],
+      "end_reason": "checkout",
+      "end_note": null,
+      "n_turns": 11,
+      "n_rejections": 0
+    },
+    {
+      "shopper_index": 2,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S1P1",
+          "reason": "Crunch Chips on promotion, cheapest chips here.",
+          "time_left_s": 84.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S1P1",
+          "reason": "Crunch chips on promo at 25, good value; add them.",
+          "time_left_s": 80.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S5P1",
+          "reason": "Cheapest nuts here at 25, want to compare and likely buy.",
+          "time_left_s": 74.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S5P1",
+          "reason": "Orchid Nuts are cheaper and larger than Nimbus, so they go in the cart.",
+          "time_left_s": 70.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B1",
+          "action": "next_station",
+          "target": null,
+          "reason": "Already got the best value chips and nuts here; checking next bay for better deals.",
+          "time_left_s": 62.0
+        },
+        {
+          "turn": 6,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S4P2",
+          "reason": "Nimbus nuts are 140g for 25, better value than Orchid; checking it.",
+          "time_left_s": 56.0
+        },
+        {
+          "turn": 7,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S4P2",
+          "reason": "Nimbus Nuts 140g at 25 is the best nut value here; put it in cart.",
+          "time_left_s": 52.0
+        },
+        {
+          "turn": 8,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S1P1",
+          "reason": "Crunch 130g at 30 is cheaper per gram than Zapp 35, picking up to compare.",
+          "time_left_s": 46.0
+        },
+        {
+          "turn": 9,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S1P1",
+          "reason": "Crunch 130g is cheaper per gram than Zapp, so I'll take it.",
+          "time_left_s": 42.0
+        },
+        {
+          "turn": 10,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S1P2",
+          "reason": "Zapp chips are on promotion; checking if the bigger bag beats Crunch per gram.",
+          "time_left_s": 36.0
+        },
+        {
+          "turn": 11,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S1P2",
+          "reason": "On promotion and already in hand; adding to cart.",
+          "time_left_s": 32.0
+        },
+        {
+          "turn": 12,
+          "station_id": "B2",
+          "action": "next_station",
+          "target": null,
+          "reason": "Checking next bay for better chip or nut deals before deciding.",
+          "time_left_s": 24.0
+        },
+        {
+          "turn": 13,
+          "station_id": "B3",
+          "action": "checkout",
+          "target": null,
+          "reason": "Got enough chips and nuts, no better deals here.",
+          "time_left_s": 19.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_001",
+        "SKU_008",
+        "SKU_015",
+        "SKU_009",
+        "SKU_010"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_001",
+          "name": "Crunch Chips 100g",
+          "brand": "Crunch",
+          "category": "chips",
+          "price": 25.0,
+          "slot_id": "B1S1P1"
+        },
+        {
+          "sku_id": "SKU_008",
+          "name": "Orchid Nuts 120g",
+          "brand": "Orchid",
+          "category": "nuts",
+          "price": 25.0,
+          "slot_id": "B1S5P1"
+        },
+        {
+          "sku_id": "SKU_015",
+          "name": "Nimbus Nuts 140g",
+          "brand": "Nimbus",
+          "category": "nuts",
+          "price": 25.0,
+          "slot_id": "B2S4P2"
+        },
+        {
+          "sku_id": "SKU_009",
+          "name": "Crunch Chips 130g",
+          "brand": "Crunch",
+          "category": "chips",
+          "price": 30.0,
+          "slot_id": "B2S1P1"
+        },
+        {
+          "sku_id": "SKU_010",
+          "name": "Zapp Chips 140g",
+          "brand": "Zapp",
+          "category": "chips",
+          "price": 35.0,
+          "slot_id": "B2S1P2"
+        }
+      ],
+      "stations_visited": [
+        "B1",
+        "B2",
+        "B3"
+      ],
+      "end_reason": "checkout",
+      "end_note": null,
+      "n_turns": 13,
+      "n_rejections": 0
+    },
+    {
+      "shopper_index": 3,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S1P1",
+          "reason": "Crunch Chips are on promotion and cheaper than Zapp, grabbing them.",
+          "time_left_s": 84.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S1P1",
+          "reason": "Promo chips at 25, cheapest chip here, adding it.",
+          "time_left_s": 80.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S5P1",
+          "reason": "Orchid Nuts are 25, much cheaper than Nimbus at 55, so they win.",
+          "time_left_s": 76.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B1",
+          "action": "next_station",
+          "target": null,
+          "reason": "Already have cheap chips and nuts; moving to compare more options.",
+          "time_left_s": 68.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S4P2",
+          "reason": "Nimbus nuts 140g at 25 is cheaper per gram than Orchid, adding.",
+          "time_left_s": 64.0
+        },
+        {
+          "turn": 6,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S1P2",
+          "reason": "Zapp chips on promotion, 140g for 35, grabbing to compare.",
+          "time_left_s": 60.0
+        },
+        {
+          "turn": 7,
+          "station_id": "B2",
+          "action": "next_station",
+          "target": null,
+          "reason": "Checking the last bay for better chip or nut promotions before I decide.",
+          "time_left_s": 52.0
+        },
+        {
+          "turn": 8,
+          "station_id": "B3",
+          "action": "add_to_cart",
+          "target": "B3S4P2",
+          "reason": "Nimbus nuts are 30 for 120g, cheaper per gram than Orchid; I'll grab them.",
+          "time_left_s": 48.0
+        },
+        {
+          "turn": 9,
+          "station_id": "B3",
+          "action": "checkout",
+          "target": null,
+          "reason": "Got enough chips and nuts at good prices; time to check out.",
+          "time_left_s": 43.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_001",
+        "SKU_008",
+        "SKU_015",
+        "SKU_010",
+        "SKU_023"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_001",
+          "name": "Crunch Chips 100g",
+          "brand": "Crunch",
+          "category": "chips",
+          "price": 25.0,
+          "slot_id": "B1S1P1"
+        },
+        {
+          "sku_id": "SKU_008",
+          "name": "Orchid Nuts 120g",
+          "brand": "Orchid",
+          "category": "nuts",
+          "price": 25.0,
+          "slot_id": "B1S5P1"
+        },
+        {
+          "sku_id": "SKU_015",
+          "name": "Nimbus Nuts 140g",
+          "brand": "Nimbus",
+          "category": "nuts",
+          "price": 25.0,
+          "slot_id": "B2S4P2"
+        },
+        {
+          "sku_id": "SKU_010",
+          "name": "Zapp Chips 140g",
+          "brand": "Zapp",
+          "category": "chips",
+          "price": 35.0,
+          "slot_id": "B2S1P2"
+        },
+        {
+          "sku_id": "SKU_023",
+          "name": "Nimbus Nuts 120g",
+          "brand": "Nimbus",
+          "category": "nuts",
+          "price": 30.0,
+          "slot_id": "B3S4P2"
+        }
+      ],
+      "stations_visited": [
+        "B1",
+        "B2",
+        "B3"
+      ],
+      "end_reason": "checkout",
+      "end_note": null,
+      "n_turns": 9,
+      "n_rejections": 0
+    },
+    {
+      "shopper_index": 4,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S1P1",
+          "reason": "Crunch Chips are on promotion and cheapest chips here; checking them first.",
+          "time_left_s": 84.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S1P1",
+          "reason": "Crunch chips are on promotion and the cheapest chips here.",
+          "time_left_s": 80.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S5P1",
+          "reason": "Orchid nuts are much cheaper per gram than Nimbus, grabbing them.",
+          "time_left_s": 74.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S5P1",
+          "reason": "Orchid nuts are bigger and cheaper than Nimbus, so they go in the cart.",
+          "time_left_s": 70.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B1",
+          "action": "next_station",
+          "target": null,
+          "reason": "Already have the best-priced chips and nuts here; check next bay for better deals.",
+          "time_left_s": 62.0
+        },
+        {
+          "turn": 6,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S4P2",
+          "reason": "Nimbus Nuts 140g at 25 is cheaper per gram than the Orchid nuts I already have.",
+          "time_left_s": 56.0
+        },
+        {
+          "turn": 7,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S4P2",
+          "reason": "Nimbus nuts are the best price per gram, so I'm adding them.",
+          "time_left_s": 52.0
+        },
+        {
+          "turn": 8,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S1P1",
+          "reason": "Crunch chips 130g at 30 is cheaper per gram than Zapp, so I'll add it.",
+          "time_left_s": 48.0
+        },
+        {
+          "turn": 9,
+          "station_id": "B2",
+          "action": "next_station",
+          "target": null,
+          "reason": "Already have the best-priced chips and nuts here; moving on to check next bay.",
+          "time_left_s": 40.0
+        },
+        {
+          "turn": 10,
+          "station_id": "B3",
+          "action": "pickup",
+          "target": "B3S4P2",
+          "reason": "Nimbus nuts 120g at 30 is cheapest per gram, adding.",
+          "time_left_s": 34.0
+        },
+        {
+          "turn": 11,
+          "station_id": "B3",
+          "action": "add_to_cart",
+          "target": "B3S4P2",
+          "reason": "Nimbus nuts at 30 are the best nut price here, so I'll take them.",
+          "time_left_s": 30.0
+        },
+        {
+          "turn": 12,
+          "station_id": "B3",
+          "action": "checkout",
+          "target": null,
+          "reason": "Got enough chips and nuts at good prices, time to checkout.",
+          "time_left_s": 25.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_001",
+        "SKU_008",
+        "SKU_015",
+        "SKU_009",
+        "SKU_023"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_001",
+          "name": "Crunch Chips 100g",
+          "brand": "Crunch",
+          "category": "chips",
+          "price": 25.0,
+          "slot_id": "B1S1P1"
+        },
+        {
+          "sku_id": "SKU_008",
+          "name": "Orchid Nuts 120g",
+          "brand": "Orchid",
+          "category": "nuts",
+          "price": 25.0,
+          "slot_id": "B1S5P1"
+        },
+        {
+          "sku_id": "SKU_015",
+          "name": "Nimbus Nuts 140g",
+          "brand": "Nimbus",
+          "category": "nuts",
+          "price": 25.0,
+          "slot_id": "B2S4P2"
+        },
+        {
+          "sku_id": "SKU_009",
+          "name": "Crunch Chips 130g",
+          "brand": "Crunch",
+          "category": "chips",
+          "price": 30.0,
+          "slot_id": "B2S1P1"
+        },
+        {
+          "sku_id": "SKU_023",
+          "name": "Nimbus Nuts 120g",
+          "brand": "Nimbus",
+          "category": "nuts",
+          "price": 30.0,
+          "slot_id": "B3S4P2"
+        }
+      ],
+      "stations_visited": [
+        "B1",
+        "B2",
+        "B3"
+      ],
+      "end_reason": "checkout",
+      "end_note": null,
+      "n_turns": 12,
+      "n_rejections": 0
+    },
+    {
+      "shopper_index": 5,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S1P1",
+          "reason": "Crunch chips are on promotion and cheapest chips here, so I'm grabbing them to check.",
+          "time_left_s": 84.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S1P1",
+          "reason": "Promo chips at 25, cheapest chip here; take it.",
+          "time_left_s": 80.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S5P1",
+          "reason": "Orchid Nuts are cheapest nuts here at 25, fits my list.",
+          "time_left_s": 76.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B1",
+          "action": "next_station",
+          "target": null,
+          "reason": "Already have the best-priced chips and nuts here; moving to compare other bays.",
+          "time_left_s": 68.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S4P2",
+          "reason": "Nimbus Nuts 140g at 25 is cheaper and bigger than my current nuts; checking value.",
+          "time_left_s": 62.0
+        },
+        {
+          "turn": 6,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S4P2",
+          "reason": "Nimbus nuts are 140g for 25, best nut value here; add them.",
+          "time_left_s": 58.0
+        },
+        {
+          "turn": 7,
+          "station_id": "B2",
+          "action": "next_station",
+          "target": null,
+          "reason": "Checking next bay for better chip or nut deals before deciding.",
+          "time_left_s": 50.0
+        },
+        {
+          "turn": 8,
+          "station_id": "B3",
+          "action": "checkout",
+          "target": null,
+          "reason": "Already have chips and nuts; no better deal visible, checking out.",
+          "time_left_s": 45.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_001",
+        "SKU_008",
+        "SKU_015"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_001",
+          "name": "Crunch Chips 100g",
+          "brand": "Crunch",
+          "category": "chips",
+          "price": 25.0,
+          "slot_id": "B1S1P1"
+        },
+        {
+          "sku_id": "SKU_008",
+          "name": "Orchid Nuts 120g",
+          "brand": "Orchid",
+          "category": "nuts",
+          "price": 25.0,
+          "slot_id": "B1S5P1"
+        },
+        {
+          "sku_id": "SKU_015",
+          "name": "Nimbus Nuts 140g",
+          "brand": "Nimbus",
+          "category": "nuts",
+          "price": 25.0,
+          "slot_id": "B2S4P2"
+        }
+      ],
+      "stations_visited": [
+        "B1",
+        "B2",
+        "B3"
+      ],
+      "end_reason": "checkout",
+      "end_note": null,
+      "n_turns": 8,
+      "n_rejections": 0
+    },
+    {
+      "shopper_index": 6,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S1P1",
+          "reason": "Crunch Chips are on promotion and cheaper than Zapp; grabbing to compare.",
+          "time_left_s": 84.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S1P1",
+          "reason": "Crunch Chips are on promotion and cheapest chips here; that fits my deal focus.",
+          "time_left_s": 80.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S5P1",
+          "reason": "Orchid Nuts 120g at 25 is the cheapest nut option, comparing value.",
+          "time_left_s": 74.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S5P1",
+          "reason": "Orchid Nuts are the cheapest nuts here, so they go in the cart.",
+          "time_left_s": 70.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B1",
+          "action": "next_station",
+          "target": null,
+          "reason": "Already got the cheapest chips and nuts here; checking next bay for better deals.",
+          "time_left_s": 62.0
+        },
+        {
+          "turn": 6,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S4P2",
+          "reason": "Nimbus nuts are 140g for 25, cheaper than the Orchid nuts I already have.",
+          "time_left_s": 56.0
+        },
+        {
+          "turn": 7,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S4P2",
+          "reason": "Nimbus nuts are 140g for 25, best nut value here; add them.",
+          "time_left_s": 52.0
+        },
+        {
+          "turn": 8,
+          "station_id": "B2",
+          "action": "next_station",
+          "target": null,
+          "reason": "Checking next bay for any better chip or nut deals before deciding.",
+          "time_left_s": 44.0
+        },
+        {
+          "turn": 9,
+          "station_id": "B3",
+          "action": "checkout",
+          "target": null,
+          "reason": "Got chips and nuts at good prices, done shopping.",
+          "time_left_s": 39.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_001",
+        "SKU_008",
+        "SKU_015"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_001",
+          "name": "Crunch Chips 100g",
+          "brand": "Crunch",
+          "category": "chips",
+          "price": 25.0,
+          "slot_id": "B1S1P1"
+        },
+        {
+          "sku_id": "SKU_008",
+          "name": "Orchid Nuts 120g",
+          "brand": "Orchid",
+          "category": "nuts",
+          "price": 25.0,
+          "slot_id": "B1S5P1"
+        },
+        {
+          "sku_id": "SKU_015",
+          "name": "Nimbus Nuts 140g",
+          "brand": "Nimbus",
+          "category": "nuts",
+          "price": 25.0,
+          "slot_id": "B2S4P2"
+        }
+      ],
+      "stations_visited": [
+        "B1",
+        "B2",
+        "B3"
+      ],
+      "end_reason": "checkout",
+      "end_note": null,
+      "n_turns": 9,
+      "n_rejections": 0
+    },
+    {
+      "shopper_index": 7,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S5P1",
+          "reason": "Cheapest nuts and bigger pack, best value for nuts.",
+          "time_left_s": 84.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S5P1",
+          "reason": "Cheapest nuts and bigger bag, adding them.",
+          "time_left_s": 80.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S1P1",
+          "reason": "Crunch chips are on promo and cheaper per gram than Zapp; adding them.",
+          "time_left_s": 76.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B1",
+          "action": "next_station",
+          "target": null,
+          "reason": "Already have cheap chips and nuts; check next bay for any better promo before deciding.",
+          "time_left_s": 68.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S4P2",
+          "reason": "Nimbus nuts 140g at 25 is cheaper per gram than Orchid; picking up to compare.",
+          "time_left_s": 62.0
+        },
+        {
+          "turn": 6,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S4P2",
+          "reason": "Nimbus nuts are cheaper per gram than the Orchid nuts already in cart.",
+          "time_left_s": 58.0
+        },
+        {
+          "turn": 7,
+          "station_id": "B2",
+          "action": "next_station",
+          "target": null,
+          "reason": "Want to check next bay for better chip or nut deals before deciding.",
+          "time_left_s": 50.0
+        },
+        {
+          "turn": 8,
+          "station_id": "B3",
+          "action": "add_to_cart",
+          "target": "B3S4P2",
+          "reason": "Nimbus nuts 120g at 30 is cheaper per gram than the Orchid nuts; grabbing the better value.",
+          "time_left_s": 46.0
+        },
+        {
+          "turn": 9,
+          "station_id": "B3",
+          "action": "checkout",
+          "target": null,
+          "reason": "Got chips and nuts at good prices; ready to check out.",
+          "time_left_s": 41.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_008",
+        "SKU_001",
+        "SKU_015",
+        "SKU_023"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_008",
+          "name": "Orchid Nuts 120g",
+          "brand": "Orchid",
+          "category": "nuts",
+          "price": 25.0,
+          "slot_id": "B1S5P1"
+        },
+        {
+          "sku_id": "SKU_001",
+          "name": "Crunch Chips 100g",
+          "brand": "Crunch",
+          "category": "chips",
+          "price": 25.0,
+          "slot_id": "B1S1P1"
+        },
+        {
+          "sku_id": "SKU_015",
+          "name": "Nimbus Nuts 140g",
+          "brand": "Nimbus",
+          "category": "nuts",
+          "price": 25.0,
+          "slot_id": "B2S4P2"
+        },
+        {
+          "sku_id": "SKU_023",
+          "name": "Nimbus Nuts 120g",
+          "brand": "Nimbus",
+          "category": "nuts",
+          "price": 30.0,
+          "slot_id": "B3S4P2"
+        }
+      ],
+      "stations_visited": [
+        "B1",
+        "B2",
+        "B3"
+      ],
+      "end_reason": "checkout",
+      "end_note": null,
+      "n_turns": 9,
+      "n_rejections": 0
+    },
+    {
+      "shopper_index": 8,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S1P1",
+          "reason": "Crunch Chips are on promotion and cheapest chips here.",
+          "time_left_s": 84.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S1P1",
+          "reason": "Crunch Chips on promotion at 25, best chip price here.",
+          "time_left_s": 80.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S5P1",
+          "reason": "Cheapest nuts here, 120g for 25, grabbing to compare.",
+          "time_left_s": 74.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S5P1",
+          "reason": "Orchid nuts are cheapest at 25, adding them.",
+          "time_left_s": 70.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B1",
+          "action": "next_station",
+          "target": null,
+          "reason": "Already have cheap chips and nuts; check next bay for better deals before deciding.",
+          "time_left_s": 62.0
+        },
+        {
+          "turn": 6,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S4P2",
+          "reason": "Nimbus Nuts 140g at 25 is cheaper per gram than Orchid, switching.",
+          "time_left_s": 58.0
+        },
+        {
+          "turn": 7,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S4P2",
+          "reason": "Nimbus nuts 140g at 25 is the cheapest nut here; stocking up.",
+          "time_left_s": 54.0
+        },
+        {
+          "turn": 8,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S1P1",
+          "reason": "Crunch Chips 130g at 30 is cheaper per gram than Zapp, adding.",
+          "time_left_s": 50.0
+        },
+        {
+          "turn": 9,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S4P2",
+          "reason": "Nimbus nuts are cheapest nuts here at 25 for 140g; stocking up.",
+          "time_left_s": 46.0
+        },
+        {
+          "turn": 10,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S4P2",
+          "reason": "Nimbus nuts are 25 for 140g, cheaper than Orchid; stocking up.",
+          "time_left_s": 42.0
+        },
+        {
+          "turn": 11,
+          "station_id": "B2",
+          "action": "next_station",
+          "target": null,
+          "reason": "Want to check the next bay for better chip or nut deals before deciding.",
+          "time_left_s": 34.0
+        },
+        {
+          "turn": 12,
+          "station_id": "B3",
+          "action": "checkout",
+          "target": null,
+          "reason": "Got enough chips and nuts at decent prices; ready to check out.",
+          "time_left_s": 29.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_001",
+        "SKU_008",
+        "SKU_015",
+        "SKU_015",
+        "SKU_009",
+        "SKU_015",
+        "SKU_015"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_001",
+          "name": "Crunch Chips 100g",
+          "brand": "Crunch",
+          "category": "chips",
+          "price": 25.0,
+          "slot_id": "B1S1P1"
+        },
+        {
+          "sku_id": "SKU_008",
+          "name": "Orchid Nuts 120g",
+          "brand": "Orchid",
+          "category": "nuts",
+          "price": 25.0,
+          "slot_id": "B1S5P1"
+        },
+        {
+          "sku_id": "SKU_015",
+          "name": "Nimbus Nuts 140g",
+          "brand": "Nimbus",
+          "category": "nuts",
+          "price": 25.0,
+          "slot_id": "B2S4P2"
+        },
+        {
+          "sku_id": "SKU_015",
+          "name": "Nimbus Nuts 140g",
+          "brand": "Nimbus",
+          "category": "nuts",
+          "price": 25.0,
+          "slot_id": "B2S4P2"
+        },
+        {
+          "sku_id": "SKU_009",
+          "name": "Crunch Chips 130g",
+          "brand": "Crunch",
+          "category": "chips",
+          "price": 30.0,
+          "slot_id": "B2S1P1"
+        },
+        {
+          "sku_id": "SKU_015",
+          "name": "Nimbus Nuts 140g",
+          "brand": "Nimbus",
+          "category": "nuts",
+          "price": 25.0,
+          "slot_id": "B2S4P2"
+        },
+        {
+          "sku_id": "SKU_015",
+          "name": "Nimbus Nuts 140g",
+          "brand": "Nimbus",
+          "category": "nuts",
+          "price": 25.0,
+          "slot_id": "B2S4P2"
+        }
+      ],
+      "stations_visited": [
+        "B1",
+        "B2",
+        "B3"
+      ],
+      "end_reason": "checkout",
+      "end_note": null,
+      "n_turns": 12,
+      "n_rejections": 0
+    },
+    {
+      "shopper_index": 9,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S1P1",
+          "reason": "Crunch Chips are on promotion and the cheapest chips here.",
+          "time_left_s": 84.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S1P1",
+          "reason": "Crunch Chips are on promotion and cheapest chips here, so they go in the cart.",
+          "time_left_s": 80.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S5P1",
+          "reason": "Cheapest nuts here, 120g for 25, grabbing to compare.",
+          "time_left_s": 74.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S5P1",
+          "reason": "Orchid nuts are cheaper per gram than Nimbus, so they go in the cart.",
+          "time_left_s": 70.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B1",
+          "action": "next_station",
+          "target": null,
+          "reason": "Already have cheap chips and nuts; checking next bay for better deals.",
+          "time_left_s": 62.0
+        },
+        {
+          "turn": 6,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S4P2",
+          "reason": "Nimbus nuts 140g at 25 is cheaper per gram than Orchid, grabbing it.",
+          "time_left_s": 56.0
+        },
+        {
+          "turn": 7,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S4P2",
+          "reason": "Nimbus Nuts 140g at 25 is the best nut value here, so I'll take it.",
+          "time_left_s": 52.0
+        },
+        {
+          "turn": 8,
+          "station_id": "B2",
+          "action": "next_station",
+          "target": null,
+          "reason": "Want to check the last bay for better chip or nut promotions before deciding.",
+          "time_left_s": 44.0
+        },
+        {
+          "turn": 9,
+          "station_id": "B3",
+          "action": "checkout",
+          "target": null,
+          "reason": "Got chips and nuts at good prices; done shopping.",
+          "time_left_s": 39.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_001",
+        "SKU_008",
+        "SKU_015"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_001",
+          "name": "Crunch Chips 100g",
+          "brand": "Crunch",
+          "category": "chips",
+          "price": 25.0,
+          "slot_id": "B1S1P1"
+        },
+        {
+          "sku_id": "SKU_008",
+          "name": "Orchid Nuts 120g",
+          "brand": "Orchid",
+          "category": "nuts",
+          "price": 25.0,
+          "slot_id": "B1S5P1"
+        },
+        {
+          "sku_id": "SKU_015",
+          "name": "Nimbus Nuts 140g",
+          "brand": "Nimbus",
+          "category": "nuts",
+          "price": 25.0,
+          "slot_id": "B2S4P2"
+        }
+      ],
+      "stations_visited": [
+        "B1",
+        "B2",
+        "B3"
+      ],
+      "end_reason": "checkout",
+      "end_note": null,
+      "n_turns": 9,
+      "n_rejections": 0
+    },
+    {
+      "shopper_index": 10,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S1P1",
+          "reason": "Crunch Chips are on promotion and cheaper than Zapp, so I want to check them.",
+          "time_left_s": 84.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S1P1",
+          "reason": "Crunch Chips are on promotion and cheapest chips here, so they go in the cart.",
+          "time_left_s": 80.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S5P1",
+          "reason": "Orchid Nuts 25 is cheapest nuts here, better than Nimbus 55.",
+          "time_left_s": 76.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B1",
+          "action": "next_station",
+          "target": null,
+          "reason": "Already got the cheapest chips and nuts here; checking next bay for better deals.",
+          "time_left_s": 68.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S4P2",
+          "reason": "Nimbus nuts are 25 for 140g, cheaper per gram than the Orchid nuts already in cart.",
+          "time_left_s": 64.0
+        },
+        {
+          "turn": 6,
+          "station_id": "B2",
+          "action": "next_station",
+          "target": null,
+          "reason": "Already have cheaper nuts and chips here; moving on to check next bay.",
+          "time_left_s": 56.0
+        },
+        {
+          "turn": 7,
+          "station_id": "B3",
+          "action": "pickup",
+          "target": "B3S4P2",
+          "reason": "Nimbus nuts are 30 for 120g, cheaper per gram than Orchid; checking value.",
+          "time_left_s": 50.0
+        },
+        {
+          "turn": 8,
+          "station_id": "B3",
+          "action": "add_to_cart",
+          "target": "B3S4P2",
+          "reason": "Nimbus nuts at 30 for 120g is the best nut price here; adding it.",
+          "time_left_s": 46.0
+        },
+        {
+          "turn": 9,
+          "station_id": "B3",
+          "action": "checkout",
+          "target": null,
+          "reason": "Got chips and nuts at good prices, done shopping.",
+          "time_left_s": 41.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_001",
+        "SKU_008",
+        "SKU_015",
+        "SKU_023"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_001",
+          "name": "Crunch Chips 100g",
+          "brand": "Crunch",
+          "category": "chips",
+          "price": 25.0,
+          "slot_id": "B1S1P1"
+        },
+        {
+          "sku_id": "SKU_008",
+          "name": "Orchid Nuts 120g",
+          "brand": "Orchid",
+          "category": "nuts",
+          "price": 25.0,
+          "slot_id": "B1S5P1"
+        },
+        {
+          "sku_id": "SKU_015",
+          "name": "Nimbus Nuts 140g",
+          "brand": "Nimbus",
+          "category": "nuts",
+          "price": 25.0,
+          "slot_id": "B2S4P2"
+        },
+        {
+          "sku_id": "SKU_023",
+          "name": "Nimbus Nuts 120g",
+          "brand": "Nimbus",
+          "category": "nuts",
+          "price": 30.0,
+          "slot_id": "B3S4P2"
+        }
+      ],
+      "stations_visited": [
+        "B1",
+        "B2",
+        "B3"
+      ],
+      "end_reason": "checkout",
+      "end_note": null,
+      "n_turns": 9,
+      "n_rejections": 0
+    },
+    {
+      "shopper_index": 11,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S1P1",
+          "reason": "Crunch chips are on promotion and cheapest chips here, grabbing them.",
+          "time_left_s": 84.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S1P1",
+          "reason": "Crunch Chips are on promotion and cheapest chips here, so they go in the cart.",
+          "time_left_s": 80.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S5P1",
+          "reason": "Orchid Nuts are 120g for 25, much cheaper than Nimbus; checking the value.",
+          "time_left_s": 74.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S5P1",
+          "reason": "Orchid nuts are cheapest nuts here, so they go in the cart.",
+          "time_left_s": 70.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B1",
+          "action": "next_station",
+          "target": null,
+          "reason": "Already got the cheapest chips and nuts here; moving on to compare other bays.",
+          "time_left_s": 62.0
+        },
+        {
+          "turn": 6,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S4P2",
+          "reason": "Nimbus Nuts 140g at 25 is the best nut value here, better than Orchid.",
+          "time_left_s": 56.0
+        },
+        {
+          "turn": 7,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S4P2",
+          "reason": "Nimbus nuts are cheaper per gram than Orchid, so I'll take this value.",
+          "time_left_s": 52.0
+        },
+        {
+          "turn": 8,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S1P2",
+          "reason": "Zapp chips are on promotion, so I want to check the deal.",
+          "time_left_s": 46.0
+        },
+        {
+          "turn": 9,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S1P2",
+          "reason": "On promotion and larger bag, adding it while I compare other prices.",
+          "time_left_s": 42.0
+        },
+        {
+          "turn": 10,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S1P1",
+          "reason": "Crunch chips 130g at 30 is cheaper per gram than Zapp, picking up to compare.",
+          "time_left_s": 36.0
+        },
+        {
+          "turn": 11,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S1P1",
+          "reason": "Crunch 130g at 30 is cheaper per gram than the Zapp chips, so it goes in.",
+          "time_left_s": 32.0
+        },
+        {
+          "turn": 12,
+          "station_id": "B2",
+          "action": "checkout",
+          "target": null,
+          "reason": "I have enough chips and nuts and no better deal here.",
+          "time_left_s": 27.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_001",
+        "SKU_008",
+        "SKU_015",
+        "SKU_010",
+        "SKU_009"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_001",
+          "name": "Crunch Chips 100g",
+          "brand": "Crunch",
+          "category": "chips",
+          "price": 25.0,
+          "slot_id": "B1S1P1"
+        },
+        {
+          "sku_id": "SKU_008",
+          "name": "Orchid Nuts 120g",
+          "brand": "Orchid",
+          "category": "nuts",
+          "price": 25.0,
+          "slot_id": "B1S5P1"
+        },
+        {
+          "sku_id": "SKU_015",
+          "name": "Nimbus Nuts 140g",
+          "brand": "Nimbus",
+          "category": "nuts",
+          "price": 25.0,
+          "slot_id": "B2S4P2"
+        },
+        {
+          "sku_id": "SKU_010",
+          "name": "Zapp Chips 140g",
+          "brand": "Zapp",
+          "category": "chips",
+          "price": 35.0,
+          "slot_id": "B2S1P2"
+        },
+        {
+          "sku_id": "SKU_009",
+          "name": "Crunch Chips 130g",
+          "brand": "Crunch",
+          "category": "chips",
+          "price": 30.0,
+          "slot_id": "B2S1P1"
+        }
+      ],
+      "stations_visited": [
+        "B1",
+        "B2"
+      ],
+      "end_reason": "checkout",
+      "end_note": null,
+      "n_turns": 12,
+      "n_rejections": 0
+    },
+    {
+      "shopper_index": 12,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S1P1",
+          "reason": "Chips on promotion at 25, cheapest chip here; checking it first.",
+          "time_left_s": 84.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S1P1",
+          "reason": "Crunch Chips are on promotion at 25, cheapest chips here; adding them.",
+          "time_left_s": 80.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S5P1",
+          "reason": "Orchid nuts are 25, much cheaper than Nimbus 55; grabbing them.",
+          "time_left_s": 74.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S5P1",
+          "reason": "Orchid nuts are cheapest per gram, adding them.",
+          "time_left_s": 70.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B1",
+          "action": "checkout",
+          "target": null,
+          "reason": "Already have the cheapest chips and nuts; no better deal here.",
+          "time_left_s": 65.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_001",
+        "SKU_008"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_001",
+          "name": "Crunch Chips 100g",
+          "brand": "Crunch",
+          "category": "chips",
+          "price": 25.0,
+          "slot_id": "B1S1P1"
+        },
+        {
+          "sku_id": "SKU_008",
+          "name": "Orchid Nuts 120g",
+          "brand": "Orchid",
+          "category": "nuts",
+          "price": 25.0,
+          "slot_id": "B1S5P1"
+        }
+      ],
+      "stations_visited": [
+        "B1"
+      ],
+      "end_reason": "checkout",
+      "end_note": null,
+      "n_turns": 5,
+      "n_rejections": 0
+    },
+    {
+      "shopper_index": 13,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S1P1",
+          "reason": "Crunch Chips are on promotion and cheapest chips here, so I'll grab them.",
+          "time_left_s": 84.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S1P1",
+          "reason": "Crunch chips are on promotion and cheapest at 25; that beats Zapp.",
+          "time_left_s": 80.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S5P1",
+          "reason": "Orchid Nuts are 120g for 25, much cheaper than Nimbus; checking value.",
+          "time_left_s": 74.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S5P1",
+          "reason": "Orchid nuts are 25, much cheaper per gram than Nimbus nuts at 55.",
+          "time_left_s": 70.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B1",
+          "action": "next_station",
+          "target": null,
+          "reason": "Already have the best-value chips and nuts here; check next bay for any better promotions.",
+          "time_left_s": 62.0
+        },
+        {
+          "turn": 6,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S4P2",
+          "reason": "Nimbus nuts are 140g for 25, cheaper per gram than the Orchid nuts in my cart.",
+          "time_left_s": 56.0
+        },
+        {
+          "turn": 7,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S4P2",
+          "reason": "Nimbus nuts are cheaper per gram than Orchid, so I'll take them.",
+          "time_left_s": 52.0
+        },
+        {
+          "turn": 8,
+          "station_id": "B2",
+          "action": "next_station",
+          "target": null,
+          "reason": "Checking next bay for better chip and nut deals before I decide.",
+          "time_left_s": 44.0
+        },
+        {
+          "turn": 9,
+          "station_id": "B3",
+          "action": "checkout",
+          "target": null,
+          "reason": "Got chips and nuts, compared prices; nothing here beats what's in my cart.",
+          "time_left_s": 39.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_001",
+        "SKU_008",
+        "SKU_015"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_001",
+          "name": "Crunch Chips 100g",
+          "brand": "Crunch",
+          "category": "chips",
+          "price": 25.0,
+          "slot_id": "B1S1P1"
+        },
+        {
+          "sku_id": "SKU_008",
+          "name": "Orchid Nuts 120g",
+          "brand": "Orchid",
+          "category": "nuts",
+          "price": 25.0,
+          "slot_id": "B1S5P1"
+        },
+        {
+          "sku_id": "SKU_015",
+          "name": "Nimbus Nuts 140g",
+          "brand": "Nimbus",
+          "category": "nuts",
+          "price": 25.0,
+          "slot_id": "B2S4P2"
+        }
+      ],
+      "stations_visited": [
+        "B1",
+        "B2",
+        "B3"
+      ],
+      "end_reason": "checkout",
+      "end_note": null,
+      "n_turns": 9,
+      "n_rejections": 0
+    },
+    {
+      "shopper_index": 14,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S1P1",
+          "reason": "Crunch Chips are on promotion and the cheapest chips here; grabbing them first.",
+          "time_left_s": 84.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S1P1",
+          "reason": "Crunch chips are on promotion and cheapest chips here, so they go in the cart.",
+          "time_left_s": 80.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S5P1",
+          "reason": "Orchid Nuts are the cheapest nuts here at 25, much better than Nimbus at 55.",
+          "time_left_s": 76.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B1",
+          "action": "next_station",
+          "target": null,
+          "reason": "Already got the promo chips and cheap nuts; moving to compare other bays.",
+          "time_left_s": 68.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S4P2",
+          "reason": "Nimbus Nuts 140g at 25 is cheaper per gram than my current nuts; comparing value.",
+          "time_left_s": 62.0
+        },
+        {
+          "turn": 6,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S4P2",
+          "reason": "Nimbus nuts are cheaper per gram than Orchid, so I'm adding them.",
+          "time_left_s": 58.0
+        },
+        {
+          "turn": 7,
+          "station_id": "B2",
+          "action": "next_station",
+          "target": null,
+          "reason": "Already have cheaper nuts and chips; moving on to compare next bay.",
+          "time_left_s": 50.0
+        },
+        {
+          "turn": 8,
+          "station_id": "B3",
+          "action": "checkout",
+          "target": null,
+          "reason": "Already have chips and nuts at good prices; ready to check out.",
+          "time_left_s": 45.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_001",
+        "SKU_008",
+        "SKU_015"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_001",
+          "name": "Crunch Chips 100g",
+          "brand": "Crunch",
+          "category": "chips",
+          "price": 25.0,
+          "slot_id": "B1S1P1"
+        },
+        {
+          "sku_id": "SKU_008",
+          "name": "Orchid Nuts 120g",
+          "brand": "Orchid",
+          "category": "nuts",
+          "price": 25.0,
+          "slot_id": "B1S5P1"
+        },
+        {
+          "sku_id": "SKU_015",
+          "name": "Nimbus Nuts 140g",
+          "brand": "Nimbus",
+          "category": "nuts",
+          "price": 25.0,
+          "slot_id": "B2S4P2"
+        }
+      ],
+      "stations_visited": [
+        "B1",
+        "B2",
+        "B3"
+      ],
+      "end_reason": "checkout",
+      "end_note": null,
+      "n_turns": 8,
+      "n_rejections": 0
+    },
+    {
+      "shopper_index": 15,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S1P1",
+          "reason": "Crunch Chips are on promotion at 25, cheapest chips here.",
+          "time_left_s": 84.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S1P1",
+          "reason": "Crunch Chips are on promotion and cheapest chips here, so they go in the cart.",
+          "time_left_s": 80.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S5P1",
+          "reason": "Orchid Nuts are bigger and cheaper than Nimbus, so I'll grab them.",
+          "time_left_s": 74.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S5P1",
+          "reason": "Orchid nuts are cheaper and bigger than Nimbus, so they're the better buy.",
+          "time_left_s": 70.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B1",
+          "action": "next_station",
+          "target": null,
+          "reason": "Already got the cheap chips and nuts here; check next bay for better deals.",
+          "time_left_s": 62.0
+        },
+        {
+          "turn": 6,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S4P2",
+          "reason": "Nimbus nuts 140g for 25 is cheaper per gram than Orchid 100g for 30.",
+          "time_left_s": 58.0
+        },
+        {
+          "turn": 7,
+          "station_id": "B2",
+          "action": "next_station",
+          "target": null,
+          "reason": "Seen enough here; moving to next bay to compare more chips and nuts.",
+          "time_left_s": 50.0
+        },
+        {
+          "turn": 8,
+          "station_id": "B3",
+          "action": "add_to_cart",
+          "target": "B3S4P2",
+          "reason": "Nimbus nuts are 30, cheaper per gram than Orchid; grabbing them.",
+          "time_left_s": 46.0
+        },
+        {
+          "turn": 9,
+          "station_id": "B3",
+          "action": "add_to_cart",
+          "target": "B3S1P1",
+          "reason": "Crunch chips 110g at 35 is cheaper per gram than Zapp, adding.",
+          "time_left_s": 42.0
+        },
+        {
+          "turn": 10,
+          "station_id": "B3",
+          "action": "checkout",
+          "target": null,
+          "reason": "Got enough chips and nuts at good prices; time to check out.",
+          "time_left_s": 37.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_001",
+        "SKU_008",
+        "SKU_015",
+        "SKU_023",
+        "SKU_017"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_001",
+          "name": "Crunch Chips 100g",
+          "brand": "Crunch",
+          "category": "chips",
+          "price": 25.0,
+          "slot_id": "B1S1P1"
+        },
+        {
+          "sku_id": "SKU_008",
+          "name": "Orchid Nuts 120g",
+          "brand": "Orchid",
+          "category": "nuts",
+          "price": 25.0,
+          "slot_id": "B1S5P1"
+        },
+        {
+          "sku_id": "SKU_015",
+          "name": "Nimbus Nuts 140g",
+          "brand": "Nimbus",
+          "category": "nuts",
+          "price": 25.0,
+          "slot_id": "B2S4P2"
+        },
+        {
+          "sku_id": "SKU_023",
+          "name": "Nimbus Nuts 120g",
+          "brand": "Nimbus",
+          "category": "nuts",
+          "price": 30.0,
+          "slot_id": "B3S4P2"
+        },
+        {
+          "sku_id": "SKU_017",
+          "name": "Crunch Chips 110g",
+          "brand": "Crunch",
+          "category": "chips",
+          "price": 35.0,
+          "slot_id": "B3S1P1"
+        }
+      ],
+      "stations_visited": [
+        "B1",
+        "B2",
+        "B3"
+      ],
+      "end_reason": "checkout",
+      "end_note": null,
+      "n_turns": 10,
+      "n_rejections": 0
+    },
+    {
+      "shopper_index": 16,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S5P1",
+          "reason": "Cheapest nuts per gram here, 120g for 25, better value than the chips.",
+          "time_left_s": 84.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S5P1",
+          "reason": "Orchid nuts are the cheapest nuts here, so I'll take them.",
+          "time_left_s": 80.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S1P1",
+          "reason": "Crunch Chips are on promotion and cheaper per gram than Zapp.",
+          "time_left_s": 74.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S1P1",
+          "reason": "Crunch chips are on promotion and cheaper than Zapp, so they go in the cart.",
+          "time_left_s": 70.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B1",
+          "action": "next_station",
+          "target": null,
+          "reason": "Already got the cheapest chips and nuts here; checking next bay for better deals.",
+          "time_left_s": 62.0
+        },
+        {
+          "turn": 6,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S4P2",
+          "reason": "Nimbus nuts 140g at 25 is cheaper per gram than Orchid nuts.",
+          "time_left_s": 56.0
+        },
+        {
+          "turn": 7,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S4P2",
+          "reason": "Nimbus Nuts 140g at 25 is better value than Orchid 100g at 30, adding it.",
+          "time_left_s": 52.0
+        },
+        {
+          "turn": 8,
+          "station_id": "B2",
+          "action": "next_station",
+          "target": null,
+          "reason": "Nothing here beats my current prices; moving to next bay to compare.",
+          "time_left_s": 44.0
+        },
+        {
+          "turn": 9,
+          "station_id": "B3",
+          "action": "add_to_cart",
+          "target": "B3S4P2",
+          "reason": "Nimbus nuts at 30 are cheaper per gram than Orchid; adding.",
+          "time_left_s": 40.0
+        },
+        {
+          "turn": 10,
+          "station_id": "B3",
+          "action": "checkout",
+          "target": null,
+          "reason": "Got enough chips and nuts at good prices; checking out.",
+          "time_left_s": 35.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_008",
+        "SKU_001",
+        "SKU_015",
+        "SKU_023"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_008",
+          "name": "Orchid Nuts 120g",
+          "brand": "Orchid",
+          "category": "nuts",
+          "price": 25.0,
+          "slot_id": "B1S5P1"
+        },
+        {
+          "sku_id": "SKU_001",
+          "name": "Crunch Chips 100g",
+          "brand": "Crunch",
+          "category": "chips",
+          "price": 25.0,
+          "slot_id": "B1S1P1"
+        },
+        {
+          "sku_id": "SKU_015",
+          "name": "Nimbus Nuts 140g",
+          "brand": "Nimbus",
+          "category": "nuts",
+          "price": 25.0,
+          "slot_id": "B2S4P2"
+        },
+        {
+          "sku_id": "SKU_023",
+          "name": "Nimbus Nuts 120g",
+          "brand": "Nimbus",
+          "category": "nuts",
+          "price": 30.0,
+          "slot_id": "B3S4P2"
+        }
+      ],
+      "stations_visited": [
+        "B1",
+        "B2",
+        "B3"
+      ],
+      "end_reason": "checkout",
+      "end_note": null,
+      "n_turns": 10,
+      "n_rejections": 0
+    },
+    {
+      "shopper_index": 17,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S1P1",
+          "reason": "Crunch Chips are on promotion and cheapest chips here.",
+          "time_left_s": 84.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S1P1",
+          "reason": "Crunch chips are on promotion at 25; put them in cart before comparing nuts.",
+          "time_left_s": 80.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S5P1",
+          "reason": "Cheapest nuts here at 25, much less than Nimbus 55.",
+          "time_left_s": 76.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B1",
+          "action": "next_station",
+          "target": null,
+          "reason": "Already got the cheapest chips and nuts here; check next bay for better deals.",
+          "time_left_s": 68.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S4P2",
+          "reason": "Nimbus Nuts 140g at 25 is the best nut price per gram here.",
+          "time_left_s": 62.0
+        },
+        {
+          "turn": 6,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S4P2",
+          "reason": "Nimbus Nuts 140g at 25 is cheaper per gram than Orchid; adding it.",
+          "time_left_s": 58.0
+        },
+        {
+          "turn": 7,
+          "station_id": "B2",
+          "action": "next_station",
+          "target": null,
+          "reason": "Checking next bay for better chip or nut deals before deciding.",
+          "time_left_s": 50.0
+        },
+        {
+          "turn": 8,
+          "station_id": "B3",
+          "action": "add_to_cart",
+          "target": "B3S4P2",
+          "reason": "Nimbus nuts 120g at 30 is cheaper than Orchid, good value.",
+          "time_left_s": 46.0
+        },
+        {
+          "turn": 9,
+          "station_id": "B3",
+          "action": "checkout",
+          "target": null,
+          "reason": "Got enough chips and nuts at good prices, time to checkout.",
+          "time_left_s": 41.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_001",
+        "SKU_008",
+        "SKU_015",
+        "SKU_023"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_001",
+          "name": "Crunch Chips 100g",
+          "brand": "Crunch",
+          "category": "chips",
+          "price": 25.0,
+          "slot_id": "B1S1P1"
+        },
+        {
+          "sku_id": "SKU_008",
+          "name": "Orchid Nuts 120g",
+          "brand": "Orchid",
+          "category": "nuts",
+          "price": 25.0,
+          "slot_id": "B1S5P1"
+        },
+        {
+          "sku_id": "SKU_015",
+          "name": "Nimbus Nuts 140g",
+          "brand": "Nimbus",
+          "category": "nuts",
+          "price": 25.0,
+          "slot_id": "B2S4P2"
+        },
+        {
+          "sku_id": "SKU_023",
+          "name": "Nimbus Nuts 120g",
+          "brand": "Nimbus",
+          "category": "nuts",
+          "price": 30.0,
+          "slot_id": "B3S4P2"
+        }
+      ],
+      "stations_visited": [
+        "B1",
+        "B2",
+        "B3"
+      ],
+      "end_reason": "checkout",
+      "end_note": null,
+      "n_turns": 9,
+      "n_rejections": 0
+    },
+    {
+      "shopper_index": 18,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S1P1",
+          "reason": "Crunch Chips are on promotion and cheaper than Zapp; grabbing them.",
+          "time_left_s": 84.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S1P1",
+          "reason": "Promo chips at 25, best chip price here; adding.",
+          "time_left_s": 80.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S5P1",
+          "reason": "Orchid Nuts are 25, much cheaper than Nimbus Nuts at 55; grabbing the better value.",
+          "time_left_s": 74.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S5P1",
+          "reason": "Cheapest nuts at 25, adding to cart.",
+          "time_left_s": 70.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B1",
+          "action": "next_station",
+          "target": null,
+          "reason": "Already got cheap chips and nuts here; moving to next bay to check for better deals.",
+          "time_left_s": 62.0
+        },
+        {
+          "turn": 6,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S4P2",
+          "reason": "Nimbus nuts are 25 for 140g, cheaper per gram than Orchid; grabbing them.",
+          "time_left_s": 58.0
+        },
+        {
+          "turn": 7,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S1P2",
+          "reason": "Zapp Chips on promotion, 140g for 35; want to check value versus Crunch.",
+          "time_left_s": 52.0
+        },
+        {
+          "turn": 8,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S1P2",
+          "reason": "Zapp chips are on promotion and a decent size, so I'll take them.",
+          "time_left_s": 48.0
+        },
+        {
+          "turn": 9,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S1P1",
+          "reason": "Crunch chips 130g at 30 is cheaper per gram than Zapp promo; switching brands for value.",
+          "time_left_s": 44.0
+        },
+        {
+          "turn": 10,
+          "station_id": "B2",
+          "action": "next_station",
+          "target": null,
+          "reason": "Already have chips and nuts, but checking next bay for better deals.",
+          "time_left_s": 36.0
+        },
+        {
+          "turn": 11,
+          "station_id": "B3",
+          "action": "add_to_cart",
+          "target": "B3S4P2",
+          "reason": "Nimbus nuts 120g at 30 is cheaper per gram than Orchid, stocking up.",
+          "time_left_s": 32.0
+        },
+        {
+          "turn": 12,
+          "station_id": "B3",
+          "action": "checkout",
+          "target": null,
+          "reason": "Got enough chips and nuts at good prices, ready to pay.",
+          "time_left_s": 27.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_001",
+        "SKU_008",
+        "SKU_015",
+        "SKU_010",
+        "SKU_009",
+        "SKU_023"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_001",
+          "name": "Crunch Chips 100g",
+          "brand": "Crunch",
+          "category": "chips",
+          "price": 25.0,
+          "slot_id": "B1S1P1"
+        },
+        {
+          "sku_id": "SKU_008",
+          "name": "Orchid Nuts 120g",
+          "brand": "Orchid",
+          "category": "nuts",
+          "price": 25.0,
+          "slot_id": "B1S5P1"
+        },
+        {
+          "sku_id": "SKU_015",
+          "name": "Nimbus Nuts 140g",
+          "brand": "Nimbus",
+          "category": "nuts",
+          "price": 25.0,
+          "slot_id": "B2S4P2"
+        },
+        {
+          "sku_id": "SKU_010",
+          "name": "Zapp Chips 140g",
+          "brand": "Zapp",
+          "category": "chips",
+          "price": 35.0,
+          "slot_id": "B2S1P2"
+        },
+        {
+          "sku_id": "SKU_009",
+          "name": "Crunch Chips 130g",
+          "brand": "Crunch",
+          "category": "chips",
+          "price": 30.0,
+          "slot_id": "B2S1P1"
+        },
+        {
+          "sku_id": "SKU_023",
+          "name": "Nimbus Nuts 120g",
+          "brand": "Nimbus",
+          "category": "nuts",
+          "price": 30.0,
+          "slot_id": "B3S4P2"
+        }
+      ],
+      "stations_visited": [
+        "B1",
+        "B2",
+        "B3"
+      ],
+      "end_reason": "checkout",
+      "end_note": null,
+      "n_turns": 12,
+      "n_rejections": 0
+    },
+    {
+      "shopper_index": 19,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S5P1",
+          "reason": "Orchid Nuts are 25 for 120g, cheapest nuts here; checking value before deciding.",
+          "time_left_s": 84.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S5P1",
+          "reason": "Cheapest nuts here, 25 for 120g, good value.",
+          "time_left_s": 80.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S1P1",
+          "reason": "Crunch Chips are on promotion at 25, cheapest chips here; grabbing them.",
+          "time_left_s": 74.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S1P1",
+          "reason": "Crunch Chips are on promotion at 25, cheaper than Zapp, so they go in the cart.",
+          "time_left_s": 70.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B1",
+          "action": "next_station",
+          "target": null,
+          "reason": "Already have cheap chips and nuts; checking next bay for better deals.",
+          "time_left_s": 62.0
+        },
+        {
+          "turn": 6,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S4P2",
+          "reason": "Nimbus nuts are 25 for 140g, cheaper per gram than Orchid; switching brands.",
+          "time_left_s": 58.0
+        },
+        {
+          "turn": 7,
+          "station_id": "B2",
+          "action": "next_station",
+          "target": null,
+          "reason": "Checking the last bay for any better chip or nut deals before checkout.",
+          "time_left_s": 50.0
+        },
+        {
+          "turn": 8,
+          "station_id": "B3",
+          "action": "checkout",
+          "target": null,
+          "reason": "Got chips and nuts at good prices; ready to check out.",
+          "time_left_s": 45.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_008",
+        "SKU_001",
+        "SKU_015"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_008",
+          "name": "Orchid Nuts 120g",
+          "brand": "Orchid",
+          "category": "nuts",
+          "price": 25.0,
+          "slot_id": "B1S5P1"
+        },
+        {
+          "sku_id": "SKU_001",
+          "name": "Crunch Chips 100g",
+          "brand": "Crunch",
+          "category": "chips",
+          "price": 25.0,
+          "slot_id": "B1S1P1"
+        },
+        {
+          "sku_id": "SKU_015",
+          "name": "Nimbus Nuts 140g",
+          "brand": "Nimbus",
+          "category": "nuts",
+          "price": 25.0,
+          "slot_id": "B2S4P2"
+        }
+      ],
+      "stations_visited": [
+        "B1",
+        "B2",
+        "B3"
+      ],
+      "end_reason": "checkout",
+      "end_note": null,
+      "n_turns": 8,
+      "n_rejections": 0
+    }
+  ],
+  "n_turns": 194,
+  "n_rejections": 0,
+  "end_reasons": {
+    "checkout": 20
+  },
+  "carts": {
+    "SKU_001": 20,
+    "SKU_008": 20,
+    "SKU_015": 22,
+    "SKU_010": 5,
+    "SKU_009": 6,
+    "SKU_023": 9,
+    "SKU_017": 2
+  }
+}

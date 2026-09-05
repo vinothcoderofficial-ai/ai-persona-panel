@@ -1,0 +1,1518 @@
+{
+  "trace_version": 1,
+  "persona_id": "mission",
+  "archetype": "mission",
+  "description": "Comes with a list, time-pressed, low exploration, buys the first acceptable match.",
+  "planogram_id": "demo_aisle",
+  "n_shoppers": 20,
+  "seed": 42,
+  "temperature": 0.7,
+  "model": "deepseek-v4-pro:cloud",
+  "time_budget_s": 45.0,
+  "max_turns": 24,
+  "max_reasks": 3,
+  "generated_by": "sim/slow_agent.py",
+  "shoppers": [
+    {
+      "shopper_index": 0,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S1P1",
+          "reason": "Need chips; this one is cheap and on promotion.",
+          "time_left_s": 39.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S1P1",
+          "reason": "Got the chips I came for; put them in the cart.",
+          "time_left_s": 35.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S2P1",
+          "reason": "Need cola; grabbing the cheaper Nimbus Cola in front of me.",
+          "time_left_s": 29.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S2P1",
+          "reason": "Got the cola in hand; adding it to cart.",
+          "time_left_s": 25.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B1",
+          "action": "checkout",
+          "target": null,
+          "reason": "I already have chips and cola in the cart; no need to keep looking.",
+          "time_left_s": 20.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_001",
+        "SKU_003"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_001",
+          "name": "Crunch Chips 100g",
+          "brand": "Crunch",
+          "category": "chips",
+          "price": 25.0,
+          "slot_id": "B1S1P1"
+        },
+        {
+          "sku_id": "SKU_003",
+          "name": "Nimbus Cola 120g",
+          "brand": "Nimbus",
+          "category": "cola",
+          "price": 35.0,
+          "slot_id": "B1S2P1"
+        }
+      ],
+      "stations_visited": [
+        "B1"
+      ],
+      "end_reason": "checkout",
+      "end_note": null,
+      "n_turns": 5,
+      "n_rejections": 0
+    },
+    {
+      "shopper_index": 1,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S1P1",
+          "reason": "Need chips, grabbing the first acceptable one.",
+          "time_left_s": 39.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S1P1",
+          "reason": "Got the chips I came for; put them in the cart.",
+          "time_left_s": 35.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S2P1",
+          "reason": "Need cola; this one is cheaper and right in front of me.",
+          "time_left_s": 29.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S2P1",
+          "reason": "Got the cola in hand; put it in the cart and move on.",
+          "time_left_s": 25.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B1",
+          "action": "checkout",
+          "target": null,
+          "reason": "I already have chips and cola in the cart; no need to keep looking.",
+          "time_left_s": 20.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_001",
+        "SKU_003"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_001",
+          "name": "Crunch Chips 100g",
+          "brand": "Crunch",
+          "category": "chips",
+          "price": 25.0,
+          "slot_id": "B1S1P1"
+        },
+        {
+          "sku_id": "SKU_003",
+          "name": "Nimbus Cola 120g",
+          "brand": "Nimbus",
+          "category": "cola",
+          "price": 35.0,
+          "slot_id": "B1S2P1"
+        }
+      ],
+      "stations_visited": [
+        "B1"
+      ],
+      "end_reason": "checkout",
+      "end_note": null,
+      "n_turns": 5,
+      "n_rejections": 0
+    },
+    {
+      "shopper_index": 2,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S1P1",
+          "reason": "Need chips; this is the first acceptable bag in front of me.",
+          "time_left_s": 39.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S1P1",
+          "reason": "Got the chips I need; put them in the cart.",
+          "time_left_s": 35.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S2P1",
+          "reason": "Need cola; this one is cheaper and right here.",
+          "time_left_s": 29.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S2P1",
+          "reason": "Got the cola in hand; put it in the cart and move on.",
+          "time_left_s": 25.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B1",
+          "action": "checkout",
+          "target": null,
+          "reason": "Got the chips and cola on my list; no need to browse more.",
+          "time_left_s": 20.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_001",
+        "SKU_003"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_001",
+          "name": "Crunch Chips 100g",
+          "brand": "Crunch",
+          "category": "chips",
+          "price": 25.0,
+          "slot_id": "B1S1P1"
+        },
+        {
+          "sku_id": "SKU_003",
+          "name": "Nimbus Cola 120g",
+          "brand": "Nimbus",
+          "category": "cola",
+          "price": 35.0,
+          "slot_id": "B1S2P1"
+        }
+      ],
+      "stations_visited": [
+        "B1"
+      ],
+      "end_reason": "checkout",
+      "end_note": null,
+      "n_turns": 5,
+      "n_rejections": 0
+    },
+    {
+      "shopper_index": 3,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S1P1",
+          "reason": "Need chips; this one is acceptable and on promotion.",
+          "time_left_s": 39.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S1P1",
+          "reason": "Got the chips I came for; put them in the cart, then grab a cola.",
+          "time_left_s": 35.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S2P1",
+          "reason": "Need cola; Nimbus is cheaper and right here.",
+          "time_left_s": 29.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S2P1",
+          "reason": "Got the cola in hand; put it in the cart so I can check out.",
+          "time_left_s": 25.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B1",
+          "action": "checkout",
+          "target": null,
+          "reason": "Got chips and cola already; no need to browse more.",
+          "time_left_s": 20.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_001",
+        "SKU_003"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_001",
+          "name": "Crunch Chips 100g",
+          "brand": "Crunch",
+          "category": "chips",
+          "price": 25.0,
+          "slot_id": "B1S1P1"
+        },
+        {
+          "sku_id": "SKU_003",
+          "name": "Nimbus Cola 120g",
+          "brand": "Nimbus",
+          "category": "cola",
+          "price": 35.0,
+          "slot_id": "B1S2P1"
+        }
+      ],
+      "stations_visited": [
+        "B1"
+      ],
+      "end_reason": "checkout",
+      "end_note": null,
+      "n_turns": 5,
+      "n_rejections": 0
+    },
+    {
+      "shopper_index": 4,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S1P1",
+          "reason": "Need chips; this is a cheap promoted bag right in front of me.",
+          "time_left_s": 39.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S1P1",
+          "reason": "Got the chips I need; put them in the cart.",
+          "time_left_s": 35.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S2P1",
+          "reason": "Need cola; this is the cheaper cola in front of me.",
+          "time_left_s": 29.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S2P1",
+          "reason": "Got the cola in hand; put it in the cart and finish.",
+          "time_left_s": 25.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B1",
+          "action": "checkout",
+          "target": null,
+          "reason": "Got chips and cola already; no need to browse more.",
+          "time_left_s": 20.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_001",
+        "SKU_003"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_001",
+          "name": "Crunch Chips 100g",
+          "brand": "Crunch",
+          "category": "chips",
+          "price": 25.0,
+          "slot_id": "B1S1P1"
+        },
+        {
+          "sku_id": "SKU_003",
+          "name": "Nimbus Cola 120g",
+          "brand": "Nimbus",
+          "category": "cola",
+          "price": 35.0,
+          "slot_id": "B1S2P1"
+        }
+      ],
+      "stations_visited": [
+        "B1"
+      ],
+      "end_reason": "checkout",
+      "end_note": null,
+      "n_turns": 5,
+      "n_rejections": 0
+    },
+    {
+      "shopper_index": 5,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S1P1",
+          "reason": "Need chips; this is the cheapest and on promotion.",
+          "time_left_s": 39.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S1P1",
+          "reason": "Got the chips I need; put them in the cart.",
+          "time_left_s": 35.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S2P1",
+          "reason": "Need cola; this one is cheaper and right in front of me.",
+          "time_left_s": 31.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B1",
+          "action": "checkout",
+          "target": null,
+          "reason": "I already have chips and cola in the cart; no need to browse more.",
+          "time_left_s": 26.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_001",
+        "SKU_003"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_001",
+          "name": "Crunch Chips 100g",
+          "brand": "Crunch",
+          "category": "chips",
+          "price": 25.0,
+          "slot_id": "B1S1P1"
+        },
+        {
+          "sku_id": "SKU_003",
+          "name": "Nimbus Cola 120g",
+          "brand": "Nimbus",
+          "category": "cola",
+          "price": 35.0,
+          "slot_id": "B1S2P1"
+        }
+      ],
+      "stations_visited": [
+        "B1"
+      ],
+      "end_reason": "checkout",
+      "end_note": null,
+      "n_turns": 4,
+      "n_rejections": 0
+    },
+    {
+      "shopper_index": 6,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S1P1",
+          "reason": "Need chips; this one is fine.",
+          "time_left_s": 39.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S1P1",
+          "reason": "Got the chips I need; put them in the cart, then grab a cola.",
+          "time_left_s": 35.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S2P1",
+          "reason": "Need cola, grabbing this one.",
+          "time_left_s": 29.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S2P1",
+          "reason": "Got the cola in hand; put it in the cart and finish up.",
+          "time_left_s": 25.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B1",
+          "action": "checkout",
+          "target": null,
+          "reason": "Got chips and cola already; no need to keep browsing.",
+          "time_left_s": 20.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_001",
+        "SKU_003"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_001",
+          "name": "Crunch Chips 100g",
+          "brand": "Crunch",
+          "category": "chips",
+          "price": 25.0,
+          "slot_id": "B1S1P1"
+        },
+        {
+          "sku_id": "SKU_003",
+          "name": "Nimbus Cola 120g",
+          "brand": "Nimbus",
+          "category": "cola",
+          "price": 35.0,
+          "slot_id": "B1S2P1"
+        }
+      ],
+      "stations_visited": [
+        "B1"
+      ],
+      "end_reason": "checkout",
+      "end_note": null,
+      "n_turns": 5,
+      "n_rejections": 0
+    },
+    {
+      "shopper_index": 7,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S1P1",
+          "reason": "Need chips; this is the first acceptable bag in front of me.",
+          "time_left_s": 39.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S1P1",
+          "reason": "Got chips in hand, need them in cart, then grab a cola.",
+          "time_left_s": 35.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S2P1",
+          "reason": "Need cola; grabbing the cheaper Nimbus.",
+          "time_left_s": 29.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S2P1",
+          "reason": "Got the cola in hand; put it in the cart with the chips.",
+          "time_left_s": 25.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B1",
+          "action": "checkout",
+          "target": null,
+          "reason": "Got the chips and cola I came for; no need to browse more.",
+          "time_left_s": 20.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_001",
+        "SKU_003"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_001",
+          "name": "Crunch Chips 100g",
+          "brand": "Crunch",
+          "category": "chips",
+          "price": 25.0,
+          "slot_id": "B1S1P1"
+        },
+        {
+          "sku_id": "SKU_003",
+          "name": "Nimbus Cola 120g",
+          "brand": "Nimbus",
+          "category": "cola",
+          "price": 35.0,
+          "slot_id": "B1S2P1"
+        }
+      ],
+      "stations_visited": [
+        "B1"
+      ],
+      "end_reason": "checkout",
+      "end_note": null,
+      "n_turns": 5,
+      "n_rejections": 0
+    },
+    {
+      "shopper_index": 8,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S1P1",
+          "reason": "Need chips; this is the cheapest and on promotion.",
+          "time_left_s": 39.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S1P1",
+          "reason": "Got chips in hand, need them in cart before grabbing a cola.",
+          "time_left_s": 35.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S2P1",
+          "reason": "Need cola; grabbing the cheaper Nimbus Cola in front of me.",
+          "time_left_s": 29.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S2P1",
+          "reason": "Got the cola in hand; put it in the cart and finish.",
+          "time_left_s": 25.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B1",
+          "action": "checkout",
+          "target": null,
+          "reason": "Already have chips and cola in the cart; no need to browse more.",
+          "time_left_s": 20.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_001",
+        "SKU_003"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_001",
+          "name": "Crunch Chips 100g",
+          "brand": "Crunch",
+          "category": "chips",
+          "price": 25.0,
+          "slot_id": "B1S1P1"
+        },
+        {
+          "sku_id": "SKU_003",
+          "name": "Nimbus Cola 120g",
+          "brand": "Nimbus",
+          "category": "cola",
+          "price": 35.0,
+          "slot_id": "B1S2P1"
+        }
+      ],
+      "stations_visited": [
+        "B1"
+      ],
+      "end_reason": "checkout",
+      "end_note": null,
+      "n_turns": 5,
+      "n_rejections": 0
+    },
+    {
+      "shopper_index": 9,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S1P1",
+          "reason": "Need chips; grabbing the cheap Crunch chips first.",
+          "time_left_s": 39.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S1P1",
+          "reason": "Got the chips in hand; put them in the cart, then grab a cola.",
+          "time_left_s": 35.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S2P1",
+          "reason": "Need cola; this Nimbus is cheaper than the Orchid and right here.",
+          "time_left_s": 29.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S2P1",
+          "reason": "Got the cola in hand; put it in the cart and finish.",
+          "time_left_s": 25.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B1",
+          "action": "checkout",
+          "target": null,
+          "reason": "Got the chips and cola I came for; no need to keep looking.",
+          "time_left_s": 20.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_001",
+        "SKU_003"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_001",
+          "name": "Crunch Chips 100g",
+          "brand": "Crunch",
+          "category": "chips",
+          "price": 25.0,
+          "slot_id": "B1S1P1"
+        },
+        {
+          "sku_id": "SKU_003",
+          "name": "Nimbus Cola 120g",
+          "brand": "Nimbus",
+          "category": "cola",
+          "price": 35.0,
+          "slot_id": "B1S2P1"
+        }
+      ],
+      "stations_visited": [
+        "B1"
+      ],
+      "end_reason": "checkout",
+      "end_note": null,
+      "n_turns": 5,
+      "n_rejections": 0
+    },
+    {
+      "shopper_index": 10,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S1P1",
+          "reason": "Need chips; this one is cheaper and on promotion.",
+          "time_left_s": 39.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S1P1",
+          "reason": "Got the chips I need; putting them in the cart.",
+          "time_left_s": 35.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S2P1",
+          "reason": "Need cola; this is the first acceptable one in front of me.",
+          "time_left_s": 29.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S2P1",
+          "reason": "Got the cola in hand; put it in the cart and move on.",
+          "time_left_s": 25.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B1",
+          "action": "checkout",
+          "target": null,
+          "reason": "I have chips and cola already; no need to keep looking.",
+          "time_left_s": 20.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_001",
+        "SKU_003"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_001",
+          "name": "Crunch Chips 100g",
+          "brand": "Crunch",
+          "category": "chips",
+          "price": 25.0,
+          "slot_id": "B1S1P1"
+        },
+        {
+          "sku_id": "SKU_003",
+          "name": "Nimbus Cola 120g",
+          "brand": "Nimbus",
+          "category": "cola",
+          "price": 35.0,
+          "slot_id": "B1S2P1"
+        }
+      ],
+      "stations_visited": [
+        "B1"
+      ],
+      "end_reason": "checkout",
+      "end_note": null,
+      "n_turns": 5,
+      "n_rejections": 0
+    },
+    {
+      "shopper_index": 11,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S1P1",
+          "reason": "Need chips; this is the cheapest and on promotion.",
+          "time_left_s": 39.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S1P1",
+          "reason": "Got chips in hand, need them in cart before grabbing a cola.",
+          "time_left_s": 35.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S2P1",
+          "reason": "Need cola; this Nimbus Cola is right here and cheaper than the other cola.",
+          "time_left_s": 29.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S2P1",
+          "reason": "Got the cola in hand; put it in the cart.",
+          "time_left_s": 25.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B1",
+          "action": "checkout",
+          "target": null,
+          "reason": "Got chips and cola already; no need to browse more.",
+          "time_left_s": 20.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_001",
+        "SKU_003"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_001",
+          "name": "Crunch Chips 100g",
+          "brand": "Crunch",
+          "category": "chips",
+          "price": 25.0,
+          "slot_id": "B1S1P1"
+        },
+        {
+          "sku_id": "SKU_003",
+          "name": "Nimbus Cola 120g",
+          "brand": "Nimbus",
+          "category": "cola",
+          "price": 35.0,
+          "slot_id": "B1S2P1"
+        }
+      ],
+      "stations_visited": [
+        "B1"
+      ],
+      "end_reason": "checkout",
+      "end_note": null,
+      "n_turns": 5,
+      "n_rejections": 0
+    },
+    {
+      "shopper_index": 12,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S1P1",
+          "reason": "Need chips; this one is cheap and on promotion.",
+          "time_left_s": 39.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S1P1",
+          "reason": "Got chips in hand, need them in the cart before grabbing a cola.",
+          "time_left_s": 35.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S2P1",
+          "reason": "Need cola; this Nimbus Cola is right here and cheaper than the other.",
+          "time_left_s": 29.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S2P1",
+          "reason": "Got the cola in hand; put it in the cart and finish up.",
+          "time_left_s": 25.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B1",
+          "action": "checkout",
+          "target": null,
+          "reason": "I already have chips and cola in the cart; no need to browse more.",
+          "time_left_s": 20.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_001",
+        "SKU_003"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_001",
+          "name": "Crunch Chips 100g",
+          "brand": "Crunch",
+          "category": "chips",
+          "price": 25.0,
+          "slot_id": "B1S1P1"
+        },
+        {
+          "sku_id": "SKU_003",
+          "name": "Nimbus Cola 120g",
+          "brand": "Nimbus",
+          "category": "cola",
+          "price": 35.0,
+          "slot_id": "B1S2P1"
+        }
+      ],
+      "stations_visited": [
+        "B1"
+      ],
+      "end_reason": "checkout",
+      "end_note": null,
+      "n_turns": 5,
+      "n_rejections": 0
+    },
+    {
+      "shopper_index": 13,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S1P1",
+          "reason": "Need chips; this one is acceptable and on promotion.",
+          "time_left_s": 39.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S1P1",
+          "reason": "Got the chips I came for; adding them before grabbing a cola.",
+          "time_left_s": 35.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S2P1",
+          "reason": "Need cola; Nimbus is cheaper than Orchid and right here.",
+          "time_left_s": 29.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S2P1",
+          "reason": "Got the cola in hand; put it in the cart and finish.",
+          "time_left_s": 25.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B1",
+          "action": "checkout",
+          "target": null,
+          "reason": "Got the chips and cola on my list; time to pay and go.",
+          "time_left_s": 20.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_001",
+        "SKU_003"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_001",
+          "name": "Crunch Chips 100g",
+          "brand": "Crunch",
+          "category": "chips",
+          "price": 25.0,
+          "slot_id": "B1S1P1"
+        },
+        {
+          "sku_id": "SKU_003",
+          "name": "Nimbus Cola 120g",
+          "brand": "Nimbus",
+          "category": "cola",
+          "price": 35.0,
+          "slot_id": "B1S2P1"
+        }
+      ],
+      "stations_visited": [
+        "B1"
+      ],
+      "end_reason": "checkout",
+      "end_note": null,
+      "n_turns": 5,
+      "n_rejections": 0
+    },
+    {
+      "shopper_index": 14,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S1P1",
+          "reason": "Need chips; this is the cheapest and on promotion.",
+          "time_left_s": 39.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S1P1",
+          "reason": "Got the chips I came for; adding them to cart.",
+          "time_left_s": 35.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S2P1",
+          "reason": "Need cola; grabbing the cheaper Nimbus Cola in front of me.",
+          "time_left_s": 29.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S2P1",
+          "reason": "Got the cola in hand; put it in the cart and move on.",
+          "time_left_s": 25.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B1",
+          "action": "checkout",
+          "target": null,
+          "reason": "Got the chips and cola I came for; no need to keep looking.",
+          "time_left_s": 20.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_001",
+        "SKU_003"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_001",
+          "name": "Crunch Chips 100g",
+          "brand": "Crunch",
+          "category": "chips",
+          "price": 25.0,
+          "slot_id": "B1S1P1"
+        },
+        {
+          "sku_id": "SKU_003",
+          "name": "Nimbus Cola 120g",
+          "brand": "Nimbus",
+          "category": "cola",
+          "price": 35.0,
+          "slot_id": "B1S2P1"
+        }
+      ],
+      "stations_visited": [
+        "B1"
+      ],
+      "end_reason": "checkout",
+      "end_note": null,
+      "n_turns": 5,
+      "n_rejections": 0
+    },
+    {
+      "shopper_index": 15,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S1P1",
+          "reason": "Need chips; grabbing the cheaper Crunch Chips on promotion.",
+          "time_left_s": 39.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S1P1",
+          "reason": "Got chips in hand, need them in cart before grabbing a cola.",
+          "time_left_s": 35.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S2P1",
+          "reason": "Need cola; this one is right here and fine.",
+          "time_left_s": 29.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S2P1",
+          "reason": "Got the cola in hand; put it in the cart and finish.",
+          "time_left_s": 25.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B1",
+          "action": "checkout",
+          "target": null,
+          "reason": "Got the chips and cola on my list; no need to browse more.",
+          "time_left_s": 20.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_001",
+        "SKU_003"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_001",
+          "name": "Crunch Chips 100g",
+          "brand": "Crunch",
+          "category": "chips",
+          "price": 25.0,
+          "slot_id": "B1S1P1"
+        },
+        {
+          "sku_id": "SKU_003",
+          "name": "Nimbus Cola 120g",
+          "brand": "Nimbus",
+          "category": "cola",
+          "price": 35.0,
+          "slot_id": "B1S2P1"
+        }
+      ],
+      "stations_visited": [
+        "B1"
+      ],
+      "end_reason": "checkout",
+      "end_note": null,
+      "n_turns": 5,
+      "n_rejections": 0
+    },
+    {
+      "shopper_index": 16,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S1P1",
+          "reason": "Need chips; grabbing the cheap Crunch Chips on promotion.",
+          "time_left_s": 39.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S1P1",
+          "reason": "Got the chips I need; put them in the cart, then grab a cola.",
+          "time_left_s": 35.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S2P1",
+          "reason": "Need cola; this one is cheaper and right here.",
+          "time_left_s": 29.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S2P1",
+          "reason": "Got the cola in hand; put it in the cart and move on.",
+          "time_left_s": 25.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B1",
+          "action": "checkout",
+          "target": null,
+          "reason": "I already have chips and cola in the cart; no need to browse more.",
+          "time_left_s": 20.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_001",
+        "SKU_003"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_001",
+          "name": "Crunch Chips 100g",
+          "brand": "Crunch",
+          "category": "chips",
+          "price": 25.0,
+          "slot_id": "B1S1P1"
+        },
+        {
+          "sku_id": "SKU_003",
+          "name": "Nimbus Cola 120g",
+          "brand": "Nimbus",
+          "category": "cola",
+          "price": 35.0,
+          "slot_id": "B1S2P1"
+        }
+      ],
+      "stations_visited": [
+        "B1"
+      ],
+      "end_reason": "checkout",
+      "end_note": null,
+      "n_turns": 5,
+      "n_rejections": 0
+    },
+    {
+      "shopper_index": 17,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S1P1",
+          "reason": "Need chips, grabbing the cheap Crunch chips on promotion.",
+          "time_left_s": 39.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S1P1",
+          "reason": "Got the chips in hand; put them in the cart, then grab a cola.",
+          "time_left_s": 35.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S2P1",
+          "reason": "Need cola; grabbing the cheaper Nimbus Cola in front of me.",
+          "time_left_s": 29.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S2P1",
+          "reason": "Got the cola I need; adding it and moving on.",
+          "time_left_s": 25.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B1",
+          "action": "checkout",
+          "target": null,
+          "reason": "Already have chips and cola; no need to browse more.",
+          "time_left_s": 20.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_001",
+        "SKU_003"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_001",
+          "name": "Crunch Chips 100g",
+          "brand": "Crunch",
+          "category": "chips",
+          "price": 25.0,
+          "slot_id": "B1S1P1"
+        },
+        {
+          "sku_id": "SKU_003",
+          "name": "Nimbus Cola 120g",
+          "brand": "Nimbus",
+          "category": "cola",
+          "price": 35.0,
+          "slot_id": "B1S2P1"
+        }
+      ],
+      "stations_visited": [
+        "B1"
+      ],
+      "end_reason": "checkout",
+      "end_note": null,
+      "n_turns": 5,
+      "n_rejections": 0
+    },
+    {
+      "shopper_index": 18,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S1P1",
+          "reason": "Need chips; this one is cheap and right here.",
+          "time_left_s": 39.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S1P1",
+          "reason": "Got the chips I need; put them in the cart.",
+          "time_left_s": 35.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S2P1",
+          "reason": "Need a cola; this Nimbus is right here and cheaper than the other cola.",
+          "time_left_s": 29.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S2P1",
+          "reason": "Got the cola in hand; put it in the cart and move on.",
+          "time_left_s": 25.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B1",
+          "action": "checkout",
+          "target": null,
+          "reason": "I already have chips and cola in the cart; no need to browse more.",
+          "time_left_s": 20.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_001",
+        "SKU_003"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_001",
+          "name": "Crunch Chips 100g",
+          "brand": "Crunch",
+          "category": "chips",
+          "price": 25.0,
+          "slot_id": "B1S1P1"
+        },
+        {
+          "sku_id": "SKU_003",
+          "name": "Nimbus Cola 120g",
+          "brand": "Nimbus",
+          "category": "cola",
+          "price": 35.0,
+          "slot_id": "B1S2P1"
+        }
+      ],
+      "stations_visited": [
+        "B1"
+      ],
+      "end_reason": "checkout",
+      "end_note": null,
+      "n_turns": 5,
+      "n_rejections": 0
+    },
+    {
+      "shopper_index": 19,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S1P1",
+          "reason": "Need chips; grabbing the first acceptable bag in front of me.",
+          "time_left_s": 39.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S1P1",
+          "reason": "Got the chips I came for; putting them in the cart.",
+          "time_left_s": 35.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S2P1",
+          "reason": "Need cola; this is the cheaper cola in front of me.",
+          "time_left_s": 29.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S2P1",
+          "reason": "Got the cola in hand, putting it in the cart.",
+          "time_left_s": 25.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B1",
+          "action": "checkout",
+          "target": null,
+          "reason": "Got the chips and cola on my list; time to go.",
+          "time_left_s": 20.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_001",
+        "SKU_003"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_001",
+          "name": "Crunch Chips 100g",
+          "brand": "Crunch",
+          "category": "chips",
+          "price": 25.0,
+          "slot_id": "B1S1P1"
+        },
+        {
+          "sku_id": "SKU_003",
+          "name": "Nimbus Cola 120g",
+          "brand": "Nimbus",
+          "category": "cola",
+          "price": 35.0,
+          "slot_id": "B1S2P1"
+        }
+      ],
+      "stations_visited": [
+        "B1"
+      ],
+      "end_reason": "checkout",
+      "end_note": null,
+      "n_turns": 5,
+      "n_rejections": 0
+    }
+  ],
+  "n_turns": 99,
+  "n_rejections": 0,
+  "end_reasons": {
+    "checkout": 20
+  },
+  "carts": {
+    "SKU_001": 20,
+    "SKU_003": 20
+  }
+}

@@ -1,0 +1,5623 @@
+{
+  "trace_version": 1,
+  "persona_id": "browser",
+  "archetype": "browser",
+  "description": "No fixed list, high exploration, long dwell, open to promotions and new packs.",
+  "planogram_id": "demo_aisle",
+  "n_shoppers": 20,
+  "seed": 42,
+  "temperature": 0.7,
+  "model": "deepseek-v4-pro:cloud",
+  "time_budget_s": 150.0,
+  "max_turns": 24,
+  "max_reasks": 3,
+  "generated_by": "sim/slow_agent.py",
+  "shoppers": [
+    {
+      "shopper_index": 0,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S1P1",
+          "reason": "Promotion on chips caught my eye; want to check the pack.",
+          "time_left_s": 144.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S1P1",
+          "reason": "Crunch chips are on promotion and a decent price; I'll take them.",
+          "time_left_s": 140.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S3P1",
+          "reason": "Eye-level biscuits, decent size, want to compare before deciding.",
+          "time_left_s": 134.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S3P1",
+          "reason": "These biscuits look good, adding them while I keep browsing.",
+          "time_left_s": 130.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S2P1",
+          "reason": "I want a cola and this Nimbus one is right here, let me check it.",
+          "time_left_s": 124.0
+        },
+        {
+          "turn": 6,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S2P1",
+          "reason": "This cola is already in my hands; I'll put it in the basket.",
+          "time_left_s": 120.0
+        },
+        {
+          "turn": 7,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S5P1",
+          "reason": "Need nuts and this bigger pack is cheaper than the Nimbus option.",
+          "time_left_s": 116.0
+        },
+        {
+          "turn": 8,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S4P2",
+          "reason": "Comparing nut packs; this Nimbus one is pricier but maybe worth a closer look.",
+          "time_left_s": 110.0
+        },
+        {
+          "turn": 9,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S4P2",
+          "reason": "These Nimbus nuts look good and I already have them in hand.",
+          "time_left_s": 106.0
+        },
+        {
+          "turn": 10,
+          "station_id": "B1",
+          "action": "next_station",
+          "target": null,
+          "reason": "I've seen enough here; moving along to see what else catches my eye.",
+          "time_left_s": 98.0
+        },
+        {
+          "turn": 11,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S1P2",
+          "reason": "On promotion and a different pack, might try these chips.",
+          "time_left_s": 92.0
+        },
+        {
+          "turn": 12,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S1P2",
+          "reason": "Promoted chips already in hand, worth trying.",
+          "time_left_s": 88.0
+        },
+        {
+          "turn": 13,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S4P2",
+          "reason": "Bigger Nimbus nuts pack is cheaper than my current one; grabbing it.",
+          "time_left_s": 84.0
+        },
+        {
+          "turn": 14,
+          "station_id": "B2",
+          "action": "next_station",
+          "target": null,
+          "reason": "Want to see what's on the last bay before deciding.",
+          "time_left_s": 76.0
+        },
+        {
+          "turn": 15,
+          "station_id": "B3",
+          "action": "pickup",
+          "target": "B3S4P1",
+          "reason": "That Zapp biscuit pack is cheap and prominent; let me see if it's worth adding.",
+          "time_left_s": 70.0
+        },
+        {
+          "turn": 16,
+          "station_id": "B3",
+          "action": "add_to_cart",
+          "target": "B3S4P1",
+          "reason": "Zapp biscuits are a good price and already in my hand.",
+          "time_left_s": 66.0
+        },
+        {
+          "turn": 17,
+          "station_id": "B3",
+          "action": "add_to_cart",
+          "target": "B3S2P1",
+          "reason": "On-promotion cola catches my eye; I'll try it while I'm here.",
+          "time_left_s": 62.0
+        },
+        {
+          "turn": 18,
+          "station_id": "B3",
+          "action": "checkout",
+          "target": null,
+          "reason": "I've got all I need for biscuits, chips, cola, and nuts; time to check out.",
+          "time_left_s": 57.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_001",
+        "SKU_005",
+        "SKU_003",
+        "SKU_008",
+        "SKU_007",
+        "SKU_010",
+        "SKU_015",
+        "SKU_022",
+        "SKU_019"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_001",
+          "name": "Crunch Chips 100g",
+          "brand": "Crunch",
+          "category": "chips",
+          "price": 25.0,
+          "slot_id": "B1S1P1"
+        },
+        {
+          "sku_id": "SKU_005",
+          "name": "Crunch Biscuits 140g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 45.0,
+          "slot_id": "B1S3P1"
+        },
+        {
+          "sku_id": "SKU_003",
+          "name": "Nimbus Cola 120g",
+          "brand": "Nimbus",
+          "category": "cola",
+          "price": 35.0,
+          "slot_id": "B1S2P1"
+        },
+        {
+          "sku_id": "SKU_008",
+          "name": "Orchid Nuts 120g",
+          "brand": "Orchid",
+          "category": "nuts",
+          "price": 25.0,
+          "slot_id": "B1S5P1"
+        },
+        {
+          "sku_id": "SKU_007",
+          "name": "Nimbus Nuts 110g",
+          "brand": "Nimbus",
+          "category": "nuts",
+          "price": 55.0,
+          "slot_id": "B1S4P2"
+        },
+        {
+          "sku_id": "SKU_010",
+          "name": "Zapp Chips 140g",
+          "brand": "Zapp",
+          "category": "chips",
+          "price": 35.0,
+          "slot_id": "B2S1P2"
+        },
+        {
+          "sku_id": "SKU_015",
+          "name": "Nimbus Nuts 140g",
+          "brand": "Nimbus",
+          "category": "nuts",
+          "price": 25.0,
+          "slot_id": "B2S4P2"
+        },
+        {
+          "sku_id": "SKU_022",
+          "name": "Zapp Biscuits 110g",
+          "brand": "Zapp",
+          "category": "biscuits",
+          "price": 25.0,
+          "slot_id": "B3S4P1"
+        },
+        {
+          "sku_id": "SKU_019",
+          "name": "Nimbus Cola 130g",
+          "brand": "Nimbus",
+          "category": "cola",
+          "price": 45.0,
+          "slot_id": "B3S2P1"
+        }
+      ],
+      "stations_visited": [
+        "B1",
+        "B2",
+        "B3"
+      ],
+      "end_reason": "checkout",
+      "end_note": null,
+      "n_turns": 18,
+      "n_rejections": 0
+    },
+    {
+      "shopper_index": 1,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "look",
+          "target": "B1S4P2",
+          "reason": "Those nuts catch my eye, want to check the pack and price.",
+          "time_left_s": 147.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S1P1",
+          "reason": "Promotion on chips catches my eye, want to check the pack and price.",
+          "time_left_s": 141.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S1P1",
+          "reason": "Promotion on chips and I already have it in hand; it fits what I came for.",
+          "time_left_s": 137.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S4P2",
+          "reason": "These nuts look interesting, want to check the pack before deciding.",
+          "time_left_s": 131.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S4P2",
+          "reason": "These nuts look good, adding them while I keep browsing.",
+          "time_left_s": 127.0
+        },
+        {
+          "turn": 6,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S3P1",
+          "reason": "Eye-level biscuits catch my attention; want to check the pack before deciding.",
+          "time_left_s": 121.0
+        },
+        {
+          "turn": 7,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S3P1",
+          "reason": "These Crunch biscuits look good and I already have chips and nuts; adding them.",
+          "time_left_s": 117.0
+        },
+        {
+          "turn": 8,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S2P1",
+          "reason": "Need a cola; this Nimbus is cheaper than the Orchid, so I'll check it.",
+          "time_left_s": 111.0
+        },
+        {
+          "turn": 9,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S2P1",
+          "reason": "This Nimbus Cola is a decent price and I want a cola.",
+          "time_left_s": 107.0
+        },
+        {
+          "turn": 10,
+          "station_id": "B1",
+          "action": "next_station",
+          "target": null,
+          "reason": "I've got the basics, but I want to see what else is down the aisle before deciding.",
+          "time_left_s": 99.0
+        },
+        {
+          "turn": 11,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S1P2",
+          "reason": "Promotion on Zapp chips catches my eye; want to compare pack size and price.",
+          "time_left_s": 93.0
+        },
+        {
+          "turn": 12,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S1P2",
+          "reason": "This Zapp chips is on promotion and already in my hand, so I'll add it.",
+          "time_left_s": 89.0
+        },
+        {
+          "turn": 13,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S4P2",
+          "reason": "Bigger nut pack at 25 seems like a better value than the smaller one in cart.",
+          "time_left_s": 85.0
+        },
+        {
+          "turn": 14,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S5P1",
+          "reason": "Haven't tried Orchid nuts, small pack, want to check value.",
+          "time_left_s": 79.0
+        },
+        {
+          "turn": 15,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S5P1",
+          "reason": "These Orchid nuts are a decent price, I'll take them.",
+          "time_left_s": 75.0
+        },
+        {
+          "turn": 16,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S2P2",
+          "reason": "Haven't tried Orchid Cola, want to check this pack.",
+          "time_left_s": 69.0
+        },
+        {
+          "turn": 17,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S2P2",
+          "reason": "I already have this cola in hand; it looks worth trying.",
+          "time_left_s": 65.0
+        },
+        {
+          "turn": 18,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S4P1",
+          "reason": "Zapp biscuits are a different pack, want to compare size and price before deciding.",
+          "time_left_s": 59.0
+        },
+        {
+          "turn": 19,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S4P1",
+          "reason": "Already holding these Zapp biscuits; they look worth trying, so into the basket.",
+          "time_left_s": 55.0
+        },
+        {
+          "turn": 20,
+          "station_id": "B2",
+          "action": "next_station",
+          "target": null,
+          "reason": "Wandering further to see what the last bay has before I decide.",
+          "time_left_s": 47.0
+        },
+        {
+          "turn": 21,
+          "station_id": "B3",
+          "action": "checkout",
+          "target": null,
+          "reason": "Got everything I came for and more; time to pay.",
+          "time_left_s": 42.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_001",
+        "SKU_007",
+        "SKU_005",
+        "SKU_003",
+        "SKU_010",
+        "SKU_015",
+        "SKU_016",
+        "SKU_012",
+        "SKU_014"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_001",
+          "name": "Crunch Chips 100g",
+          "brand": "Crunch",
+          "category": "chips",
+          "price": 25.0,
+          "slot_id": "B1S1P1"
+        },
+        {
+          "sku_id": "SKU_007",
+          "name": "Nimbus Nuts 110g",
+          "brand": "Nimbus",
+          "category": "nuts",
+          "price": 55.0,
+          "slot_id": "B1S4P2"
+        },
+        {
+          "sku_id": "SKU_005",
+          "name": "Crunch Biscuits 140g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 45.0,
+          "slot_id": "B1S3P1"
+        },
+        {
+          "sku_id": "SKU_003",
+          "name": "Nimbus Cola 120g",
+          "brand": "Nimbus",
+          "category": "cola",
+          "price": 35.0,
+          "slot_id": "B1S2P1"
+        },
+        {
+          "sku_id": "SKU_010",
+          "name": "Zapp Chips 140g",
+          "brand": "Zapp",
+          "category": "chips",
+          "price": 35.0,
+          "slot_id": "B2S1P2"
+        },
+        {
+          "sku_id": "SKU_015",
+          "name": "Nimbus Nuts 140g",
+          "brand": "Nimbus",
+          "category": "nuts",
+          "price": 25.0,
+          "slot_id": "B2S4P2"
+        },
+        {
+          "sku_id": "SKU_016",
+          "name": "Orchid Nuts 100g",
+          "brand": "Orchid",
+          "category": "nuts",
+          "price": 30.0,
+          "slot_id": "B2S5P1"
+        },
+        {
+          "sku_id": "SKU_012",
+          "name": "Orchid Cola 110g",
+          "brand": "Orchid",
+          "category": "cola",
+          "price": 45.0,
+          "slot_id": "B2S2P2"
+        },
+        {
+          "sku_id": "SKU_014",
+          "name": "Zapp Biscuits 130g",
+          "brand": "Zapp",
+          "category": "biscuits",
+          "price": 55.0,
+          "slot_id": "B2S4P1"
+        }
+      ],
+      "stations_visited": [
+        "B1",
+        "B2",
+        "B3"
+      ],
+      "end_reason": "checkout",
+      "end_note": null,
+      "n_turns": 21,
+      "n_rejections": 0
+    },
+    {
+      "shopper_index": 2,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "look",
+          "target": "B1S1P1",
+          "reason": "Spotted a promotion on chips, want to check the pack and price.",
+          "time_left_s": 147.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "look",
+          "target": "B1S4P2",
+          "reason": "That nut pack catches my eye; I want to check the size and price.",
+          "time_left_s": 144.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "look",
+          "target": "B1S1P1",
+          "reason": "A chips promotion catches my eye; I want a closer look.",
+          "time_left_s": 141.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S1P1",
+          "reason": "Chips on promotion at a good price, I'll grab them to compare.",
+          "time_left_s": 135.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S1P1",
+          "reason": "Crunch Chips are on promotion and a good price, so I'll take them.",
+          "time_left_s": 131.0
+        },
+        {
+          "turn": 6,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S5P1",
+          "reason": "I want a nut option and this price looks good, let me inspect it.",
+          "time_left_s": 125.0
+        },
+        {
+          "turn": 7,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S5P1",
+          "reason": "Orchid nuts are a better value than Nimbus, adding them.",
+          "time_left_s": 121.0
+        },
+        {
+          "turn": 8,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S3P1",
+          "reason": "Need biscuits and this eye-level pack looks worth a closer look.",
+          "time_left_s": 115.0
+        },
+        {
+          "turn": 9,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S3P1",
+          "reason": "These Crunch biscuits are at eye level and a decent price; I'll take them.",
+          "time_left_s": 111.0
+        },
+        {
+          "turn": 10,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S2P1",
+          "reason": "Need a cola and this Nimbus looks like a decent price to compare.",
+          "time_left_s": 105.0
+        },
+        {
+          "turn": 11,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S2P1",
+          "reason": "This cola is cheaper than the Orchid one and I already have it in hand.",
+          "time_left_s": 101.0
+        },
+        {
+          "turn": 12,
+          "station_id": "B1",
+          "action": "next_station",
+          "target": null,
+          "reason": "I have the basics; want to browse the next bay for anything new or on promotion.",
+          "time_left_s": 93.0
+        },
+        {
+          "turn": 13,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S1P2",
+          "reason": "Promo chips, bigger pack, want to compare with my Crunch chips.",
+          "time_left_s": 87.0
+        },
+        {
+          "turn": 14,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S1P2",
+          "reason": "These Zapp chips are on promotion and I already have them in hand.",
+          "time_left_s": 83.0
+        },
+        {
+          "turn": 15,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S4P2",
+          "reason": "That Nimbus Nuts 140g is cheap and prominent; want to compare with the nuts I already have.",
+          "time_left_s": 77.0
+        },
+        {
+          "turn": 16,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S4P2",
+          "reason": "Good size and price for nuts, adding it.",
+          "time_left_s": 73.0
+        },
+        {
+          "turn": 17,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S4P1",
+          "reason": "Zapp biscuits are new to me, want a closer look at the pack.",
+          "time_left_s": 67.0
+        },
+        {
+          "turn": 18,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S4P1",
+          "reason": "This Zapp biscuit pack looks worth trying; I'll take it too.",
+          "time_left_s": 63.0
+        },
+        {
+          "turn": 19,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S2P2",
+          "reason": "Haven't tried Orchid Cola, want to compare it with the Nimbus cola I already have.",
+          "time_left_s": 57.0
+        },
+        {
+          "turn": 20,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S2P2",
+          "reason": "I'll try this Orchid Cola; it's a different size than the Nimbus I already have.",
+          "time_left_s": 53.0
+        },
+        {
+          "turn": 21,
+          "station_id": "B2",
+          "action": "next_station",
+          "target": null,
+          "reason": "I've compared this bay enough; let me see the last station for anything new.",
+          "time_left_s": 45.0
+        },
+        {
+          "turn": 22,
+          "station_id": "B3",
+          "action": "checkout",
+          "target": null,
+          "reason": "I have enough from every category and time is short.",
+          "time_left_s": 40.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_001",
+        "SKU_008",
+        "SKU_005",
+        "SKU_003",
+        "SKU_010",
+        "SKU_015",
+        "SKU_014",
+        "SKU_012"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_001",
+          "name": "Crunch Chips 100g",
+          "brand": "Crunch",
+          "category": "chips",
+          "price": 25.0,
+          "slot_id": "B1S1P1"
+        },
+        {
+          "sku_id": "SKU_008",
+          "name": "Orchid Nuts 120g",
+          "brand": "Orchid",
+          "category": "nuts",
+          "price": 25.0,
+          "slot_id": "B1S5P1"
+        },
+        {
+          "sku_id": "SKU_005",
+          "name": "Crunch Biscuits 140g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 45.0,
+          "slot_id": "B1S3P1"
+        },
+        {
+          "sku_id": "SKU_003",
+          "name": "Nimbus Cola 120g",
+          "brand": "Nimbus",
+          "category": "cola",
+          "price": 35.0,
+          "slot_id": "B1S2P1"
+        },
+        {
+          "sku_id": "SKU_010",
+          "name": "Zapp Chips 140g",
+          "brand": "Zapp",
+          "category": "chips",
+          "price": 35.0,
+          "slot_id": "B2S1P2"
+        },
+        {
+          "sku_id": "SKU_015",
+          "name": "Nimbus Nuts 140g",
+          "brand": "Nimbus",
+          "category": "nuts",
+          "price": 25.0,
+          "slot_id": "B2S4P2"
+        },
+        {
+          "sku_id": "SKU_014",
+          "name": "Zapp Biscuits 130g",
+          "brand": "Zapp",
+          "category": "biscuits",
+          "price": 55.0,
+          "slot_id": "B2S4P1"
+        },
+        {
+          "sku_id": "SKU_012",
+          "name": "Orchid Cola 110g",
+          "brand": "Orchid",
+          "category": "cola",
+          "price": 45.0,
+          "slot_id": "B2S2P2"
+        }
+      ],
+      "stations_visited": [
+        "B1",
+        "B2",
+        "B3"
+      ],
+      "end_reason": "checkout",
+      "end_note": null,
+      "n_turns": 22,
+      "n_rejections": 0
+    },
+    {
+      "shopper_index": 3,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S1P1",
+          "reason": "Promotion catches my eye, want to check this chips pack.",
+          "time_left_s": 144.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S1P1",
+          "reason": "Promotion price is good, I'll take these chips.",
+          "time_left_s": 140.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S5P1",
+          "reason": "Nuts are on my list and this pack is cheap; checking it out.",
+          "time_left_s": 134.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S5P1",
+          "reason": "These nuts are a good price and I came for nuts, so I'll take them.",
+          "time_left_s": 130.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S2P1",
+          "reason": "Need a cola; Nimbus is cheaper per gram than Orchid, so I'll take it.",
+          "time_left_s": 126.0
+        },
+        {
+          "turn": 6,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S3P1",
+          "reason": "Biscuits are on my list; this 140g pack looks better value than the Zapp one.",
+          "time_left_s": 120.0
+        },
+        {
+          "turn": 7,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S3P1",
+          "reason": "Crunch biscuits are a good size and price, adding them.",
+          "time_left_s": 116.0
+        },
+        {
+          "turn": 8,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S4P2",
+          "reason": "Curious about these pricier Nimbus nuts compared to the Orchid ones already in cart.",
+          "time_left_s": 110.0
+        },
+        {
+          "turn": 9,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S4P2",
+          "reason": "I already have this in my hands; might as well try the pricier nuts too.",
+          "time_left_s": 106.0
+        },
+        {
+          "turn": 10,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S4P1",
+          "reason": "I want to compare this Zapp biscuit pack with the Crunch one already in my cart.",
+          "time_left_s": 100.0
+        },
+        {
+          "turn": 11,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S4P1",
+          "reason": "This Zapp biscuit pack looks interesting, and I'm open to trying it.",
+          "time_left_s": 96.0
+        },
+        {
+          "turn": 12,
+          "station_id": "B1",
+          "action": "next_station",
+          "target": null,
+          "reason": "I've seen enough here; moving to the next bay to explore more options.",
+          "time_left_s": 88.0
+        },
+        {
+          "turn": 13,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S4P2",
+          "reason": "That Nimbus nuts 140g pack looks like a good deal, grabbing it to compare.",
+          "time_left_s": 82.0
+        },
+        {
+          "turn": 14,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S4P2",
+          "reason": "This bigger Nimbus Nuts pack is a good price, and I already have it in hand.",
+          "time_left_s": 78.0
+        },
+        {
+          "turn": 15,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S1P2",
+          "reason": "Zapp chips are on promotion and a bigger pack, worth trying.",
+          "time_left_s": 74.0
+        },
+        {
+          "turn": 16,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S2P2",
+          "reason": "Haven't tried Orchid Cola, want a different cola to compare.",
+          "time_left_s": 70.0
+        },
+        {
+          "turn": 17,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S1P1",
+          "reason": "Crunch Chips 130g is a new size at a decent price, want to compare it.",
+          "time_left_s": 64.0
+        },
+        {
+          "turn": 18,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S1P1",
+          "reason": "This Crunch Chips is only 30, and another chips option seems worth grabbing.",
+          "time_left_s": 60.0
+        },
+        {
+          "turn": 19,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S2P1",
+          "reason": "Smaller cola pack caught my eye; want to compare with the one in cart.",
+          "time_left_s": 54.0
+        },
+        {
+          "turn": 20,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S2P1",
+          "reason": "This smaller Nimbus cola looks good, I'll take it too.",
+          "time_left_s": 50.0
+        },
+        {
+          "turn": 21,
+          "station_id": "B2",
+          "action": "next_station",
+          "target": null,
+          "reason": "I've compared enough here; let me see the last bay before deciding.",
+          "time_left_s": 42.0
+        },
+        {
+          "turn": 22,
+          "station_id": "B3",
+          "action": "pickup",
+          "target": "B3S2P1",
+          "reason": "Promotion on cola caught my eye; want to compare size and price with what I already have.",
+          "time_left_s": 36.0
+        },
+        {
+          "turn": 23,
+          "station_id": "B3",
+          "action": "add_to_cart",
+          "target": "B3S2P1",
+          "reason": "This Nimbus Cola is on promotion and already in my hand.",
+          "time_left_s": 32.0
+        },
+        {
+          "turn": 24,
+          "station_id": "B3",
+          "action": "checkout",
+          "target": null,
+          "reason": "I've seen enough and my cart is full; time to pay.",
+          "time_left_s": 27.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_001",
+        "SKU_008",
+        "SKU_003",
+        "SKU_005",
+        "SKU_007",
+        "SKU_006",
+        "SKU_015",
+        "SKU_010",
+        "SKU_012",
+        "SKU_009",
+        "SKU_011",
+        "SKU_019"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_001",
+          "name": "Crunch Chips 100g",
+          "brand": "Crunch",
+          "category": "chips",
+          "price": 25.0,
+          "slot_id": "B1S1P1"
+        },
+        {
+          "sku_id": "SKU_008",
+          "name": "Orchid Nuts 120g",
+          "brand": "Orchid",
+          "category": "nuts",
+          "price": 25.0,
+          "slot_id": "B1S5P1"
+        },
+        {
+          "sku_id": "SKU_003",
+          "name": "Nimbus Cola 120g",
+          "brand": "Nimbus",
+          "category": "cola",
+          "price": 35.0,
+          "slot_id": "B1S2P1"
+        },
+        {
+          "sku_id": "SKU_005",
+          "name": "Crunch Biscuits 140g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 45.0,
+          "slot_id": "B1S3P1"
+        },
+        {
+          "sku_id": "SKU_007",
+          "name": "Nimbus Nuts 110g",
+          "brand": "Nimbus",
+          "category": "nuts",
+          "price": 55.0,
+          "slot_id": "B1S4P2"
+        },
+        {
+          "sku_id": "SKU_006",
+          "name": "Zapp Biscuits 100g",
+          "brand": "Zapp",
+          "category": "biscuits",
+          "price": 50.0,
+          "slot_id": "B1S4P1"
+        },
+        {
+          "sku_id": "SKU_015",
+          "name": "Nimbus Nuts 140g",
+          "brand": "Nimbus",
+          "category": "nuts",
+          "price": 25.0,
+          "slot_id": "B2S4P2"
+        },
+        {
+          "sku_id": "SKU_010",
+          "name": "Zapp Chips 140g",
+          "brand": "Zapp",
+          "category": "chips",
+          "price": 35.0,
+          "slot_id": "B2S1P2"
+        },
+        {
+          "sku_id": "SKU_012",
+          "name": "Orchid Cola 110g",
+          "brand": "Orchid",
+          "category": "cola",
+          "price": 45.0,
+          "slot_id": "B2S2P2"
+        },
+        {
+          "sku_id": "SKU_009",
+          "name": "Crunch Chips 130g",
+          "brand": "Crunch",
+          "category": "chips",
+          "price": 30.0,
+          "slot_id": "B2S1P1"
+        },
+        {
+          "sku_id": "SKU_011",
+          "name": "Nimbus Cola 100g",
+          "brand": "Nimbus",
+          "category": "cola",
+          "price": 40.0,
+          "slot_id": "B2S2P1"
+        },
+        {
+          "sku_id": "SKU_019",
+          "name": "Nimbus Cola 130g",
+          "brand": "Nimbus",
+          "category": "cola",
+          "price": 45.0,
+          "slot_id": "B3S2P1"
+        }
+      ],
+      "stations_visited": [
+        "B1",
+        "B2",
+        "B3"
+      ],
+      "end_reason": "checkout",
+      "end_note": null,
+      "n_turns": 24,
+      "n_rejections": 0
+    },
+    {
+      "shopper_index": 4,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "look",
+          "target": "B1S1P1",
+          "reason": "Spotted a promo on chips, want to check the pack.",
+          "time_left_s": 147.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "look",
+          "target": "B1S1P1",
+          "reason": "Spotted a promotion on chips, want to check the pack and price.",
+          "time_left_s": 144.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S1P1",
+          "reason": "On promotion and I came for chips; want to check the pack.",
+          "time_left_s": 138.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S1P1",
+          "reason": "Crunch Chips are on promotion and I want chips, so in they go.",
+          "time_left_s": 134.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S5P1",
+          "reason": "Need nuts too, this bigger pack is cheap, want to check it.",
+          "time_left_s": 128.0
+        },
+        {
+          "turn": 6,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S5P1",
+          "reason": "These nuts are a good price and I already have them in hand.",
+          "time_left_s": 124.0
+        },
+        {
+          "turn": 7,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S2P1",
+          "reason": "Need cola, this Nimbus is cheaper than the Orchid one and looks fine.",
+          "time_left_s": 120.0
+        },
+        {
+          "turn": 8,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S3P1",
+          "reason": "Need biscuits; this eye-level pack looks worth a closer look.",
+          "time_left_s": 114.0
+        },
+        {
+          "turn": 9,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S3P1",
+          "reason": "These biscuits look good and I already have them in hand.",
+          "time_left_s": 110.0
+        },
+        {
+          "turn": 10,
+          "station_id": "B1",
+          "action": "next_station",
+          "target": null,
+          "reason": "Seen enough here, want to see what else is on the next bay.",
+          "time_left_s": 102.0
+        },
+        {
+          "turn": 11,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S1P2",
+          "reason": "Promo chips catch my eye; want to compare pack size and price.",
+          "time_left_s": 96.0
+        },
+        {
+          "turn": 12,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S1P2",
+          "reason": "Zapp Chips are on promotion and I already have them in hand; into the basket.",
+          "time_left_s": 92.0
+        },
+        {
+          "turn": 13,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S4P2",
+          "reason": "Nimbus nuts are a different pack and cheaper, want to inspect them.",
+          "time_left_s": 86.0
+        },
+        {
+          "turn": 14,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S4P2",
+          "reason": "Good price for nuts and I already have it in hand.",
+          "time_left_s": 82.0
+        },
+        {
+          "turn": 15,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S4P1",
+          "reason": "Zapp biscuits are a new pack for me, price okay, adding to try.",
+          "time_left_s": 78.0
+        },
+        {
+          "turn": 16,
+          "station_id": "B2",
+          "action": "next_station",
+          "target": null,
+          "reason": "I've got most things, but I'll wander to the last bay to see if anything catches my eye.",
+          "time_left_s": 70.0
+        },
+        {
+          "turn": 17,
+          "station_id": "B3",
+          "action": "pickup",
+          "target": "B3S2P2",
+          "reason": "New cola pack I haven't tried; grabbing it to compare with the Nimbus one.",
+          "time_left_s": 64.0
+        },
+        {
+          "turn": 18,
+          "station_id": "B3",
+          "action": "add_to_cart",
+          "target": "B3S2P2",
+          "reason": "Picked this up, want to try another cola brand while I'm here.",
+          "time_left_s": 60.0
+        },
+        {
+          "turn": 19,
+          "station_id": "B3",
+          "action": "checkout",
+          "target": null,
+          "reason": "I've seen enough and my cart covers everything I came for.",
+          "time_left_s": 55.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_001",
+        "SKU_008",
+        "SKU_003",
+        "SKU_005",
+        "SKU_010",
+        "SKU_015",
+        "SKU_014",
+        "SKU_020"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_001",
+          "name": "Crunch Chips 100g",
+          "brand": "Crunch",
+          "category": "chips",
+          "price": 25.0,
+          "slot_id": "B1S1P1"
+        },
+        {
+          "sku_id": "SKU_008",
+          "name": "Orchid Nuts 120g",
+          "brand": "Orchid",
+          "category": "nuts",
+          "price": 25.0,
+          "slot_id": "B1S5P1"
+        },
+        {
+          "sku_id": "SKU_003",
+          "name": "Nimbus Cola 120g",
+          "brand": "Nimbus",
+          "category": "cola",
+          "price": 35.0,
+          "slot_id": "B1S2P1"
+        },
+        {
+          "sku_id": "SKU_005",
+          "name": "Crunch Biscuits 140g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 45.0,
+          "slot_id": "B1S3P1"
+        },
+        {
+          "sku_id": "SKU_010",
+          "name": "Zapp Chips 140g",
+          "brand": "Zapp",
+          "category": "chips",
+          "price": 35.0,
+          "slot_id": "B2S1P2"
+        },
+        {
+          "sku_id": "SKU_015",
+          "name": "Nimbus Nuts 140g",
+          "brand": "Nimbus",
+          "category": "nuts",
+          "price": 25.0,
+          "slot_id": "B2S4P2"
+        },
+        {
+          "sku_id": "SKU_014",
+          "name": "Zapp Biscuits 130g",
+          "brand": "Zapp",
+          "category": "biscuits",
+          "price": 55.0,
+          "slot_id": "B2S4P1"
+        },
+        {
+          "sku_id": "SKU_020",
+          "name": "Orchid Cola 140g",
+          "brand": "Orchid",
+          "category": "cola",
+          "price": 50.0,
+          "slot_id": "B3S2P2"
+        }
+      ],
+      "stations_visited": [
+        "B1",
+        "B2",
+        "B3"
+      ],
+      "end_reason": "checkout",
+      "end_note": null,
+      "n_turns": 19,
+      "n_rejections": 0
+    },
+    {
+      "shopper_index": 5,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "look",
+          "target": "B1S1P1",
+          "reason": "That Crunch Chips promo catches my eye, want to check it.",
+          "time_left_s": 147.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S1P1",
+          "reason": "Promotion on chips caught my eye; want to check the pack.",
+          "time_left_s": 141.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S1P1",
+          "reason": "Crunch Chips are on promotion and a decent price, I'll take them.",
+          "time_left_s": 137.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S5P1",
+          "reason": "Cheap nuts, want to check the pack before deciding.",
+          "time_left_s": 131.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S5P1",
+          "reason": "Orchid Nuts are a decent size for 25, I'll take them.",
+          "time_left_s": 127.0
+        },
+        {
+          "turn": 6,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S3P1",
+          "reason": "Need a biscuit; this eye-level pack looks substantial and I want to check it.",
+          "time_left_s": 121.0
+        },
+        {
+          "turn": 7,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S3P1",
+          "reason": "This Crunch biscuit pack looks good, adding it while I keep browsing.",
+          "time_left_s": 117.0
+        },
+        {
+          "turn": 8,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S2P1",
+          "reason": "Need a cola; this Nimbus is cheaper than the Orchid, so I'll check it.",
+          "time_left_s": 111.0
+        },
+        {
+          "turn": 9,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S2P1",
+          "reason": "This Nimbus Cola is in my hands and cheaper than the Orchid, so I'll take it.",
+          "time_left_s": 107.0
+        },
+        {
+          "turn": 10,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S1P2",
+          "reason": "Haven't tried Zapp chips, want to check the pack and compare with the Crunch ones.",
+          "time_left_s": 101.0
+        },
+        {
+          "turn": 11,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S1P2",
+          "reason": "Already holding these Zapp chips; might as well try them alongside the Crunch.",
+          "time_left_s": 97.0
+        },
+        {
+          "turn": 12,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S4P2",
+          "reason": "Curious about these pricier Nimbus nuts, want to compare the pack before deciding.",
+          "time_left_s": 91.0
+        },
+        {
+          "turn": 13,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S4P2",
+          "reason": "This nut mix looks interesting; I'll add it to compare with the Orchid nuts.",
+          "time_left_s": 87.0
+        },
+        {
+          "turn": 14,
+          "station_id": "B1",
+          "action": "next_station",
+          "target": null,
+          "reason": "I want to see what else is on the next bay before deciding.",
+          "time_left_s": 79.0
+        },
+        {
+          "turn": 15,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S1P2",
+          "reason": "Promotion on Zapp Chips, bigger pack; want to compare with what I already have.",
+          "time_left_s": 73.0
+        },
+        {
+          "turn": 16,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S1P2",
+          "reason": "Promotion caught my eye; bigger pack, worth trying.",
+          "time_left_s": 69.0
+        },
+        {
+          "turn": 17,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S4P2",
+          "reason": "Bigger nut pack at 25, worth comparing to the ones already in cart.",
+          "time_left_s": 63.0
+        },
+        {
+          "turn": 18,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S4P2",
+          "reason": "These Nimbus nuts are a good price and I already have them in hand.",
+          "time_left_s": 59.0
+        },
+        {
+          "turn": 19,
+          "station_id": "B2",
+          "action": "next_station",
+          "target": null,
+          "reason": "Wander to the last bay to see if anything else catches my eye.",
+          "time_left_s": 51.0
+        },
+        {
+          "turn": 20,
+          "station_id": "B3",
+          "action": "pickup",
+          "target": "B3S2P1",
+          "reason": "That Nimbus Cola is on promotion and a size I haven't tried; grabbing it.",
+          "time_left_s": 45.0
+        },
+        {
+          "turn": 21,
+          "station_id": "B3",
+          "action": "add_to_cart",
+          "target": "B3S2P1",
+          "reason": "This Nimbus Cola is on promotion and a bigger size; I'll take it while I'm here.",
+          "time_left_s": 41.0
+        },
+        {
+          "turn": 22,
+          "station_id": "B3",
+          "action": "add_to_cart",
+          "target": "B3S4P1",
+          "reason": "Trying a different biscuit pack at a good price.",
+          "time_left_s": 37.0
+        },
+        {
+          "turn": 23,
+          "station_id": "B3",
+          "action": "checkout",
+          "target": null,
+          "reason": "I've browsed enough and my cart is full; time to pay.",
+          "time_left_s": 32.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_001",
+        "SKU_008",
+        "SKU_005",
+        "SKU_003",
+        "SKU_002",
+        "SKU_007",
+        "SKU_010",
+        "SKU_015",
+        "SKU_019",
+        "SKU_022"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_001",
+          "name": "Crunch Chips 100g",
+          "brand": "Crunch",
+          "category": "chips",
+          "price": 25.0,
+          "slot_id": "B1S1P1"
+        },
+        {
+          "sku_id": "SKU_008",
+          "name": "Orchid Nuts 120g",
+          "brand": "Orchid",
+          "category": "nuts",
+          "price": 25.0,
+          "slot_id": "B1S5P1"
+        },
+        {
+          "sku_id": "SKU_005",
+          "name": "Crunch Biscuits 140g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 45.0,
+          "slot_id": "B1S3P1"
+        },
+        {
+          "sku_id": "SKU_003",
+          "name": "Nimbus Cola 120g",
+          "brand": "Nimbus",
+          "category": "cola",
+          "price": 35.0,
+          "slot_id": "B1S2P1"
+        },
+        {
+          "sku_id": "SKU_002",
+          "name": "Zapp Chips 110g",
+          "brand": "Zapp",
+          "category": "chips",
+          "price": 30.0,
+          "slot_id": "B1S1P2"
+        },
+        {
+          "sku_id": "SKU_007",
+          "name": "Nimbus Nuts 110g",
+          "brand": "Nimbus",
+          "category": "nuts",
+          "price": 55.0,
+          "slot_id": "B1S4P2"
+        },
+        {
+          "sku_id": "SKU_010",
+          "name": "Zapp Chips 140g",
+          "brand": "Zapp",
+          "category": "chips",
+          "price": 35.0,
+          "slot_id": "B2S1P2"
+        },
+        {
+          "sku_id": "SKU_015",
+          "name": "Nimbus Nuts 140g",
+          "brand": "Nimbus",
+          "category": "nuts",
+          "price": 25.0,
+          "slot_id": "B2S4P2"
+        },
+        {
+          "sku_id": "SKU_019",
+          "name": "Nimbus Cola 130g",
+          "brand": "Nimbus",
+          "category": "cola",
+          "price": 45.0,
+          "slot_id": "B3S2P1"
+        },
+        {
+          "sku_id": "SKU_022",
+          "name": "Zapp Biscuits 110g",
+          "brand": "Zapp",
+          "category": "biscuits",
+          "price": 25.0,
+          "slot_id": "B3S4P1"
+        }
+      ],
+      "stations_visited": [
+        "B1",
+        "B2",
+        "B3"
+      ],
+      "end_reason": "checkout",
+      "end_note": null,
+      "n_turns": 23,
+      "n_rejections": 0
+    },
+    {
+      "shopper_index": 6,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "look",
+          "target": "B1S1P1",
+          "reason": "Spotted a promotion on chips, want to check the pack and price.",
+          "time_left_s": 147.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S1P1",
+          "reason": "Promotion on chips caught my eye, want to check the pack.",
+          "time_left_s": 141.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S1P1",
+          "reason": "Promotion on chips and I wanted chips; adding this one.",
+          "time_left_s": 137.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S3P1",
+          "reason": "Biscuits are on my mind and this eye-level pack looks worth a closer look.",
+          "time_left_s": 131.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S3P1",
+          "reason": "These Crunch Biscuits are at eye level and already in my hand; I'll take them.",
+          "time_left_s": 127.0
+        },
+        {
+          "turn": 6,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S5P1",
+          "reason": "Nuts are on my list; this Orchid bag is bigger and cheaper than Nimbus, so I want a closer look.",
+          "time_left_s": 121.0
+        },
+        {
+          "turn": 7,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S5P1",
+          "reason": "These nuts are cheap and I already have them in hand.",
+          "time_left_s": 117.0
+        },
+        {
+          "turn": 8,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S2P1",
+          "reason": "Need a cola; this Nimbus is cheaper than the Orchid, so I want to check it.",
+          "time_left_s": 111.0
+        },
+        {
+          "turn": 9,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S2P1",
+          "reason": "Cola is on my list and this Nimbus is a decent price.",
+          "time_left_s": 107.0
+        },
+        {
+          "turn": 10,
+          "station_id": "B1",
+          "action": "next_station",
+          "target": null,
+          "reason": "Seen enough here, want to browse the next bay.",
+          "time_left_s": 99.0
+        },
+        {
+          "turn": 11,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S1P2",
+          "reason": "Promotion on chips catches my eye; want to check the pack and price.",
+          "time_left_s": 93.0
+        },
+        {
+          "turn": 12,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S1P2",
+          "reason": "These Zapp chips are on promotion and already in my hand, so I'll take them.",
+          "time_left_s": 89.0
+        },
+        {
+          "turn": 13,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S4P2",
+          "reason": "Big pack of nuts at a good price; want to check it against the one in cart.",
+          "time_left_s": 83.0
+        },
+        {
+          "turn": 14,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S4P2",
+          "reason": "These Nimbus nuts are a good size for the price, adding them.",
+          "time_left_s": 79.0
+        },
+        {
+          "turn": 15,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S4P1",
+          "reason": "Different biscuit pack, might try Zapp.",
+          "time_left_s": 73.0
+        },
+        {
+          "turn": 16,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S4P1",
+          "reason": "These Zapp biscuits look worth trying; I'll add them to the basket.",
+          "time_left_s": 69.0
+        },
+        {
+          "turn": 17,
+          "station_id": "B2",
+          "action": "next_station",
+          "target": null,
+          "reason": "Seen enough here, want to see the last bay before deciding.",
+          "time_left_s": 61.0
+        },
+        {
+          "turn": 18,
+          "station_id": "B3",
+          "action": "pickup",
+          "target": "B3S2P1",
+          "reason": "Promotion caught my eye; want to check this cola.",
+          "time_left_s": 55.0
+        },
+        {
+          "turn": 19,
+          "station_id": "B3",
+          "action": "add_to_cart",
+          "target": "B3S2P1",
+          "reason": "It's on promotion and already in my hand, so I'll take it.",
+          "time_left_s": 51.0
+        },
+        {
+          "turn": 20,
+          "station_id": "B3",
+          "action": "pickup",
+          "target": "B3S2P2",
+          "reason": "Haven't tried Orchid cola, want to compare with the Nimbus ones I already have.",
+          "time_left_s": 45.0
+        },
+        {
+          "turn": 21,
+          "station_id": "B3",
+          "action": "add_to_cart",
+          "target": "B3S2P2",
+          "reason": "This Orchid Cola looks interesting and I don't have it yet; into the basket.",
+          "time_left_s": 41.0
+        },
+        {
+          "turn": 22,
+          "station_id": "B3",
+          "action": "checkout",
+          "target": null,
+          "reason": "I've got plenty of biscuits, chips, cola, and nuts; time to check out.",
+          "time_left_s": 36.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_001",
+        "SKU_005",
+        "SKU_008",
+        "SKU_003",
+        "SKU_010",
+        "SKU_015",
+        "SKU_014",
+        "SKU_019",
+        "SKU_020"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_001",
+          "name": "Crunch Chips 100g",
+          "brand": "Crunch",
+          "category": "chips",
+          "price": 25.0,
+          "slot_id": "B1S1P1"
+        },
+        {
+          "sku_id": "SKU_005",
+          "name": "Crunch Biscuits 140g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 45.0,
+          "slot_id": "B1S3P1"
+        },
+        {
+          "sku_id": "SKU_008",
+          "name": "Orchid Nuts 120g",
+          "brand": "Orchid",
+          "category": "nuts",
+          "price": 25.0,
+          "slot_id": "B1S5P1"
+        },
+        {
+          "sku_id": "SKU_003",
+          "name": "Nimbus Cola 120g",
+          "brand": "Nimbus",
+          "category": "cola",
+          "price": 35.0,
+          "slot_id": "B1S2P1"
+        },
+        {
+          "sku_id": "SKU_010",
+          "name": "Zapp Chips 140g",
+          "brand": "Zapp",
+          "category": "chips",
+          "price": 35.0,
+          "slot_id": "B2S1P2"
+        },
+        {
+          "sku_id": "SKU_015",
+          "name": "Nimbus Nuts 140g",
+          "brand": "Nimbus",
+          "category": "nuts",
+          "price": 25.0,
+          "slot_id": "B2S4P2"
+        },
+        {
+          "sku_id": "SKU_014",
+          "name": "Zapp Biscuits 130g",
+          "brand": "Zapp",
+          "category": "biscuits",
+          "price": 55.0,
+          "slot_id": "B2S4P1"
+        },
+        {
+          "sku_id": "SKU_019",
+          "name": "Nimbus Cola 130g",
+          "brand": "Nimbus",
+          "category": "cola",
+          "price": 45.0,
+          "slot_id": "B3S2P1"
+        },
+        {
+          "sku_id": "SKU_020",
+          "name": "Orchid Cola 140g",
+          "brand": "Orchid",
+          "category": "cola",
+          "price": 50.0,
+          "slot_id": "B3S2P2"
+        }
+      ],
+      "stations_visited": [
+        "B1",
+        "B2",
+        "B3"
+      ],
+      "end_reason": "checkout",
+      "end_note": null,
+      "n_turns": 22,
+      "n_rejections": 0
+    },
+    {
+      "shopper_index": 7,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S1P1",
+          "reason": "Promotion on chips caught my eye; want to check the pack.",
+          "time_left_s": 144.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S1P1",
+          "reason": "Crunch Chips are on promotion and cheap, I'll take them.",
+          "time_left_s": 140.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S3P1",
+          "reason": "Biscuits are on my mind, this eye-level pack looks worth a closer look.",
+          "time_left_s": 134.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S3P1",
+          "reason": "These biscuits look good, adding them before I keep browsing.",
+          "time_left_s": 130.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S5P1",
+          "reason": "Need nuts and this Orchid pack is cheaper than the Nimbus one.",
+          "time_left_s": 124.0
+        },
+        {
+          "turn": 6,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S5P1",
+          "reason": "These Orchid nuts are a good price and I already have them in hand.",
+          "time_left_s": 120.0
+        },
+        {
+          "turn": 7,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S2P1",
+          "reason": "Need a cola; this Nimbus looks like a better price per gram than the Orchid.",
+          "time_left_s": 114.0
+        },
+        {
+          "turn": 8,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S2P1",
+          "reason": "This cola is cheaper than the Orchid one, and I need cola.",
+          "time_left_s": 110.0
+        },
+        {
+          "turn": 9,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S4P2",
+          "reason": "Comparing this nut pack with the Orchid nuts already in my cart.",
+          "time_left_s": 104.0
+        },
+        {
+          "turn": 10,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S4P2",
+          "reason": "These Nimbus nuts look good, adding them to the basket.",
+          "time_left_s": 100.0
+        },
+        {
+          "turn": 11,
+          "station_id": "B1",
+          "action": "next_station",
+          "target": null,
+          "reason": "I've seen this bay enough; let me wander down and see what else catches my eye.",
+          "time_left_s": 92.0
+        },
+        {
+          "turn": 12,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S1P2",
+          "reason": "Promotion on chips catches my eye, want to compare pack size and price.",
+          "time_left_s": 86.0
+        },
+        {
+          "turn": 13,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S1P2",
+          "reason": "Zapp chips are on promotion and a decent price; I'll take them.",
+          "time_left_s": 82.0
+        },
+        {
+          "turn": 14,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S4P2",
+          "reason": "Bigger nut pack at lower price, want to compare.",
+          "time_left_s": 76.0
+        },
+        {
+          "turn": 15,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S4P2",
+          "reason": "Good price for a bigger nuts pack, already in my hand.",
+          "time_left_s": 72.0
+        },
+        {
+          "turn": 16,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S4P1",
+          "reason": "Haven't tried Zapp biscuits, curious to compare with the Crunch pack.",
+          "time_left_s": 68.0
+        },
+        {
+          "turn": 17,
+          "station_id": "B2",
+          "action": "next_station",
+          "target": null,
+          "reason": "I've seen enough here; let's check the last bay before deciding.",
+          "time_left_s": 60.0
+        },
+        {
+          "turn": 18,
+          "station_id": "B3",
+          "action": "pickup",
+          "target": "B3S2P1",
+          "reason": "Promotion on cola, bigger pack; want to check it against what I already have.",
+          "time_left_s": 54.0
+        },
+        {
+          "turn": 19,
+          "station_id": "B3",
+          "action": "add_to_cart",
+          "target": "B3S2P1",
+          "reason": "Promotion on cola, already in hand; toss it in.",
+          "time_left_s": 50.0
+        },
+        {
+          "turn": 20,
+          "station_id": "B3",
+          "action": "add_to_cart",
+          "target": "B3S2P2",
+          "reason": "Haven't tried Orchid cola; this larger pack looks interesting even at 50.",
+          "time_left_s": 46.0
+        },
+        {
+          "turn": 21,
+          "station_id": "B3",
+          "action": "add_to_cart",
+          "target": "B3S4P2",
+          "reason": "Nimbus nuts 120g at 30 is a size I haven't tried, adding it.",
+          "time_left_s": 42.0
+        },
+        {
+          "turn": 22,
+          "station_id": "B3",
+          "action": "checkout",
+          "target": null,
+          "reason": "I've seen enough and my cart is full; time to pay.",
+          "time_left_s": 37.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_001",
+        "SKU_005",
+        "SKU_008",
+        "SKU_003",
+        "SKU_007",
+        "SKU_010",
+        "SKU_015",
+        "SKU_014",
+        "SKU_019",
+        "SKU_020",
+        "SKU_023"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_001",
+          "name": "Crunch Chips 100g",
+          "brand": "Crunch",
+          "category": "chips",
+          "price": 25.0,
+          "slot_id": "B1S1P1"
+        },
+        {
+          "sku_id": "SKU_005",
+          "name": "Crunch Biscuits 140g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 45.0,
+          "slot_id": "B1S3P1"
+        },
+        {
+          "sku_id": "SKU_008",
+          "name": "Orchid Nuts 120g",
+          "brand": "Orchid",
+          "category": "nuts",
+          "price": 25.0,
+          "slot_id": "B1S5P1"
+        },
+        {
+          "sku_id": "SKU_003",
+          "name": "Nimbus Cola 120g",
+          "brand": "Nimbus",
+          "category": "cola",
+          "price": 35.0,
+          "slot_id": "B1S2P1"
+        },
+        {
+          "sku_id": "SKU_007",
+          "name": "Nimbus Nuts 110g",
+          "brand": "Nimbus",
+          "category": "nuts",
+          "price": 55.0,
+          "slot_id": "B1S4P2"
+        },
+        {
+          "sku_id": "SKU_010",
+          "name": "Zapp Chips 140g",
+          "brand": "Zapp",
+          "category": "chips",
+          "price": 35.0,
+          "slot_id": "B2S1P2"
+        },
+        {
+          "sku_id": "SKU_015",
+          "name": "Nimbus Nuts 140g",
+          "brand": "Nimbus",
+          "category": "nuts",
+          "price": 25.0,
+          "slot_id": "B2S4P2"
+        },
+        {
+          "sku_id": "SKU_014",
+          "name": "Zapp Biscuits 130g",
+          "brand": "Zapp",
+          "category": "biscuits",
+          "price": 55.0,
+          "slot_id": "B2S4P1"
+        },
+        {
+          "sku_id": "SKU_019",
+          "name": "Nimbus Cola 130g",
+          "brand": "Nimbus",
+          "category": "cola",
+          "price": 45.0,
+          "slot_id": "B3S2P1"
+        },
+        {
+          "sku_id": "SKU_020",
+          "name": "Orchid Cola 140g",
+          "brand": "Orchid",
+          "category": "cola",
+          "price": 50.0,
+          "slot_id": "B3S2P2"
+        },
+        {
+          "sku_id": "SKU_023",
+          "name": "Nimbus Nuts 120g",
+          "brand": "Nimbus",
+          "category": "nuts",
+          "price": 30.0,
+          "slot_id": "B3S4P2"
+        }
+      ],
+      "stations_visited": [
+        "B1",
+        "B2",
+        "B3"
+      ],
+      "end_reason": "checkout",
+      "end_note": null,
+      "n_turns": 22,
+      "n_rejections": 0
+    },
+    {
+      "shopper_index": 8,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "look",
+          "target": "B1S1P1",
+          "reason": "Promotion on chips catches my eye; want to check the pack.",
+          "time_left_s": 147.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "look",
+          "target": "B1S1P1",
+          "reason": "Chips on promotion catch my eye; want to check the deal.",
+          "time_left_s": 144.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S1P1",
+          "reason": "Promotion on chips catches my eye, want to check the pack.",
+          "time_left_s": 138.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S1P1",
+          "reason": "This Crunch Chips is on promotion and a decent price, so I'll take it while I look around.",
+          "time_left_s": 134.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S3P1",
+          "reason": "Eye-level biscuits catch my attention; want to check the pack and compare.",
+          "time_left_s": 128.0
+        },
+        {
+          "turn": 6,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S3P1",
+          "reason": "Already holding these biscuits; price seems fine and I want them.",
+          "time_left_s": 124.0
+        },
+        {
+          "turn": 7,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S5P1",
+          "reason": "Need nuts and this Orchid pack is cheap, want to check it.",
+          "time_left_s": 118.0
+        },
+        {
+          "turn": 8,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S5P1",
+          "reason": "These nuts are a decent price and I already have them in hand.",
+          "time_left_s": 114.0
+        },
+        {
+          "turn": 9,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S2P1",
+          "reason": "Need a cola; this Nimbus looks like a better price per gram than the Orchid.",
+          "time_left_s": 108.0
+        },
+        {
+          "turn": 10,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S2P1",
+          "reason": "This cola is a decent size and price, so I'll take it.",
+          "time_left_s": 104.0
+        },
+        {
+          "turn": 11,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S4P2",
+          "reason": "Comparing nut options; these Nimbus nuts look interesting even though pricier.",
+          "time_left_s": 98.0
+        },
+        {
+          "turn": 12,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S4P2",
+          "reason": "These Nimbus Nuts look interesting and I already have them in hand, so into the basket.",
+          "time_left_s": 94.0
+        },
+        {
+          "turn": 13,
+          "station_id": "B1",
+          "action": "next_station",
+          "target": null,
+          "reason": "I've got all my categories, but I'll wander to the next bay to see what else catches my eye.",
+          "time_left_s": 86.0
+        },
+        {
+          "turn": 14,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S1P2",
+          "reason": "Zapp Chips are on promotion; I want a closer look at the pack.",
+          "time_left_s": 80.0
+        },
+        {
+          "turn": 15,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S1P2",
+          "reason": "Promotion on a bigger chip pack, and I already have it in hand.",
+          "time_left_s": 76.0
+        },
+        {
+          "turn": 16,
+          "station_id": "B2",
+          "action": "next_station",
+          "target": null,
+          "reason": "Still curious what the last bay has before I decide.",
+          "time_left_s": 68.0
+        },
+        {
+          "turn": 17,
+          "station_id": "B3",
+          "action": "pickup",
+          "target": "B3S2P1",
+          "reason": "Promotion on cola catches my eye; want to compare size and price with what I already have.",
+          "time_left_s": 62.0
+        },
+        {
+          "turn": 18,
+          "station_id": "B3",
+          "action": "add_to_cart",
+          "target": "B3S2P1",
+          "reason": "This cola is on promotion and already in my hand, so it goes in the basket.",
+          "time_left_s": 58.0
+        },
+        {
+          "turn": 19,
+          "station_id": "B3",
+          "action": "pickup",
+          "target": "B3S4P1",
+          "reason": "Cheap biscuits, want to compare with the Crunch ones already in my cart.",
+          "time_left_s": 52.0
+        },
+        {
+          "turn": 20,
+          "station_id": "B3",
+          "action": "add_to_cart",
+          "target": "B3S4P1",
+          "reason": "Price is good and I'm already holding it; into the basket.",
+          "time_left_s": 48.0
+        },
+        {
+          "turn": 21,
+          "station_id": "B3",
+          "action": "pickup",
+          "target": "B3S4P2",
+          "reason": "Different nut pack than what I have, want to check it out.",
+          "time_left_s": 42.0
+        },
+        {
+          "turn": 22,
+          "station_id": "B3",
+          "action": "add_to_cart",
+          "target": "B3S4P2",
+          "reason": "I'm already holding these Nimbus nuts; might as well toss them in.",
+          "time_left_s": 38.0
+        },
+        {
+          "turn": 23,
+          "station_id": "B3",
+          "action": "checkout",
+          "target": null,
+          "reason": "I've seen enough and my cart is full; time to pay.",
+          "time_left_s": 33.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_001",
+        "SKU_005",
+        "SKU_008",
+        "SKU_003",
+        "SKU_007",
+        "SKU_010",
+        "SKU_019",
+        "SKU_022",
+        "SKU_023"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_001",
+          "name": "Crunch Chips 100g",
+          "brand": "Crunch",
+          "category": "chips",
+          "price": 25.0,
+          "slot_id": "B1S1P1"
+        },
+        {
+          "sku_id": "SKU_005",
+          "name": "Crunch Biscuits 140g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 45.0,
+          "slot_id": "B1S3P1"
+        },
+        {
+          "sku_id": "SKU_008",
+          "name": "Orchid Nuts 120g",
+          "brand": "Orchid",
+          "category": "nuts",
+          "price": 25.0,
+          "slot_id": "B1S5P1"
+        },
+        {
+          "sku_id": "SKU_003",
+          "name": "Nimbus Cola 120g",
+          "brand": "Nimbus",
+          "category": "cola",
+          "price": 35.0,
+          "slot_id": "B1S2P1"
+        },
+        {
+          "sku_id": "SKU_007",
+          "name": "Nimbus Nuts 110g",
+          "brand": "Nimbus",
+          "category": "nuts",
+          "price": 55.0,
+          "slot_id": "B1S4P2"
+        },
+        {
+          "sku_id": "SKU_010",
+          "name": "Zapp Chips 140g",
+          "brand": "Zapp",
+          "category": "chips",
+          "price": 35.0,
+          "slot_id": "B2S1P2"
+        },
+        {
+          "sku_id": "SKU_019",
+          "name": "Nimbus Cola 130g",
+          "brand": "Nimbus",
+          "category": "cola",
+          "price": 45.0,
+          "slot_id": "B3S2P1"
+        },
+        {
+          "sku_id": "SKU_022",
+          "name": "Zapp Biscuits 110g",
+          "brand": "Zapp",
+          "category": "biscuits",
+          "price": 25.0,
+          "slot_id": "B3S4P1"
+        },
+        {
+          "sku_id": "SKU_023",
+          "name": "Nimbus Nuts 120g",
+          "brand": "Nimbus",
+          "category": "nuts",
+          "price": 30.0,
+          "slot_id": "B3S4P2"
+        }
+      ],
+      "stations_visited": [
+        "B1",
+        "B2",
+        "B3"
+      ],
+      "end_reason": "checkout",
+      "end_note": null,
+      "n_turns": 23,
+      "n_rejections": 0
+    },
+    {
+      "shopper_index": 9,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S1P1",
+          "reason": "Crunch Chips are on promotion and I want a closer look at the pack.",
+          "time_left_s": 144.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S1P1",
+          "reason": "Promotion caught my eye and chips are on my list.",
+          "time_left_s": 140.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S5P1",
+          "reason": "Cheap nuts, want to check pack size and freshness.",
+          "time_left_s": 134.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S5P1",
+          "reason": "These nuts are a good price and I want them.",
+          "time_left_s": 130.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S2P1",
+          "reason": "Need cola and this Nimbus is cheaper than the Orchid option right here.",
+          "time_left_s": 126.0
+        },
+        {
+          "turn": 6,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S3P1",
+          "reason": "Eye-level biscuits, good size, want to check pack and price.",
+          "time_left_s": 120.0
+        },
+        {
+          "turn": 7,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S3P1",
+          "reason": "These Crunch Biscuits look good, adding them to try.",
+          "time_left_s": 116.0
+        },
+        {
+          "turn": 8,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S4P1",
+          "reason": "Curious about Zapp biscuits, comparing pack size and price to Crunch.",
+          "time_left_s": 110.0
+        },
+        {
+          "turn": 9,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S4P1",
+          "reason": "I'm curious about this Zapp biscuit; I'll try it alongside the Crunch one.",
+          "time_left_s": 106.0
+        },
+        {
+          "turn": 10,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S4P2",
+          "reason": "Haven't tried Nimbus nuts; want to compare them with the Orchid nuts already in my cart.",
+          "time_left_s": 100.0
+        },
+        {
+          "turn": 11,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S4P2",
+          "reason": "These Nimbus nuts look interesting, adding to compare with the Orchid ones.",
+          "time_left_s": 96.0
+        },
+        {
+          "turn": 12,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S1P2",
+          "reason": "Zapp chips are a new pack, want to try them alongside the Crunch chips.",
+          "time_left_s": 92.0
+        },
+        {
+          "turn": 13,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S2P2",
+          "reason": "Haven't tried Orchid Cola; comparing it with the Nimbus one already in my cart.",
+          "time_left_s": 86.0
+        },
+        {
+          "turn": 14,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S2P2",
+          "reason": "This Orchid Cola is already in my hands; I'll add it to the basket.",
+          "time_left_s": 82.0
+        },
+        {
+          "turn": 15,
+          "station_id": "B1",
+          "action": "next_station",
+          "target": null,
+          "reason": "Already got everything here; moving to next bay to browse.",
+          "time_left_s": 74.0
+        },
+        {
+          "turn": 16,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S4P2",
+          "reason": "Bigger nut pack at a good price, want to check it.",
+          "time_left_s": 68.0
+        },
+        {
+          "turn": 17,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S4P2",
+          "reason": "This Nimbus Nuts is a good price and already in my hand.",
+          "time_left_s": 64.0
+        },
+        {
+          "turn": 18,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S1P2",
+          "reason": "Promoted Zapp chips catch my eye; bigger pack than the one in cart, worth trying.",
+          "time_left_s": 60.0
+        },
+        {
+          "turn": 19,
+          "station_id": "B2",
+          "action": "next_station",
+          "target": null,
+          "reason": "Wander to the next bay, see if anything new catches my eye.",
+          "time_left_s": 52.0
+        },
+        {
+          "turn": 20,
+          "station_id": "B3",
+          "action": "pickup",
+          "target": "B3S2P1",
+          "reason": "Promotion on cola, want to compare size and price with what I already have.",
+          "time_left_s": 46.0
+        },
+        {
+          "turn": 21,
+          "station_id": "B3",
+          "action": "add_to_cart",
+          "target": "B3S2P1",
+          "reason": "This Nimbus Cola is on promotion and I already have it in hand, so it goes in the basket.",
+          "time_left_s": 42.0
+        },
+        {
+          "turn": 22,
+          "station_id": "B3",
+          "action": "checkout",
+          "target": null,
+          "reason": "I've browsed enough and have plenty in the cart; time to pay.",
+          "time_left_s": 37.0
+        }
+      ],
+      "rejections": [
+        {
+          "turn": 15,
+          "station_id": "B1",
+          "action": "next_station",
+          "target": null,
+          "reason": "I've already got everything from this bay, so I'll wander to the next one and see what else catches my eye.",
+          "rejection": "the reason was 21 words; the limit is 20 words."
+        }
+      ],
+      "cart": [
+        "SKU_001",
+        "SKU_008",
+        "SKU_003",
+        "SKU_005",
+        "SKU_006",
+        "SKU_007",
+        "SKU_002",
+        "SKU_004",
+        "SKU_015",
+        "SKU_010",
+        "SKU_019"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_001",
+          "name": "Crunch Chips 100g",
+          "brand": "Crunch",
+          "category": "chips",
+          "price": 25.0,
+          "slot_id": "B1S1P1"
+        },
+        {
+          "sku_id": "SKU_008",
+          "name": "Orchid Nuts 120g",
+          "brand": "Orchid",
+          "category": "nuts",
+          "price": 25.0,
+          "slot_id": "B1S5P1"
+        },
+        {
+          "sku_id": "SKU_003",
+          "name": "Nimbus Cola 120g",
+          "brand": "Nimbus",
+          "category": "cola",
+          "price": 35.0,
+          "slot_id": "B1S2P1"
+        },
+        {
+          "sku_id": "SKU_005",
+          "name": "Crunch Biscuits 140g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 45.0,
+          "slot_id": "B1S3P1"
+        },
+        {
+          "sku_id": "SKU_006",
+          "name": "Zapp Biscuits 100g",
+          "brand": "Zapp",
+          "category": "biscuits",
+          "price": 50.0,
+          "slot_id": "B1S4P1"
+        },
+        {
+          "sku_id": "SKU_007",
+          "name": "Nimbus Nuts 110g",
+          "brand": "Nimbus",
+          "category": "nuts",
+          "price": 55.0,
+          "slot_id": "B1S4P2"
+        },
+        {
+          "sku_id": "SKU_002",
+          "name": "Zapp Chips 110g",
+          "brand": "Zapp",
+          "category": "chips",
+          "price": 30.0,
+          "slot_id": "B1S1P2"
+        },
+        {
+          "sku_id": "SKU_004",
+          "name": "Orchid Cola 130g",
+          "brand": "Orchid",
+          "category": "cola",
+          "price": 40.0,
+          "slot_id": "B1S2P2"
+        },
+        {
+          "sku_id": "SKU_015",
+          "name": "Nimbus Nuts 140g",
+          "brand": "Nimbus",
+          "category": "nuts",
+          "price": 25.0,
+          "slot_id": "B2S4P2"
+        },
+        {
+          "sku_id": "SKU_010",
+          "name": "Zapp Chips 140g",
+          "brand": "Zapp",
+          "category": "chips",
+          "price": 35.0,
+          "slot_id": "B2S1P2"
+        },
+        {
+          "sku_id": "SKU_019",
+          "name": "Nimbus Cola 130g",
+          "brand": "Nimbus",
+          "category": "cola",
+          "price": 45.0,
+          "slot_id": "B3S2P1"
+        }
+      ],
+      "stations_visited": [
+        "B1",
+        "B2",
+        "B3"
+      ],
+      "end_reason": "checkout",
+      "end_note": null,
+      "n_turns": 22,
+      "n_rejections": 1
+    },
+    {
+      "shopper_index": 10,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "look",
+          "target": "B1S1P1",
+          "reason": "Promo chips catch my eye, checking the pack and price.",
+          "time_left_s": 147.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "look",
+          "target": "B1S1P1",
+          "reason": "That Crunch Chips pack is on promotion; I want a closer look before deciding.",
+          "time_left_s": 144.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S1P1",
+          "reason": "Promotion on chips catches my eye, want to check the pack.",
+          "time_left_s": 138.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S1P1",
+          "reason": "Promotion chips at 25, good value, adding them.",
+          "time_left_s": 134.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S3P1",
+          "reason": "Biscuits on eye shelf, decent size, want to compare before adding.",
+          "time_left_s": 128.0
+        },
+        {
+          "turn": 6,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S3P1",
+          "reason": "These eye-level biscuits look good, and I already have them in hand.",
+          "time_left_s": 124.0
+        },
+        {
+          "turn": 7,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S5P1",
+          "reason": "Need nuts and this Orchid pack is cheap, want to check it.",
+          "time_left_s": 118.0
+        },
+        {
+          "turn": 8,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S5P1",
+          "reason": "These nuts are cheap and I already have them in hand.",
+          "time_left_s": 114.0
+        },
+        {
+          "turn": 9,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S2P1",
+          "reason": "Need a cola; this Nimbus is cheaper per gram than the Orchid, so I'll check it.",
+          "time_left_s": 108.0
+        },
+        {
+          "turn": 10,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S2P1",
+          "reason": "This cola looks good and I already have it in hand.",
+          "time_left_s": 104.0
+        },
+        {
+          "turn": 11,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S1P2",
+          "reason": "Comparing these Zapp chips with the Crunch chips already in cart.",
+          "time_left_s": 98.0
+        },
+        {
+          "turn": 12,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S1P2",
+          "reason": "I'll try these Zapp chips too; they look interesting and I'm not loyal to one brand.",
+          "time_left_s": 94.0
+        },
+        {
+          "turn": 13,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S4P2",
+          "reason": "This nut pack catches my eye; want to compare with the Orchid nuts already in cart.",
+          "time_left_s": 88.0
+        },
+        {
+          "turn": 14,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S4P2",
+          "reason": "I'll take these nuts too; already in hand.",
+          "time_left_s": 84.0
+        },
+        {
+          "turn": 15,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S2P2",
+          "reason": "Trying a different cola pack while I'm here.",
+          "time_left_s": 80.0
+        },
+        {
+          "turn": 16,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S4P1",
+          "reason": "Haven't tried Zapp biscuits, price seems fair, want a closer look.",
+          "time_left_s": 74.0
+        },
+        {
+          "turn": 17,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S4P1",
+          "reason": "These Zapp biscuits look worth trying; I'll take them too.",
+          "time_left_s": 70.0
+        },
+        {
+          "turn": 18,
+          "station_id": "B1",
+          "action": "next_station",
+          "target": null,
+          "reason": "Already grabbed everything here; I'll wander to the next bay and see what else catches my eye.",
+          "time_left_s": 62.0
+        },
+        {
+          "turn": 19,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S1P2",
+          "reason": "Promotion on a bigger chip pack, want to compare with the Zapp chips already in cart.",
+          "time_left_s": 56.0
+        },
+        {
+          "turn": 20,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S1P2",
+          "reason": "On promotion and I like trying different chip sizes; adding it.",
+          "time_left_s": 52.0
+        },
+        {
+          "turn": 21,
+          "station_id": "B2",
+          "action": "next_station",
+          "target": null,
+          "reason": "Wander to the last bay to see if anything else catches my eye.",
+          "time_left_s": 44.0
+        },
+        {
+          "turn": 22,
+          "station_id": "B3",
+          "action": "checkout",
+          "target": null,
+          "reason": "I've compared enough and my cart already covers everything I came for; time to check out.",
+          "time_left_s": 39.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_001",
+        "SKU_005",
+        "SKU_008",
+        "SKU_003",
+        "SKU_002",
+        "SKU_007",
+        "SKU_004",
+        "SKU_006",
+        "SKU_010"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_001",
+          "name": "Crunch Chips 100g",
+          "brand": "Crunch",
+          "category": "chips",
+          "price": 25.0,
+          "slot_id": "B1S1P1"
+        },
+        {
+          "sku_id": "SKU_005",
+          "name": "Crunch Biscuits 140g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 45.0,
+          "slot_id": "B1S3P1"
+        },
+        {
+          "sku_id": "SKU_008",
+          "name": "Orchid Nuts 120g",
+          "brand": "Orchid",
+          "category": "nuts",
+          "price": 25.0,
+          "slot_id": "B1S5P1"
+        },
+        {
+          "sku_id": "SKU_003",
+          "name": "Nimbus Cola 120g",
+          "brand": "Nimbus",
+          "category": "cola",
+          "price": 35.0,
+          "slot_id": "B1S2P1"
+        },
+        {
+          "sku_id": "SKU_002",
+          "name": "Zapp Chips 110g",
+          "brand": "Zapp",
+          "category": "chips",
+          "price": 30.0,
+          "slot_id": "B1S1P2"
+        },
+        {
+          "sku_id": "SKU_007",
+          "name": "Nimbus Nuts 110g",
+          "brand": "Nimbus",
+          "category": "nuts",
+          "price": 55.0,
+          "slot_id": "B1S4P2"
+        },
+        {
+          "sku_id": "SKU_004",
+          "name": "Orchid Cola 130g",
+          "brand": "Orchid",
+          "category": "cola",
+          "price": 40.0,
+          "slot_id": "B1S2P2"
+        },
+        {
+          "sku_id": "SKU_006",
+          "name": "Zapp Biscuits 100g",
+          "brand": "Zapp",
+          "category": "biscuits",
+          "price": 50.0,
+          "slot_id": "B1S4P1"
+        },
+        {
+          "sku_id": "SKU_010",
+          "name": "Zapp Chips 140g",
+          "brand": "Zapp",
+          "category": "chips",
+          "price": 35.0,
+          "slot_id": "B2S1P2"
+        }
+      ],
+      "stations_visited": [
+        "B1",
+        "B2",
+        "B3"
+      ],
+      "end_reason": "checkout",
+      "end_note": null,
+      "n_turns": 22,
+      "n_rejections": 0
+    },
+    {
+      "shopper_index": 11,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S1P1",
+          "reason": "Chips are on promotion, want to see the pack and maybe try them.",
+          "time_left_s": 144.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S1P1",
+          "reason": "Crunch Chips are on promotion and a good price, so I'll take them.",
+          "time_left_s": 140.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S5P1",
+          "reason": "That nut price looks good, want to check the pack.",
+          "time_left_s": 134.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S5P1",
+          "reason": "Good price on nuts and already in my hand; I'll add them while I keep browsing.",
+          "time_left_s": 130.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S3P1",
+          "reason": "Need biscuits; Crunch gives more grams for less than Zapp.",
+          "time_left_s": 124.0
+        },
+        {
+          "turn": 6,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S3P1",
+          "reason": "These Crunch Biscuits are already in my hands and look worth trying.",
+          "time_left_s": 120.0
+        },
+        {
+          "turn": 7,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S2P1",
+          "reason": "I need a cola and this Nimbus looks like a decent price.",
+          "time_left_s": 114.0
+        },
+        {
+          "turn": 8,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S2P1",
+          "reason": "This cola is a decent price and I don't have one yet.",
+          "time_left_s": 110.0
+        },
+        {
+          "turn": 9,
+          "station_id": "B1",
+          "action": "next_station",
+          "target": null,
+          "reason": "Seen enough here, want to browse the next bay for other packs.",
+          "time_left_s": 102.0
+        },
+        {
+          "turn": 10,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S1P2",
+          "reason": "Promotion on Zapp chips catches my eye; want to compare pack size and price.",
+          "time_left_s": 96.0
+        },
+        {
+          "turn": 11,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S1P2",
+          "reason": "Bigger chips pack on promotion, seems worth grabbing while I'm here.",
+          "time_left_s": 92.0
+        },
+        {
+          "turn": 12,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S4P2",
+          "reason": "That Nimbus Nuts pack is cheap and prominent, want to check it.",
+          "time_left_s": 86.0
+        },
+        {
+          "turn": 13,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S4P2",
+          "reason": "This Nimbus Nuts is a good size for 25, I'll take it.",
+          "time_left_s": 82.0
+        },
+        {
+          "turn": 14,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S4P1",
+          "reason": "Zapp biscuits are new to me; want to compare pack and price.",
+          "time_left_s": 76.0
+        },
+        {
+          "turn": 15,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S4P1",
+          "reason": "This Zapp biscuit pack looks worth trying; adding it while I'm here.",
+          "time_left_s": 72.0
+        },
+        {
+          "turn": 16,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S2P2",
+          "reason": "Orchid cola is a brand I haven't tried; curious to compare.",
+          "time_left_s": 68.0
+        },
+        {
+          "turn": 17,
+          "station_id": "B2",
+          "action": "next_station",
+          "target": null,
+          "reason": "I've seen enough here; moving along to browse the next bay.",
+          "time_left_s": 60.0
+        },
+        {
+          "turn": 18,
+          "station_id": "B3",
+          "action": "pickup",
+          "target": "B3S2P1",
+          "reason": "Promotion on cola catches my eye; want to compare size and price.",
+          "time_left_s": 54.0
+        },
+        {
+          "turn": 19,
+          "station_id": "B3",
+          "action": "add_to_cart",
+          "target": "B3S2P1",
+          "reason": "This cola is on promotion and a different size, I'll take it.",
+          "time_left_s": 50.0
+        },
+        {
+          "turn": 20,
+          "station_id": "B3",
+          "action": "checkout",
+          "target": null,
+          "reason": "I've got plenty from every category; time to check out.",
+          "time_left_s": 45.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_001",
+        "SKU_008",
+        "SKU_005",
+        "SKU_003",
+        "SKU_010",
+        "SKU_015",
+        "SKU_014",
+        "SKU_012",
+        "SKU_019"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_001",
+          "name": "Crunch Chips 100g",
+          "brand": "Crunch",
+          "category": "chips",
+          "price": 25.0,
+          "slot_id": "B1S1P1"
+        },
+        {
+          "sku_id": "SKU_008",
+          "name": "Orchid Nuts 120g",
+          "brand": "Orchid",
+          "category": "nuts",
+          "price": 25.0,
+          "slot_id": "B1S5P1"
+        },
+        {
+          "sku_id": "SKU_005",
+          "name": "Crunch Biscuits 140g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 45.0,
+          "slot_id": "B1S3P1"
+        },
+        {
+          "sku_id": "SKU_003",
+          "name": "Nimbus Cola 120g",
+          "brand": "Nimbus",
+          "category": "cola",
+          "price": 35.0,
+          "slot_id": "B1S2P1"
+        },
+        {
+          "sku_id": "SKU_010",
+          "name": "Zapp Chips 140g",
+          "brand": "Zapp",
+          "category": "chips",
+          "price": 35.0,
+          "slot_id": "B2S1P2"
+        },
+        {
+          "sku_id": "SKU_015",
+          "name": "Nimbus Nuts 140g",
+          "brand": "Nimbus",
+          "category": "nuts",
+          "price": 25.0,
+          "slot_id": "B2S4P2"
+        },
+        {
+          "sku_id": "SKU_014",
+          "name": "Zapp Biscuits 130g",
+          "brand": "Zapp",
+          "category": "biscuits",
+          "price": 55.0,
+          "slot_id": "B2S4P1"
+        },
+        {
+          "sku_id": "SKU_012",
+          "name": "Orchid Cola 110g",
+          "brand": "Orchid",
+          "category": "cola",
+          "price": 45.0,
+          "slot_id": "B2S2P2"
+        },
+        {
+          "sku_id": "SKU_019",
+          "name": "Nimbus Cola 130g",
+          "brand": "Nimbus",
+          "category": "cola",
+          "price": 45.0,
+          "slot_id": "B3S2P1"
+        }
+      ],
+      "stations_visited": [
+        "B1",
+        "B2",
+        "B3"
+      ],
+      "end_reason": "checkout",
+      "end_note": null,
+      "n_turns": 20,
+      "n_rejections": 0
+    },
+    {
+      "shopper_index": 12,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "look",
+          "target": "B1S1P1",
+          "reason": "Noticing the chips are on promotion, want to check them out.",
+          "time_left_s": 147.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "look",
+          "target": "B1S1P1",
+          "reason": "Spotted a promotion on Crunch Chips, checking the pack.",
+          "time_left_s": 144.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "look",
+          "target": "B1S1P1",
+          "reason": "That chip promotion catches my eye; want to see the pack and price.",
+          "time_left_s": 141.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S1P1",
+          "reason": "That Crunch Chips promo catches my eye, want to check it out.",
+          "time_left_s": 135.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S1P1",
+          "reason": "This Crunch Chips is on promotion and a good price, so I'll take it.",
+          "time_left_s": 131.0
+        },
+        {
+          "turn": 6,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S5P1",
+          "reason": "Nuts are on my list, this bigger pack is cheap, want to check it.",
+          "time_left_s": 125.0
+        },
+        {
+          "turn": 7,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S5P1",
+          "reason": "These nuts are a good price and already in my hand.",
+          "time_left_s": 121.0
+        },
+        {
+          "turn": 8,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S3P1",
+          "reason": "Need biscuits and this eye-level pack looks worth a closer look.",
+          "time_left_s": 115.0
+        },
+        {
+          "turn": 9,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S3P1",
+          "reason": "These Crunch Biscuits are at eye level and a fair price; I'll take them.",
+          "time_left_s": 111.0
+        },
+        {
+          "turn": 10,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S2P1",
+          "reason": "Need a cola; Nimbus is cheaper per gram than Orchid, so I'll take it.",
+          "time_left_s": 107.0
+        },
+        {
+          "turn": 11,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S4P2",
+          "reason": "Curious about these pricier Nimbus nuts, want to compare pack size and value.",
+          "time_left_s": 101.0
+        },
+        {
+          "turn": 12,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S4P2",
+          "reason": "These Nimbus nuts look interesting, so I'll try them alongside the Orchid nuts.",
+          "time_left_s": 97.0
+        },
+        {
+          "turn": 13,
+          "station_id": "B1",
+          "action": "look",
+          "target": "B1S1P2",
+          "reason": "Comparing Zapp chips with the Crunch chips already in my cart.",
+          "time_left_s": 94.0
+        },
+        {
+          "turn": 14,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S1P2",
+          "reason": "Haven't tried Zapp chips, price looks decent, want a closer look.",
+          "time_left_s": 88.0
+        },
+        {
+          "turn": 15,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S1P2",
+          "reason": "Trying the Zapp chips too; price is okay and I like variety.",
+          "time_left_s": 84.0
+        },
+        {
+          "turn": 16,
+          "station_id": "B1",
+          "action": "next_station",
+          "target": null,
+          "reason": "This bay seems picked over; I'll wander to the next section and see what else catches my eye.",
+          "time_left_s": 76.0
+        },
+        {
+          "turn": 17,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S1P2",
+          "reason": "Promo on bigger Zapp chips catches my eye; want to check the pack.",
+          "time_left_s": 70.0
+        },
+        {
+          "turn": 18,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S1P2",
+          "reason": "This Zapp Chips is on promotion and already in my hands, so it goes in the basket.",
+          "time_left_s": 66.0
+        },
+        {
+          "turn": 19,
+          "station_id": "B2",
+          "action": "next_station",
+          "target": null,
+          "reason": "Wandering further to see what else catches my eye.",
+          "time_left_s": 58.0
+        },
+        {
+          "turn": 20,
+          "station_id": "B3",
+          "action": "add_to_cart",
+          "target": "B3S2P1",
+          "reason": "Promotion on cola catches my eye; I'll try this pack too.",
+          "time_left_s": 54.0
+        },
+        {
+          "turn": 21,
+          "station_id": "B3",
+          "action": "add_to_cart",
+          "target": "B3S4P1",
+          "reason": "Zapp biscuits are cheap and I don't have that brand yet, so I'll grab them.",
+          "time_left_s": 50.0
+        },
+        {
+          "turn": 22,
+          "station_id": "B3",
+          "action": "checkout",
+          "target": null,
+          "reason": "I've got enough from every category and I'm at the end; time to pay.",
+          "time_left_s": 45.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_001",
+        "SKU_008",
+        "SKU_005",
+        "SKU_003",
+        "SKU_007",
+        "SKU_002",
+        "SKU_010",
+        "SKU_019",
+        "SKU_022"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_001",
+          "name": "Crunch Chips 100g",
+          "brand": "Crunch",
+          "category": "chips",
+          "price": 25.0,
+          "slot_id": "B1S1P1"
+        },
+        {
+          "sku_id": "SKU_008",
+          "name": "Orchid Nuts 120g",
+          "brand": "Orchid",
+          "category": "nuts",
+          "price": 25.0,
+          "slot_id": "B1S5P1"
+        },
+        {
+          "sku_id": "SKU_005",
+          "name": "Crunch Biscuits 140g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 45.0,
+          "slot_id": "B1S3P1"
+        },
+        {
+          "sku_id": "SKU_003",
+          "name": "Nimbus Cola 120g",
+          "brand": "Nimbus",
+          "category": "cola",
+          "price": 35.0,
+          "slot_id": "B1S2P1"
+        },
+        {
+          "sku_id": "SKU_007",
+          "name": "Nimbus Nuts 110g",
+          "brand": "Nimbus",
+          "category": "nuts",
+          "price": 55.0,
+          "slot_id": "B1S4P2"
+        },
+        {
+          "sku_id": "SKU_002",
+          "name": "Zapp Chips 110g",
+          "brand": "Zapp",
+          "category": "chips",
+          "price": 30.0,
+          "slot_id": "B1S1P2"
+        },
+        {
+          "sku_id": "SKU_010",
+          "name": "Zapp Chips 140g",
+          "brand": "Zapp",
+          "category": "chips",
+          "price": 35.0,
+          "slot_id": "B2S1P2"
+        },
+        {
+          "sku_id": "SKU_019",
+          "name": "Nimbus Cola 130g",
+          "brand": "Nimbus",
+          "category": "cola",
+          "price": 45.0,
+          "slot_id": "B3S2P1"
+        },
+        {
+          "sku_id": "SKU_022",
+          "name": "Zapp Biscuits 110g",
+          "brand": "Zapp",
+          "category": "biscuits",
+          "price": 25.0,
+          "slot_id": "B3S4P1"
+        }
+      ],
+      "stations_visited": [
+        "B1",
+        "B2",
+        "B3"
+      ],
+      "end_reason": "checkout",
+      "end_note": null,
+      "n_turns": 22,
+      "n_rejections": 0
+    },
+    {
+      "shopper_index": 13,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "look",
+          "target": "B1S1P1",
+          "reason": "Promotion on chips caught my eye, want to check the pack.",
+          "time_left_s": 147.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "look",
+          "target": "B1S1P1",
+          "reason": "Spotted a promotion on chips, want to check it out.",
+          "time_left_s": 144.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "look",
+          "target": "B1S1P1",
+          "reason": "Spotted a promo on chips, want to check the pack and price.",
+          "time_left_s": 141.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S1P1",
+          "reason": "Promotion on Crunch Chips catches my eye; I want a closer look.",
+          "time_left_s": 135.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S1P1",
+          "reason": "Promotion on chips and I already have them in hand; into the basket.",
+          "time_left_s": 131.0
+        },
+        {
+          "turn": 6,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S3P1",
+          "reason": "Biscuits are on my mind; this eye-level pack looks worth inspecting.",
+          "time_left_s": 125.0
+        },
+        {
+          "turn": 7,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S3P1",
+          "reason": "These Crunch Biscuits look good, I'll take them.",
+          "time_left_s": 121.0
+        },
+        {
+          "turn": 8,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S5P1",
+          "reason": "Need nuts and this Orchid pack is a much better price than the Nimbus one.",
+          "time_left_s": 115.0
+        },
+        {
+          "turn": 9,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S5P1",
+          "reason": "These nuts are a good price and I already have them in hand.",
+          "time_left_s": 111.0
+        },
+        {
+          "turn": 10,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S2P1",
+          "reason": "Need a cola and this Nimbus is cheaper than the Orchid, so I'll check it.",
+          "time_left_s": 105.0
+        },
+        {
+          "turn": 11,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S2P1",
+          "reason": "This cola looks good, adding it to my basket.",
+          "time_left_s": 101.0
+        },
+        {
+          "turn": 12,
+          "station_id": "B1",
+          "action": "next_station",
+          "target": null,
+          "reason": "I've got one of each; let me see what else is down the aisle.",
+          "time_left_s": 93.0
+        },
+        {
+          "turn": 13,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S1P2",
+          "reason": "Promoted Zapp chips catch my eye; I want to check the pack and price.",
+          "time_left_s": 87.0
+        },
+        {
+          "turn": 14,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S1P2",
+          "reason": "These Zapp chips are on promotion and I already have them in hand.",
+          "time_left_s": 83.0
+        },
+        {
+          "turn": 15,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S4P2",
+          "reason": "Nimbus nuts are 140g for 25, better value than my current nuts; checking the pack.",
+          "time_left_s": 77.0
+        },
+        {
+          "turn": 16,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S4P2",
+          "reason": "Good price for a bigger nut pack, and I already have it in hand.",
+          "time_left_s": 73.0
+        },
+        {
+          "turn": 17,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S4P1",
+          "reason": "Zapp biscuits catch my eye, want to compare pack and price.",
+          "time_left_s": 67.0
+        },
+        {
+          "turn": 18,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S4P1",
+          "reason": "I'm already holding these Zapp biscuits; might as well try them.",
+          "time_left_s": 63.0
+        },
+        {
+          "turn": 19,
+          "station_id": "B2",
+          "action": "next_station",
+          "target": null,
+          "reason": "I'll wander to the last bay to see if anything else catches my eye.",
+          "time_left_s": 55.0
+        },
+        {
+          "turn": 20,
+          "station_id": "B3",
+          "action": "add_to_cart",
+          "target": "B3S2P1",
+          "reason": "Promo cola in a bigger pack, worth grabbing while I'm here.",
+          "time_left_s": 51.0
+        },
+        {
+          "turn": 21,
+          "station_id": "B3",
+          "action": "checkout",
+          "target": null,
+          "reason": "I've got plenty of snacks and drinks, time to head out.",
+          "time_left_s": 46.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_001",
+        "SKU_005",
+        "SKU_008",
+        "SKU_003",
+        "SKU_010",
+        "SKU_015",
+        "SKU_014",
+        "SKU_019"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_001",
+          "name": "Crunch Chips 100g",
+          "brand": "Crunch",
+          "category": "chips",
+          "price": 25.0,
+          "slot_id": "B1S1P1"
+        },
+        {
+          "sku_id": "SKU_005",
+          "name": "Crunch Biscuits 140g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 45.0,
+          "slot_id": "B1S3P1"
+        },
+        {
+          "sku_id": "SKU_008",
+          "name": "Orchid Nuts 120g",
+          "brand": "Orchid",
+          "category": "nuts",
+          "price": 25.0,
+          "slot_id": "B1S5P1"
+        },
+        {
+          "sku_id": "SKU_003",
+          "name": "Nimbus Cola 120g",
+          "brand": "Nimbus",
+          "category": "cola",
+          "price": 35.0,
+          "slot_id": "B1S2P1"
+        },
+        {
+          "sku_id": "SKU_010",
+          "name": "Zapp Chips 140g",
+          "brand": "Zapp",
+          "category": "chips",
+          "price": 35.0,
+          "slot_id": "B2S1P2"
+        },
+        {
+          "sku_id": "SKU_015",
+          "name": "Nimbus Nuts 140g",
+          "brand": "Nimbus",
+          "category": "nuts",
+          "price": 25.0,
+          "slot_id": "B2S4P2"
+        },
+        {
+          "sku_id": "SKU_014",
+          "name": "Zapp Biscuits 130g",
+          "brand": "Zapp",
+          "category": "biscuits",
+          "price": 55.0,
+          "slot_id": "B2S4P1"
+        },
+        {
+          "sku_id": "SKU_019",
+          "name": "Nimbus Cola 130g",
+          "brand": "Nimbus",
+          "category": "cola",
+          "price": 45.0,
+          "slot_id": "B3S2P1"
+        }
+      ],
+      "stations_visited": [
+        "B1",
+        "B2",
+        "B3"
+      ],
+      "end_reason": "checkout",
+      "end_note": null,
+      "n_turns": 21,
+      "n_rejections": 0
+    },
+    {
+      "shopper_index": 14,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "look",
+          "target": "B1S1P1",
+          "reason": "Spotted a promotion on chips, want to check the pack and price.",
+          "time_left_s": 147.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "look",
+          "target": "B1S3P1",
+          "reason": "Eye-level biscuits catch my attention; want to check the pack and price.",
+          "time_left_s": 144.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "look",
+          "target": "B1S1P1",
+          "reason": "Promotion on chips caught my eye, want a closer look.",
+          "time_left_s": 141.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S1P1",
+          "reason": "Promotion on chips catches my eye, want to check the pack.",
+          "time_left_s": 135.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S1P1",
+          "reason": "Crunch Chips are on promotion and I came for chips; into the basket.",
+          "time_left_s": 131.0
+        },
+        {
+          "turn": 6,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S4P2",
+          "reason": "Checking these nuts, want something for snacking and comparing what's here.",
+          "time_left_s": 125.0
+        },
+        {
+          "turn": 7,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S4P2",
+          "reason": "These Nimbus nuts look good, and I want a nut option in the basket.",
+          "time_left_s": 121.0
+        },
+        {
+          "turn": 8,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S3P1",
+          "reason": "Eye-level biscuits catch my attention; want to compare size and price.",
+          "time_left_s": 115.0
+        },
+        {
+          "turn": 9,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S3P1",
+          "reason": "These biscuits look good and I need some; adding them.",
+          "time_left_s": 111.0
+        },
+        {
+          "turn": 10,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S2P1",
+          "reason": "Need a cola, this one is cheaper than Orchid and looks fine.",
+          "time_left_s": 107.0
+        },
+        {
+          "turn": 11,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S5P1",
+          "reason": "That nut pack is bigger and cheaper than the one in my cart, want to compare.",
+          "time_left_s": 101.0
+        },
+        {
+          "turn": 12,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S5P1",
+          "reason": "Cheap nuts, I'll take these too.",
+          "time_left_s": 97.0
+        },
+        {
+          "turn": 13,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S1P2",
+          "reason": "Comparing Zapp chips to the Crunch chips already in my cart.",
+          "time_left_s": 91.0
+        },
+        {
+          "turn": 14,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S1P2",
+          "reason": "I'll take these Zapp chips too; I'm comparing chip options and they look worth trying.",
+          "time_left_s": 87.0
+        },
+        {
+          "turn": 15,
+          "station_id": "B1",
+          "action": "next_station",
+          "target": null,
+          "reason": "I've covered this bay; moving along to see what else catches my eye.",
+          "time_left_s": 79.0
+        },
+        {
+          "turn": 16,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S1P2",
+          "reason": "Promotion on bigger Zapp chips, want to compare pack size and price.",
+          "time_left_s": 73.0
+        },
+        {
+          "turn": 17,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S1P2",
+          "reason": "This Zapp chips is on promotion and already in my hands, so it goes in the basket.",
+          "time_left_s": 69.0
+        },
+        {
+          "turn": 18,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S4P2",
+          "reason": "Bigger nut pack at 25, want to compare with the one in cart.",
+          "time_left_s": 63.0
+        },
+        {
+          "turn": 19,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S4P2",
+          "reason": "This larger nut pack is only 25, good value, so I'll take it.",
+          "time_left_s": 59.0
+        },
+        {
+          "turn": 20,
+          "station_id": "B2",
+          "action": "next_station",
+          "target": null,
+          "reason": "Wandered this bay enough, want to see the last station before deciding.",
+          "time_left_s": 51.0
+        },
+        {
+          "turn": 21,
+          "station_id": "B3",
+          "action": "add_to_cart",
+          "target": "B3S4P1",
+          "reason": "Zapp biscuits are only 25, new to me, and I want a biscuit variety.",
+          "time_left_s": 47.0
+        },
+        {
+          "turn": 22,
+          "station_id": "B3",
+          "action": "checkout",
+          "target": null,
+          "reason": "I've got enough variety across biscuits, chips, cola, and nuts; time to check out.",
+          "time_left_s": 42.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_001",
+        "SKU_007",
+        "SKU_005",
+        "SKU_003",
+        "SKU_008",
+        "SKU_002",
+        "SKU_010",
+        "SKU_015",
+        "SKU_022"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_001",
+          "name": "Crunch Chips 100g",
+          "brand": "Crunch",
+          "category": "chips",
+          "price": 25.0,
+          "slot_id": "B1S1P1"
+        },
+        {
+          "sku_id": "SKU_007",
+          "name": "Nimbus Nuts 110g",
+          "brand": "Nimbus",
+          "category": "nuts",
+          "price": 55.0,
+          "slot_id": "B1S4P2"
+        },
+        {
+          "sku_id": "SKU_005",
+          "name": "Crunch Biscuits 140g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 45.0,
+          "slot_id": "B1S3P1"
+        },
+        {
+          "sku_id": "SKU_003",
+          "name": "Nimbus Cola 120g",
+          "brand": "Nimbus",
+          "category": "cola",
+          "price": 35.0,
+          "slot_id": "B1S2P1"
+        },
+        {
+          "sku_id": "SKU_008",
+          "name": "Orchid Nuts 120g",
+          "brand": "Orchid",
+          "category": "nuts",
+          "price": 25.0,
+          "slot_id": "B1S5P1"
+        },
+        {
+          "sku_id": "SKU_002",
+          "name": "Zapp Chips 110g",
+          "brand": "Zapp",
+          "category": "chips",
+          "price": 30.0,
+          "slot_id": "B1S1P2"
+        },
+        {
+          "sku_id": "SKU_010",
+          "name": "Zapp Chips 140g",
+          "brand": "Zapp",
+          "category": "chips",
+          "price": 35.0,
+          "slot_id": "B2S1P2"
+        },
+        {
+          "sku_id": "SKU_015",
+          "name": "Nimbus Nuts 140g",
+          "brand": "Nimbus",
+          "category": "nuts",
+          "price": 25.0,
+          "slot_id": "B2S4P2"
+        },
+        {
+          "sku_id": "SKU_022",
+          "name": "Zapp Biscuits 110g",
+          "brand": "Zapp",
+          "category": "biscuits",
+          "price": 25.0,
+          "slot_id": "B3S4P1"
+        }
+      ],
+      "stations_visited": [
+        "B1",
+        "B2",
+        "B3"
+      ],
+      "end_reason": "checkout",
+      "end_note": null,
+      "n_turns": 22,
+      "n_rejections": 0
+    },
+    {
+      "shopper_index": 15,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "look",
+          "target": "B1S1P1",
+          "reason": "Spotted a promotion on chips, want to check the pack and price.",
+          "time_left_s": 147.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "look",
+          "target": "B1S1P1",
+          "reason": "Promotion on chips caught my eye; checking pack and price.",
+          "time_left_s": 144.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "look",
+          "target": "B1S1P1",
+          "reason": "Spotted a promotion on Crunch Chips, want to check it out.",
+          "time_left_s": 141.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S1P1",
+          "reason": "On promotion, want to check the chips pack.",
+          "time_left_s": 135.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S1P1",
+          "reason": "Promotion on these chips caught my eye, and I already have them in hand.",
+          "time_left_s": 131.0
+        },
+        {
+          "turn": 6,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S4P2",
+          "reason": "That nut pack stands out, want to check size and price before deciding.",
+          "time_left_s": 125.0
+        },
+        {
+          "turn": 7,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S4P2",
+          "reason": "These Nimbus nuts are already in my hand; I'll take them.",
+          "time_left_s": 121.0
+        },
+        {
+          "turn": 8,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S3P1",
+          "reason": "Need biscuits and this eye-level pack looks like a good size to check.",
+          "time_left_s": 115.0
+        },
+        {
+          "turn": 9,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S3P1",
+          "reason": "These Crunch Biscuits look good, I'll take them while I'm here.",
+          "time_left_s": 111.0
+        },
+        {
+          "turn": 10,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S2P1",
+          "reason": "Need a cola; comparing Nimbus at 35 with Orchid at 40.",
+          "time_left_s": 105.0
+        },
+        {
+          "turn": 11,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S2P1",
+          "reason": "This Nimbus Cola is cheaper than the Orchid and I already have it in hand.",
+          "time_left_s": 101.0
+        },
+        {
+          "turn": 12,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S5P1",
+          "reason": "These Orchid nuts are half the price of the Nimbus ones in my cart; grabbing a pack.",
+          "time_left_s": 97.0
+        },
+        {
+          "turn": 13,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S1P2",
+          "reason": "Curious about Zapp chips, comparing them with the Crunch chips already in my cart.",
+          "time_left_s": 91.0
+        },
+        {
+          "turn": 14,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S1P2",
+          "reason": "This Zapp chips pack looks worth trying, so I'll drop it in the basket.",
+          "time_left_s": 87.0
+        },
+        {
+          "turn": 15,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S2P2",
+          "reason": "Comparing this Orchid Cola to the Nimbus one already in my cart.",
+          "time_left_s": 81.0
+        },
+        {
+          "turn": 16,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S2P2",
+          "reason": "Already holding it; open to another cola pack.",
+          "time_left_s": 77.0
+        },
+        {
+          "turn": 17,
+          "station_id": "B1",
+          "action": "next_station",
+          "target": null,
+          "reason": "I've seen this bay enough; moving along to browse more.",
+          "time_left_s": 69.0
+        },
+        {
+          "turn": 18,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S1P2",
+          "reason": "Promotion on Zapp Chips caught my eye; want to check this bigger pack.",
+          "time_left_s": 63.0
+        },
+        {
+          "turn": 19,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S1P2",
+          "reason": "Promotion on bigger Zapp chips, already in my hand, into basket.",
+          "time_left_s": 59.0
+        },
+        {
+          "turn": 20,
+          "station_id": "B2",
+          "action": "next_station",
+          "target": null,
+          "reason": "I've seen this bay enough; let me see what's on the last bay.",
+          "time_left_s": 51.0
+        },
+        {
+          "turn": 21,
+          "station_id": "B3",
+          "action": "pickup",
+          "target": "B3S2P1",
+          "reason": "On promotion and a different size than my current cola; want to compare.",
+          "time_left_s": 45.0
+        },
+        {
+          "turn": 22,
+          "station_id": "B3",
+          "action": "add_to_cart",
+          "target": "B3S2P1",
+          "reason": "This Nimbus Cola is on promotion and I already have it in hand, so it goes in.",
+          "time_left_s": 41.0
+        },
+        {
+          "turn": 23,
+          "station_id": "B3",
+          "action": "add_to_cart",
+          "target": "B3S4P1",
+          "reason": "Zapp biscuits are cheap and a pack I haven't tried; grabbing them before I finish.",
+          "time_left_s": 37.0
+        },
+        {
+          "turn": 24,
+          "station_id": "B3",
+          "action": "checkout",
+          "target": null,
+          "reason": "I've browsed enough and my cart is full; time to pay.",
+          "time_left_s": 32.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_001",
+        "SKU_007",
+        "SKU_005",
+        "SKU_003",
+        "SKU_008",
+        "SKU_002",
+        "SKU_004",
+        "SKU_010",
+        "SKU_019",
+        "SKU_022"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_001",
+          "name": "Crunch Chips 100g",
+          "brand": "Crunch",
+          "category": "chips",
+          "price": 25.0,
+          "slot_id": "B1S1P1"
+        },
+        {
+          "sku_id": "SKU_007",
+          "name": "Nimbus Nuts 110g",
+          "brand": "Nimbus",
+          "category": "nuts",
+          "price": 55.0,
+          "slot_id": "B1S4P2"
+        },
+        {
+          "sku_id": "SKU_005",
+          "name": "Crunch Biscuits 140g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 45.0,
+          "slot_id": "B1S3P1"
+        },
+        {
+          "sku_id": "SKU_003",
+          "name": "Nimbus Cola 120g",
+          "brand": "Nimbus",
+          "category": "cola",
+          "price": 35.0,
+          "slot_id": "B1S2P1"
+        },
+        {
+          "sku_id": "SKU_008",
+          "name": "Orchid Nuts 120g",
+          "brand": "Orchid",
+          "category": "nuts",
+          "price": 25.0,
+          "slot_id": "B1S5P1"
+        },
+        {
+          "sku_id": "SKU_002",
+          "name": "Zapp Chips 110g",
+          "brand": "Zapp",
+          "category": "chips",
+          "price": 30.0,
+          "slot_id": "B1S1P2"
+        },
+        {
+          "sku_id": "SKU_004",
+          "name": "Orchid Cola 130g",
+          "brand": "Orchid",
+          "category": "cola",
+          "price": 40.0,
+          "slot_id": "B1S2P2"
+        },
+        {
+          "sku_id": "SKU_010",
+          "name": "Zapp Chips 140g",
+          "brand": "Zapp",
+          "category": "chips",
+          "price": 35.0,
+          "slot_id": "B2S1P2"
+        },
+        {
+          "sku_id": "SKU_019",
+          "name": "Nimbus Cola 130g",
+          "brand": "Nimbus",
+          "category": "cola",
+          "price": 45.0,
+          "slot_id": "B3S2P1"
+        },
+        {
+          "sku_id": "SKU_022",
+          "name": "Zapp Biscuits 110g",
+          "brand": "Zapp",
+          "category": "biscuits",
+          "price": 25.0,
+          "slot_id": "B3S4P1"
+        }
+      ],
+      "stations_visited": [
+        "B1",
+        "B2",
+        "B3"
+      ],
+      "end_reason": "checkout",
+      "end_note": null,
+      "n_turns": 24,
+      "n_rejections": 0
+    },
+    {
+      "shopper_index": 16,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "look",
+          "target": "B1S1P1",
+          "reason": "Spotted a promo on chips; want to check the pack and price before deciding.",
+          "time_left_s": 147.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S1P1",
+          "reason": "Promotion on chips catches my eye, want to check it out.",
+          "time_left_s": 141.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S1P1",
+          "reason": "Promotion on chips and I came for chips, so this goes in the basket.",
+          "time_left_s": 137.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S4P2",
+          "reason": "I want to compare these nuts with the cheaper Orchid ones before deciding.",
+          "time_left_s": 131.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S4P2",
+          "reason": "These nuts look good and I already have them in hand; into the basket.",
+          "time_left_s": 127.0
+        },
+        {
+          "turn": 6,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S3P1",
+          "reason": "I want to check these eye-level biscuits before deciding.",
+          "time_left_s": 121.0
+        },
+        {
+          "turn": 7,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S3P1",
+          "reason": "These biscuits are right at eye level and already in my hand, so I'll take them.",
+          "time_left_s": 117.0
+        },
+        {
+          "turn": 8,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S2P1",
+          "reason": "Need a cola; this Nimbus is cheaper than the Orchid and right in front of me.",
+          "time_left_s": 111.0
+        },
+        {
+          "turn": 9,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S2P1",
+          "reason": "This Nimbus Cola is already in my hand and the price seems fair, so I'll take it.",
+          "time_left_s": 107.0
+        },
+        {
+          "turn": 10,
+          "station_id": "B1",
+          "action": "next_station",
+          "target": null,
+          "reason": "I've compared these; moving along to see other options.",
+          "time_left_s": 99.0
+        },
+        {
+          "turn": 11,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S1P2",
+          "reason": "On promotion and a bigger pack, want to try Zapp chips.",
+          "time_left_s": 95.0
+        },
+        {
+          "turn": 12,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S4P2",
+          "reason": "That larger nut pack is only 25, want to check it against my smaller one.",
+          "time_left_s": 89.0
+        },
+        {
+          "turn": 13,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S4P2",
+          "reason": "These Nimbus nuts are a decent price and already in my hands.",
+          "time_left_s": 85.0
+        },
+        {
+          "turn": 14,
+          "station_id": "B2",
+          "action": "next_station",
+          "target": null,
+          "reason": "I've got the basics, but I'll wander to the last bay to see if anything else catches my eye.",
+          "time_left_s": 77.0
+        },
+        {
+          "turn": 15,
+          "station_id": "B3",
+          "action": "add_to_cart",
+          "target": "B3S2P1",
+          "reason": "That Nimbus Cola is on promotion and cheaper than the Orchid; I'll grab one.",
+          "time_left_s": 73.0
+        },
+        {
+          "turn": 16,
+          "station_id": "B3",
+          "action": "pickup",
+          "target": "B3S4P1",
+          "reason": "Zapp biscuits are cheap and prominent, want to compare pack size.",
+          "time_left_s": 67.0
+        },
+        {
+          "turn": 17,
+          "station_id": "B3",
+          "action": "add_to_cart",
+          "target": "B3S4P1",
+          "reason": "This Zapp biscuit is cheap and I'm already holding it; into the basket.",
+          "time_left_s": 63.0
+        },
+        {
+          "turn": 18,
+          "station_id": "B3",
+          "action": "pickup",
+          "target": "B3S5P1",
+          "reason": "Haven't tried Orchid nuts, price seems fair, want a closer look.",
+          "time_left_s": 57.0
+        },
+        {
+          "turn": 19,
+          "station_id": "B3",
+          "action": "add_to_cart",
+          "target": "B3S5P1",
+          "reason": "Curious about Orchid nuts, price seems fair, I'll try this pack.",
+          "time_left_s": 53.0
+        },
+        {
+          "turn": 20,
+          "station_id": "B3",
+          "action": "add_to_cart",
+          "target": "B3S4P2",
+          "reason": "New size and cheaper than my other nuts; I'll try it.",
+          "time_left_s": 49.0
+        },
+        {
+          "turn": 21,
+          "station_id": "B3",
+          "action": "add_to_cart",
+          "target": "B3S2P2",
+          "reason": "Haven't grabbed an Orchid cola yet; this 140g looks worth trying.",
+          "time_left_s": 45.0
+        },
+        {
+          "turn": 22,
+          "station_id": "B3",
+          "action": "checkout",
+          "target": null,
+          "reason": "I've browsed enough and my cart covers everything I came for.",
+          "time_left_s": 40.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_001",
+        "SKU_007",
+        "SKU_005",
+        "SKU_003",
+        "SKU_010",
+        "SKU_015",
+        "SKU_019",
+        "SKU_022",
+        "SKU_024",
+        "SKU_023",
+        "SKU_020"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_001",
+          "name": "Crunch Chips 100g",
+          "brand": "Crunch",
+          "category": "chips",
+          "price": 25.0,
+          "slot_id": "B1S1P1"
+        },
+        {
+          "sku_id": "SKU_007",
+          "name": "Nimbus Nuts 110g",
+          "brand": "Nimbus",
+          "category": "nuts",
+          "price": 55.0,
+          "slot_id": "B1S4P2"
+        },
+        {
+          "sku_id": "SKU_005",
+          "name": "Crunch Biscuits 140g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 45.0,
+          "slot_id": "B1S3P1"
+        },
+        {
+          "sku_id": "SKU_003",
+          "name": "Nimbus Cola 120g",
+          "brand": "Nimbus",
+          "category": "cola",
+          "price": 35.0,
+          "slot_id": "B1S2P1"
+        },
+        {
+          "sku_id": "SKU_010",
+          "name": "Zapp Chips 140g",
+          "brand": "Zapp",
+          "category": "chips",
+          "price": 35.0,
+          "slot_id": "B2S1P2"
+        },
+        {
+          "sku_id": "SKU_015",
+          "name": "Nimbus Nuts 140g",
+          "brand": "Nimbus",
+          "category": "nuts",
+          "price": 25.0,
+          "slot_id": "B2S4P2"
+        },
+        {
+          "sku_id": "SKU_019",
+          "name": "Nimbus Cola 130g",
+          "brand": "Nimbus",
+          "category": "cola",
+          "price": 45.0,
+          "slot_id": "B3S2P1"
+        },
+        {
+          "sku_id": "SKU_022",
+          "name": "Zapp Biscuits 110g",
+          "brand": "Zapp",
+          "category": "biscuits",
+          "price": 25.0,
+          "slot_id": "B3S4P1"
+        },
+        {
+          "sku_id": "SKU_024",
+          "name": "Orchid Nuts 130g",
+          "brand": "Orchid",
+          "category": "nuts",
+          "price": 35.0,
+          "slot_id": "B3S5P1"
+        },
+        {
+          "sku_id": "SKU_023",
+          "name": "Nimbus Nuts 120g",
+          "brand": "Nimbus",
+          "category": "nuts",
+          "price": 30.0,
+          "slot_id": "B3S4P2"
+        },
+        {
+          "sku_id": "SKU_020",
+          "name": "Orchid Cola 140g",
+          "brand": "Orchid",
+          "category": "cola",
+          "price": 50.0,
+          "slot_id": "B3S2P2"
+        }
+      ],
+      "stations_visited": [
+        "B1",
+        "B2",
+        "B3"
+      ],
+      "end_reason": "checkout",
+      "end_note": null,
+      "n_turns": 22,
+      "n_rejections": 0
+    },
+    {
+      "shopper_index": 17,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S1P1",
+          "reason": "Spotted a promotion on chips, want to inspect the pack.",
+          "time_left_s": 144.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S1P1",
+          "reason": "Crunch Chips are on promotion and a decent price; I'll take them while I look around.",
+          "time_left_s": 140.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S2P1",
+          "reason": "Checking this cola; price looks decent and I want a cola.",
+          "time_left_s": 134.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S2P1",
+          "reason": "This Nimbus cola is cheaper than the Orchid one and I already have it in hand.",
+          "time_left_s": 130.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S5P1",
+          "reason": "Need nuts and this 120g pack is only 25, seems like a good deal.",
+          "time_left_s": 124.0
+        },
+        {
+          "turn": 6,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S5P1",
+          "reason": "Orchid nuts are bigger and cheaper than the Nimbus nuts, so they go in the basket.",
+          "time_left_s": 120.0
+        },
+        {
+          "turn": 7,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S3P1",
+          "reason": "Need biscuits, this eye-level pack looks decent for 45.",
+          "time_left_s": 114.0
+        },
+        {
+          "turn": 8,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S3P1",
+          "reason": "Biscuits look good and I still need some; adding these.",
+          "time_left_s": 110.0
+        },
+        {
+          "turn": 9,
+          "station_id": "B1",
+          "action": "look",
+          "target": "B1S4P2",
+          "reason": "Those nuts are prominent, want a closer look before deciding.",
+          "time_left_s": 107.0
+        },
+        {
+          "turn": 10,
+          "station_id": "B1",
+          "action": "look",
+          "target": "B1S4P2",
+          "reason": "Checking these nuts against what I already picked.",
+          "time_left_s": 104.0
+        },
+        {
+          "turn": 11,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S4P2",
+          "reason": "Comparing nut packs; this Nimbus one looks different from the Orchid in my cart.",
+          "time_left_s": 98.0
+        },
+        {
+          "turn": 12,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S4P2",
+          "reason": "Already holding these; curious to try Nimbus nuts even though I have Orchid.",
+          "time_left_s": 94.0
+        },
+        {
+          "turn": 13,
+          "station_id": "B1",
+          "action": "next_station",
+          "target": null,
+          "reason": "Seen enough here, moving to see what else is on the next bay.",
+          "time_left_s": 86.0
+        },
+        {
+          "turn": 14,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S1P2",
+          "reason": "Promotion on Zapp Chips caught my eye; want to check the bigger pack.",
+          "time_left_s": 80.0
+        },
+        {
+          "turn": 15,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S1P2",
+          "reason": "This Zapp Chips is on promotion and I already have it in hand.",
+          "time_left_s": 76.0
+        },
+        {
+          "turn": 16,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S4P2",
+          "reason": "Bigger pack of Nimbus nuts at a good price, want to compare with the one in my cart.",
+          "time_left_s": 70.0
+        },
+        {
+          "turn": 17,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S4P2",
+          "reason": "Good price on these nuts, I'll take them.",
+          "time_left_s": 66.0
+        },
+        {
+          "turn": 18,
+          "station_id": "B2",
+          "action": "next_station",
+          "target": null,
+          "reason": "I've browsed this bay enough; let me see what the next one offers.",
+          "time_left_s": 58.0
+        },
+        {
+          "turn": 19,
+          "station_id": "B3",
+          "action": "pickup",
+          "target": "B3S2P1",
+          "reason": "That cola is on promotion; I want to check the pack before deciding.",
+          "time_left_s": 52.0
+        },
+        {
+          "turn": 20,
+          "station_id": "B3",
+          "action": "add_to_cart",
+          "target": "B3S2P1",
+          "reason": "This Nimbus Cola is on promotion and I already have it in hand, so I'll take it.",
+          "time_left_s": 48.0
+        },
+        {
+          "turn": 21,
+          "station_id": "B3",
+          "action": "add_to_cart",
+          "target": "B3S4P1",
+          "reason": "Zapp biscuits are new to me and cheap, I'll grab a pack.",
+          "time_left_s": 44.0
+        },
+        {
+          "turn": 22,
+          "station_id": "B3",
+          "action": "add_to_cart",
+          "target": "B3S2P2",
+          "reason": "Haven't tried Orchid cola; this bigger pack catches my eye.",
+          "time_left_s": 40.0
+        },
+        {
+          "turn": 23,
+          "station_id": "B3",
+          "action": "checkout",
+          "target": null,
+          "reason": "I've seen enough and have all I came for; time to go.",
+          "time_left_s": 35.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_001",
+        "SKU_003",
+        "SKU_008",
+        "SKU_005",
+        "SKU_007",
+        "SKU_010",
+        "SKU_015",
+        "SKU_019",
+        "SKU_022",
+        "SKU_020"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_001",
+          "name": "Crunch Chips 100g",
+          "brand": "Crunch",
+          "category": "chips",
+          "price": 25.0,
+          "slot_id": "B1S1P1"
+        },
+        {
+          "sku_id": "SKU_003",
+          "name": "Nimbus Cola 120g",
+          "brand": "Nimbus",
+          "category": "cola",
+          "price": 35.0,
+          "slot_id": "B1S2P1"
+        },
+        {
+          "sku_id": "SKU_008",
+          "name": "Orchid Nuts 120g",
+          "brand": "Orchid",
+          "category": "nuts",
+          "price": 25.0,
+          "slot_id": "B1S5P1"
+        },
+        {
+          "sku_id": "SKU_005",
+          "name": "Crunch Biscuits 140g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 45.0,
+          "slot_id": "B1S3P1"
+        },
+        {
+          "sku_id": "SKU_007",
+          "name": "Nimbus Nuts 110g",
+          "brand": "Nimbus",
+          "category": "nuts",
+          "price": 55.0,
+          "slot_id": "B1S4P2"
+        },
+        {
+          "sku_id": "SKU_010",
+          "name": "Zapp Chips 140g",
+          "brand": "Zapp",
+          "category": "chips",
+          "price": 35.0,
+          "slot_id": "B2S1P2"
+        },
+        {
+          "sku_id": "SKU_015",
+          "name": "Nimbus Nuts 140g",
+          "brand": "Nimbus",
+          "category": "nuts",
+          "price": 25.0,
+          "slot_id": "B2S4P2"
+        },
+        {
+          "sku_id": "SKU_019",
+          "name": "Nimbus Cola 130g",
+          "brand": "Nimbus",
+          "category": "cola",
+          "price": 45.0,
+          "slot_id": "B3S2P1"
+        },
+        {
+          "sku_id": "SKU_022",
+          "name": "Zapp Biscuits 110g",
+          "brand": "Zapp",
+          "category": "biscuits",
+          "price": 25.0,
+          "slot_id": "B3S4P1"
+        },
+        {
+          "sku_id": "SKU_020",
+          "name": "Orchid Cola 140g",
+          "brand": "Orchid",
+          "category": "cola",
+          "price": 50.0,
+          "slot_id": "B3S2P2"
+        }
+      ],
+      "stations_visited": [
+        "B1",
+        "B2",
+        "B3"
+      ],
+      "end_reason": "checkout",
+      "end_note": null,
+      "n_turns": 23,
+      "n_rejections": 0
+    },
+    {
+      "shopper_index": 18,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "look",
+          "target": "B1S1P1",
+          "reason": "Spotted a promotion on Crunch Chips, want to check the pack and price.",
+          "time_left_s": 147.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S1P1",
+          "reason": "Promotion on chips caught my eye, want to check the pack.",
+          "time_left_s": 141.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S1P1",
+          "reason": "Crunch Chips are on promotion and already in my hand, so they go in the basket.",
+          "time_left_s": 137.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S3P1",
+          "reason": "Eye-level biscuits catch my attention; want to compare this pack before deciding.",
+          "time_left_s": 131.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S3P1",
+          "reason": "This Crunch biscuit is right at eye level and a fair price; I'll take it.",
+          "time_left_s": 127.0
+        },
+        {
+          "turn": 6,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S5P1",
+          "reason": "Cheap nuts, want to check the pack before deciding.",
+          "time_left_s": 121.0
+        },
+        {
+          "turn": 7,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S5P1",
+          "reason": "These nuts are cheap and I already have them in hand, so into the basket.",
+          "time_left_s": 117.0
+        },
+        {
+          "turn": 8,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S2P1",
+          "reason": "Need a cola, this Nimbus is cheaper than Orchid, checking pack.",
+          "time_left_s": 111.0
+        },
+        {
+          "turn": 9,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S2P1",
+          "reason": "This cola is already in my hands and fits what I came for.",
+          "time_left_s": 107.0
+        },
+        {
+          "turn": 10,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S4P2",
+          "reason": "Curious about these Nimbus nuts, want to compare with the Orchid nuts in my cart.",
+          "time_left_s": 101.0
+        },
+        {
+          "turn": 11,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S4P2",
+          "reason": "These nuts look interesting, adding them to try.",
+          "time_left_s": 97.0
+        },
+        {
+          "turn": 12,
+          "station_id": "B1",
+          "action": "next_station",
+          "target": null,
+          "reason": "Seen enough here, want to browse the next bay for anything new.",
+          "time_left_s": 89.0
+        },
+        {
+          "turn": 13,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S1P2",
+          "reason": "Promoted Zapp chips catch my eye; bigger pack and decent price.",
+          "time_left_s": 85.0
+        },
+        {
+          "turn": 14,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S4P2",
+          "reason": "Bigger nut pack at a good price, want to check it before deciding.",
+          "time_left_s": 79.0
+        },
+        {
+          "turn": 15,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S4P2",
+          "reason": "This bigger nut pack is a decent price, I'll take it.",
+          "time_left_s": 75.0
+        },
+        {
+          "turn": 16,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S4P1",
+          "reason": "New biscuit pack, want to compare weight and price before deciding.",
+          "time_left_s": 69.0
+        },
+        {
+          "turn": 17,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S4P1",
+          "reason": "I've been holding this Zapp biscuit pack; decent enough, into the basket.",
+          "time_left_s": 65.0
+        },
+        {
+          "turn": 18,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S2P2",
+          "reason": "Curious about Orchid cola since I only have Nimbus; want to compare.",
+          "time_left_s": 59.0
+        },
+        {
+          "turn": 19,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S2P2",
+          "reason": "Already holding the Orchid Cola; I'll try it and keep moving.",
+          "time_left_s": 55.0
+        },
+        {
+          "turn": 20,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S1P1",
+          "reason": "Bigger Crunch chips pack at a fair price, I want to try this size.",
+          "time_left_s": 51.0
+        },
+        {
+          "turn": 21,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S2P1",
+          "reason": "Smaller cola pack catches my eye; I'll try it.",
+          "time_left_s": 47.0
+        },
+        {
+          "turn": 22,
+          "station_id": "B2",
+          "action": "next_station",
+          "target": null,
+          "reason": "Want to see the last bay before I decide to check out.",
+          "time_left_s": 39.0
+        },
+        {
+          "turn": 23,
+          "station_id": "B3",
+          "action": "checkout",
+          "target": null,
+          "reason": "I've got plenty across all four categories, time to check out.",
+          "time_left_s": 34.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_001",
+        "SKU_005",
+        "SKU_008",
+        "SKU_003",
+        "SKU_007",
+        "SKU_010",
+        "SKU_015",
+        "SKU_014",
+        "SKU_012",
+        "SKU_009",
+        "SKU_011"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_001",
+          "name": "Crunch Chips 100g",
+          "brand": "Crunch",
+          "category": "chips",
+          "price": 25.0,
+          "slot_id": "B1S1P1"
+        },
+        {
+          "sku_id": "SKU_005",
+          "name": "Crunch Biscuits 140g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 45.0,
+          "slot_id": "B1S3P1"
+        },
+        {
+          "sku_id": "SKU_008",
+          "name": "Orchid Nuts 120g",
+          "brand": "Orchid",
+          "category": "nuts",
+          "price": 25.0,
+          "slot_id": "B1S5P1"
+        },
+        {
+          "sku_id": "SKU_003",
+          "name": "Nimbus Cola 120g",
+          "brand": "Nimbus",
+          "category": "cola",
+          "price": 35.0,
+          "slot_id": "B1S2P1"
+        },
+        {
+          "sku_id": "SKU_007",
+          "name": "Nimbus Nuts 110g",
+          "brand": "Nimbus",
+          "category": "nuts",
+          "price": 55.0,
+          "slot_id": "B1S4P2"
+        },
+        {
+          "sku_id": "SKU_010",
+          "name": "Zapp Chips 140g",
+          "brand": "Zapp",
+          "category": "chips",
+          "price": 35.0,
+          "slot_id": "B2S1P2"
+        },
+        {
+          "sku_id": "SKU_015",
+          "name": "Nimbus Nuts 140g",
+          "brand": "Nimbus",
+          "category": "nuts",
+          "price": 25.0,
+          "slot_id": "B2S4P2"
+        },
+        {
+          "sku_id": "SKU_014",
+          "name": "Zapp Biscuits 130g",
+          "brand": "Zapp",
+          "category": "biscuits",
+          "price": 55.0,
+          "slot_id": "B2S4P1"
+        },
+        {
+          "sku_id": "SKU_012",
+          "name": "Orchid Cola 110g",
+          "brand": "Orchid",
+          "category": "cola",
+          "price": 45.0,
+          "slot_id": "B2S2P2"
+        },
+        {
+          "sku_id": "SKU_009",
+          "name": "Crunch Chips 130g",
+          "brand": "Crunch",
+          "category": "chips",
+          "price": 30.0,
+          "slot_id": "B2S1P1"
+        },
+        {
+          "sku_id": "SKU_011",
+          "name": "Nimbus Cola 100g",
+          "brand": "Nimbus",
+          "category": "cola",
+          "price": 40.0,
+          "slot_id": "B2S2P1"
+        }
+      ],
+      "stations_visited": [
+        "B1",
+        "B2",
+        "B3"
+      ],
+      "end_reason": "checkout",
+      "end_note": null,
+      "n_turns": 23,
+      "n_rejections": 0
+    },
+    {
+      "shopper_index": 19,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "look",
+          "target": "B1S1P1",
+          "reason": "On promotion and I came for chips; checking the pack.",
+          "time_left_s": 147.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "look",
+          "target": "B1S1P1",
+          "reason": "That chip promo catches my eye; want to check the pack and price.",
+          "time_left_s": 144.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S1P1",
+          "reason": "On promotion and I need chips, want to check the pack.",
+          "time_left_s": 138.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S1P1",
+          "reason": "Crunch chips are on promotion and I came for chips; adding them.",
+          "time_left_s": 134.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S4P2",
+          "reason": "Checking these nuts against the cheaper Orchid ones; pack size and price seem different.",
+          "time_left_s": 128.0
+        },
+        {
+          "turn": 6,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S4P2",
+          "reason": "Nuts are on my list and this Nimbus pack is already in my hands.",
+          "time_left_s": 124.0
+        },
+        {
+          "turn": 7,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S3P1",
+          "reason": "Eye-level biscuits with good facings, want to check the pack and compare.",
+          "time_left_s": 118.0
+        },
+        {
+          "turn": 8,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S3P1",
+          "reason": "Already holding these eye-level biscuits; they look worth trying.",
+          "time_left_s": 114.0
+        },
+        {
+          "turn": 9,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S2P1",
+          "reason": "Need a cola, this one looks decent and cheaper by weight.",
+          "time_left_s": 108.0
+        },
+        {
+          "turn": 10,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S2P1",
+          "reason": "I already have the other categories; this cola is right here and fits what I came for.",
+          "time_left_s": 104.0
+        },
+        {
+          "turn": 11,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S5P1",
+          "reason": "Cheap nuts on bottom shelf, want to compare with the Nimbus nuts I already have.",
+          "time_left_s": 98.0
+        },
+        {
+          "turn": 12,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S5P1",
+          "reason": "Orchid nuts are bigger and cheaper than the Nimbus ones, worth trying.",
+          "time_left_s": 94.0
+        },
+        {
+          "turn": 13,
+          "station_id": "B1",
+          "action": "next_station",
+          "target": null,
+          "reason": "I've compared this bay enough; moving along to see what else catches my eye.",
+          "time_left_s": 86.0
+        },
+        {
+          "turn": 14,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S1P2",
+          "reason": "Zapp chips are on promotion; want to check the pack and compare size.",
+          "time_left_s": 80.0
+        },
+        {
+          "turn": 15,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S1P2",
+          "reason": "Promo chips, bigger pack, good price; I'll take it.",
+          "time_left_s": 76.0
+        },
+        {
+          "turn": 16,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S4P2",
+          "reason": "Bigger nut pack at a low price catches my eye; want to compare it.",
+          "time_left_s": 70.0
+        },
+        {
+          "turn": 17,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S4P2",
+          "reason": "Good price for a bigger nut pack and I'm already holding it.",
+          "time_left_s": 66.0
+        },
+        {
+          "turn": 18,
+          "station_id": "B2",
+          "action": "next_station",
+          "target": null,
+          "reason": "I've seen this bay enough; let's see what the next one has.",
+          "time_left_s": 58.0
+        },
+        {
+          "turn": 19,
+          "station_id": "B3",
+          "action": "add_to_cart",
+          "target": "B3S4P1",
+          "reason": "Zapp biscuits are a new pack and only 25, adding to try.",
+          "time_left_s": 54.0
+        },
+        {
+          "turn": 20,
+          "station_id": "B3",
+          "action": "checkout",
+          "target": null,
+          "reason": "I've got all I need from this aisle; time to check out.",
+          "time_left_s": 49.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_001",
+        "SKU_007",
+        "SKU_005",
+        "SKU_003",
+        "SKU_008",
+        "SKU_010",
+        "SKU_015",
+        "SKU_022"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_001",
+          "name": "Crunch Chips 100g",
+          "brand": "Crunch",
+          "category": "chips",
+          "price": 25.0,
+          "slot_id": "B1S1P1"
+        },
+        {
+          "sku_id": "SKU_007",
+          "name": "Nimbus Nuts 110g",
+          "brand": "Nimbus",
+          "category": "nuts",
+          "price": 55.0,
+          "slot_id": "B1S4P2"
+        },
+        {
+          "sku_id": "SKU_005",
+          "name": "Crunch Biscuits 140g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 45.0,
+          "slot_id": "B1S3P1"
+        },
+        {
+          "sku_id": "SKU_003",
+          "name": "Nimbus Cola 120g",
+          "brand": "Nimbus",
+          "category": "cola",
+          "price": 35.0,
+          "slot_id": "B1S2P1"
+        },
+        {
+          "sku_id": "SKU_008",
+          "name": "Orchid Nuts 120g",
+          "brand": "Orchid",
+          "category": "nuts",
+          "price": 25.0,
+          "slot_id": "B1S5P1"
+        },
+        {
+          "sku_id": "SKU_010",
+          "name": "Zapp Chips 140g",
+          "brand": "Zapp",
+          "category": "chips",
+          "price": 35.0,
+          "slot_id": "B2S1P2"
+        },
+        {
+          "sku_id": "SKU_015",
+          "name": "Nimbus Nuts 140g",
+          "brand": "Nimbus",
+          "category": "nuts",
+          "price": 25.0,
+          "slot_id": "B2S4P2"
+        },
+        {
+          "sku_id": "SKU_022",
+          "name": "Zapp Biscuits 110g",
+          "brand": "Zapp",
+          "category": "biscuits",
+          "price": 25.0,
+          "slot_id": "B3S4P1"
+        }
+      ],
+      "stations_visited": [
+        "B1",
+        "B2",
+        "B3"
+      ],
+      "end_reason": "checkout",
+      "end_note": null,
+      "n_turns": 20,
+      "n_rejections": 0
+    }
+  ],
+  "n_turns": 435,
+  "n_rejections": 1,
+  "end_reasons": {
+    "checkout": 20
+  },
+  "carts": {
+    "SKU_001": 20,
+    "SKU_005": 20,
+    "SKU_003": 20,
+    "SKU_008": 18,
+    "SKU_007": 15,
+    "SKU_010": 20,
+    "SKU_015": 16,
+    "SKU_022": 9,
+    "SKU_019": 13,
+    "SKU_016": 1,
+    "SKU_012": 5,
+    "SKU_014": 8,
+    "SKU_006": 3,
+    "SKU_009": 2,
+    "SKU_011": 2,
+    "SKU_020": 5,
+    "SKU_002": 6,
+    "SKU_023": 3,
+    "SKU_004": 3,
+    "SKU_024": 1
+  }
+}

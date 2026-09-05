@@ -1,0 +1,3262 @@
+{
+  "trace_version": 1,
+  "persona_id": "loyalist",
+  "archetype": "loyalist",
+  "description": "Strong affinity to one brand, ignores competitors, low price sensitivity.",
+  "planogram_id": "demo_aisle",
+  "n_shoppers": 20,
+  "seed": 42,
+  "temperature": 0.7,
+  "model": "deepseek-v4-pro:cloud",
+  "time_budget_s": 70.0,
+  "max_turns": 24,
+  "max_reasks": 3,
+  "generated_by": "sim/slow_agent.py",
+  "shoppers": [
+    {
+      "shopper_index": 0,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S3P1",
+          "reason": "I want Crunch biscuits; that's my brand.",
+          "time_left_s": 64.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S3P1",
+          "reason": "Crunch biscuits are exactly what I came for; into the cart.",
+          "time_left_s": 60.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "next_station",
+          "target": null,
+          "reason": "Looking for Crunch nuts; these other brands don't interest me.",
+          "time_left_s": 52.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S3P1",
+          "reason": "Crunch Biscuits are right here; I want them.",
+          "time_left_s": 46.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S3P1",
+          "reason": "Crunch is my brand; adding the biscuits I'm holding.",
+          "time_left_s": 42.0
+        },
+        {
+          "turn": 6,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S3P1",
+          "reason": "Crunch biscuits are my go-to; grabbing another box.",
+          "time_left_s": 36.0
+        },
+        {
+          "turn": 7,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S3P1",
+          "reason": "Crunch biscuits are my brand; adding them to cart.",
+          "time_left_s": 32.0
+        },
+        {
+          "turn": 8,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S3P1",
+          "reason": "I always grab Crunch biscuits when I see them; stocking up.",
+          "time_left_s": 26.0
+        },
+        {
+          "turn": 9,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S3P1",
+          "reason": "Crunch biscuits are what I came for; put this one in the cart.",
+          "time_left_s": 22.0
+        },
+        {
+          "turn": 10,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S3P1",
+          "reason": "I always grab Crunch biscuits when I see them.",
+          "time_left_s": 16.0
+        },
+        {
+          "turn": 11,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S3P1",
+          "reason": "Crunch is my brand, and I want plenty of biscuits.",
+          "time_left_s": 12.0
+        },
+        {
+          "turn": 12,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S3P1",
+          "reason": "Crunch biscuits are my brand; grabbing another box.",
+          "time_left_s": 8.0
+        },
+        {
+          "turn": 13,
+          "station_id": "B2",
+          "action": "next_station",
+          "target": null,
+          "reason": "No Crunch nuts here; I'll check the next bay.",
+          "time_left_s": 0.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_005",
+        "SKU_013",
+        "SKU_013",
+        "SKU_013",
+        "SKU_013",
+        "SKU_013"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_005",
+          "name": "Crunch Biscuits 140g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 45.0,
+          "slot_id": "B1S3P1"
+        },
+        {
+          "sku_id": "SKU_013",
+          "name": "Crunch Biscuits 120g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 50.0,
+          "slot_id": "B2S3P1"
+        },
+        {
+          "sku_id": "SKU_013",
+          "name": "Crunch Biscuits 120g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 50.0,
+          "slot_id": "B2S3P1"
+        },
+        {
+          "sku_id": "SKU_013",
+          "name": "Crunch Biscuits 120g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 50.0,
+          "slot_id": "B2S3P1"
+        },
+        {
+          "sku_id": "SKU_013",
+          "name": "Crunch Biscuits 120g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 50.0,
+          "slot_id": "B2S3P1"
+        },
+        {
+          "sku_id": "SKU_013",
+          "name": "Crunch Biscuits 120g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 50.0,
+          "slot_id": "B2S3P1"
+        }
+      ],
+      "stations_visited": [
+        "B1",
+        "B2",
+        "B3"
+      ],
+      "end_reason": "out_of_time",
+      "end_note": null,
+      "n_turns": 13,
+      "n_rejections": 0
+    },
+    {
+      "shopper_index": 1,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S3P1",
+          "reason": "I came for Crunch biscuits; that's my brand.",
+          "time_left_s": 64.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S3P1",
+          "reason": "Crunch biscuits are my brand; putting them in my basket.",
+          "time_left_s": 60.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "next_station",
+          "target": null,
+          "reason": "I need Crunch nuts; no Crunch nuts here, so I'll check the next bay.",
+          "time_left_s": 52.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S3P1",
+          "reason": "I want more Crunch biscuits; this one is right at eye level.",
+          "time_left_s": 46.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S3P1",
+          "reason": "Crunch is my brand; I want these biscuits too.",
+          "time_left_s": 42.0
+        },
+        {
+          "turn": 6,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S3P1",
+          "reason": "Grabbing another Crunch Biscuits, my favorite brand.",
+          "time_left_s": 36.0
+        },
+        {
+          "turn": 7,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S3P1",
+          "reason": "Crunch biscuits are my brand; putting this in the cart.",
+          "time_left_s": 32.0
+        },
+        {
+          "turn": 8,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S3P1",
+          "reason": "Crunch biscuits are my brand; grabbing another box while I'm here.",
+          "time_left_s": 26.0
+        },
+        {
+          "turn": 9,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S3P1",
+          "reason": "Crunch is my brand; I'll take another pack of biscuits.",
+          "time_left_s": 22.0
+        },
+        {
+          "turn": 10,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S3P1",
+          "reason": "Crunch biscuits are my brand; grabbing another pack.",
+          "time_left_s": 16.0
+        },
+        {
+          "turn": 11,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S3P1",
+          "reason": "Crunch biscuits are my brand; putting this one in the cart.",
+          "time_left_s": 12.0
+        },
+        {
+          "turn": 12,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S3P1",
+          "reason": "Crunch biscuits are my brand; grabbing another pack.",
+          "time_left_s": 6.0
+        },
+        {
+          "turn": 13,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S3P1",
+          "reason": "Crunch biscuits are my brand; adding another box.",
+          "time_left_s": 2.0
+        },
+        {
+          "turn": 14,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S3P1",
+          "reason": "Crunch biscuits are my brand; grabbing another box.",
+          "time_left_s": 0.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_005",
+        "SKU_013",
+        "SKU_013",
+        "SKU_013",
+        "SKU_013",
+        "SKU_013"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_005",
+          "name": "Crunch Biscuits 140g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 45.0,
+          "slot_id": "B1S3P1"
+        },
+        {
+          "sku_id": "SKU_013",
+          "name": "Crunch Biscuits 120g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 50.0,
+          "slot_id": "B2S3P1"
+        },
+        {
+          "sku_id": "SKU_013",
+          "name": "Crunch Biscuits 120g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 50.0,
+          "slot_id": "B2S3P1"
+        },
+        {
+          "sku_id": "SKU_013",
+          "name": "Crunch Biscuits 120g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 50.0,
+          "slot_id": "B2S3P1"
+        },
+        {
+          "sku_id": "SKU_013",
+          "name": "Crunch Biscuits 120g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 50.0,
+          "slot_id": "B2S3P1"
+        },
+        {
+          "sku_id": "SKU_013",
+          "name": "Crunch Biscuits 120g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 50.0,
+          "slot_id": "B2S3P1"
+        }
+      ],
+      "stations_visited": [
+        "B1",
+        "B2"
+      ],
+      "end_reason": "out_of_time",
+      "end_note": null,
+      "n_turns": 14,
+      "n_rejections": 0
+    },
+    {
+      "shopper_index": 2,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S3P1",
+          "reason": "I want Crunch Biscuits, my usual brand.",
+          "time_left_s": 64.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S3P1",
+          "reason": "Crunch biscuits are exactly what I came for; putting them in my basket.",
+          "time_left_s": 60.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "next_station",
+          "target": null,
+          "reason": "Already have Crunch biscuits; no Crunch nuts here, so moving on.",
+          "time_left_s": 52.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S3P1",
+          "reason": "I see Crunch Biscuits; grabbing them.",
+          "time_left_s": 46.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S3P1",
+          "reason": "Crunch biscuits are my brand; this size goes in the cart.",
+          "time_left_s": 42.0
+        },
+        {
+          "turn": 6,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S3P1",
+          "reason": "I want more Crunch Biscuits; that's my brand.",
+          "time_left_s": 36.0
+        },
+        {
+          "turn": 7,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S3P1",
+          "reason": "Crunch biscuits are my brand; adding them.",
+          "time_left_s": 32.0
+        },
+        {
+          "turn": 8,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S3P1",
+          "reason": "Grabbing more Crunch biscuits, my favorite.",
+          "time_left_s": 26.0
+        },
+        {
+          "turn": 9,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S3P1",
+          "reason": "Adding Crunch Biscuits to cart, my brand.",
+          "time_left_s": 22.0
+        },
+        {
+          "turn": 10,
+          "station_id": "B2",
+          "action": "next_station",
+          "target": null,
+          "reason": "Need Crunch nuts; these other brands don't interest me.",
+          "time_left_s": 14.0
+        },
+        {
+          "turn": 11,
+          "station_id": "B3",
+          "action": "pickup",
+          "target": "B3S3P1",
+          "reason": "Crunch biscuits are my brand; grabbing another pack.",
+          "time_left_s": 8.0
+        },
+        {
+          "turn": 12,
+          "station_id": "B3",
+          "action": "add_to_cart",
+          "target": "B3S3P1",
+          "reason": "Crunch biscuits are my brand; adding this pack.",
+          "time_left_s": 4.0
+        },
+        {
+          "turn": 13,
+          "station_id": "B3",
+          "action": "pickup",
+          "target": "B3S3P1",
+          "reason": "Crunch biscuits are right here; I want another box.",
+          "time_left_s": 0.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_005",
+        "SKU_013",
+        "SKU_013",
+        "SKU_013",
+        "SKU_021"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_005",
+          "name": "Crunch Biscuits 140g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 45.0,
+          "slot_id": "B1S3P1"
+        },
+        {
+          "sku_id": "SKU_013",
+          "name": "Crunch Biscuits 120g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 50.0,
+          "slot_id": "B2S3P1"
+        },
+        {
+          "sku_id": "SKU_013",
+          "name": "Crunch Biscuits 120g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 50.0,
+          "slot_id": "B2S3P1"
+        },
+        {
+          "sku_id": "SKU_013",
+          "name": "Crunch Biscuits 120g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 50.0,
+          "slot_id": "B2S3P1"
+        },
+        {
+          "sku_id": "SKU_021",
+          "name": "Crunch Biscuits 100g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 55.0,
+          "slot_id": "B3S3P1"
+        }
+      ],
+      "stations_visited": [
+        "B1",
+        "B2",
+        "B3"
+      ],
+      "end_reason": "out_of_time",
+      "end_note": null,
+      "n_turns": 13,
+      "n_rejections": 0
+    },
+    {
+      "shopper_index": 3,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S3P1",
+          "reason": "Need Crunch biscuits, my brand.",
+          "time_left_s": 64.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S3P1",
+          "reason": "Crunch Biscuits are my brand; putting them in the cart.",
+          "time_left_s": 60.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "next_station",
+          "target": null,
+          "reason": "Need Crunch nuts; no Crunch nuts here, moving on.",
+          "time_left_s": 52.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S3P1",
+          "reason": "Crunch Biscuits are right here; I want them.",
+          "time_left_s": 46.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S3P1",
+          "reason": "Crunch biscuits are my brand; putting them in the cart.",
+          "time_left_s": 42.0
+        },
+        {
+          "turn": 6,
+          "station_id": "B2",
+          "action": "next_station",
+          "target": null,
+          "reason": "Need Crunch nuts; only competitor nuts here, moving on.",
+          "time_left_s": 34.0
+        },
+        {
+          "turn": 7,
+          "station_id": "B3",
+          "action": "pickup",
+          "target": "B3S3P1",
+          "reason": "Crunch biscuits are my brand; grabbing the 100g pack.",
+          "time_left_s": 28.0
+        },
+        {
+          "turn": 8,
+          "station_id": "B3",
+          "action": "add_to_cart",
+          "target": "B3S3P1",
+          "reason": "Crunch biscuits are my brand; grabbing another box while it's right here.",
+          "time_left_s": 24.0
+        },
+        {
+          "turn": 9,
+          "station_id": "B3",
+          "action": "pickup",
+          "target": "B3S3P1",
+          "reason": "Grabbing another Crunch biscuit; can never have too many.",
+          "time_left_s": 18.0
+        },
+        {
+          "turn": 10,
+          "station_id": "B3",
+          "action": "add_to_cart",
+          "target": "B3S3P1",
+          "reason": "Putting the Crunch Biscuits in my basket.",
+          "time_left_s": 14.0
+        },
+        {
+          "turn": 11,
+          "station_id": "B3",
+          "action": "checkout",
+          "target": null,
+          "reason": "Got my Crunch biscuits; no Crunch nuts here, so I'm done.",
+          "time_left_s": 9.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_005",
+        "SKU_013",
+        "SKU_021",
+        "SKU_021"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_005",
+          "name": "Crunch Biscuits 140g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 45.0,
+          "slot_id": "B1S3P1"
+        },
+        {
+          "sku_id": "SKU_013",
+          "name": "Crunch Biscuits 120g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 50.0,
+          "slot_id": "B2S3P1"
+        },
+        {
+          "sku_id": "SKU_021",
+          "name": "Crunch Biscuits 100g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 55.0,
+          "slot_id": "B3S3P1"
+        },
+        {
+          "sku_id": "SKU_021",
+          "name": "Crunch Biscuits 100g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 55.0,
+          "slot_id": "B3S3P1"
+        }
+      ],
+      "stations_visited": [
+        "B1",
+        "B2",
+        "B3"
+      ],
+      "end_reason": "checkout",
+      "end_note": null,
+      "n_turns": 11,
+      "n_rejections": 0
+    },
+    {
+      "shopper_index": 4,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S3P1",
+          "reason": "I want Crunch biscuits, my brand.",
+          "time_left_s": 64.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S3P1",
+          "reason": "Crunch biscuits are my brand; putting them in the cart.",
+          "time_left_s": 60.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "next_station",
+          "target": null,
+          "reason": "Got my Crunch biscuits; now I need Crunch nuts, so moving along.",
+          "time_left_s": 52.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S3P1",
+          "reason": "I want Crunch biscuits; this is my brand.",
+          "time_left_s": 46.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S3P1",
+          "reason": "I want more Crunch biscuits; this one goes in the cart.",
+          "time_left_s": 42.0
+        },
+        {
+          "turn": 6,
+          "station_id": "B2",
+          "action": "next_station",
+          "target": null,
+          "reason": "No Crunch nuts here; I'll keep looking for them.",
+          "time_left_s": 34.0
+        },
+        {
+          "turn": 7,
+          "station_id": "B3",
+          "action": "pickup",
+          "target": "B3S3P1",
+          "reason": "Crunch biscuits are my brand; grabbing the 100g pack.",
+          "time_left_s": 28.0
+        },
+        {
+          "turn": 8,
+          "station_id": "B3",
+          "action": "add_to_cart",
+          "target": "B3S3P1",
+          "reason": "Crunch is my brand; adding this pack.",
+          "time_left_s": 24.0
+        },
+        {
+          "turn": 9,
+          "station_id": "B3",
+          "action": "checkout",
+          "target": null,
+          "reason": "Got my Crunch biscuits; no Crunch nuts here, so I'm done.",
+          "time_left_s": 19.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_005",
+        "SKU_013",
+        "SKU_021"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_005",
+          "name": "Crunch Biscuits 140g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 45.0,
+          "slot_id": "B1S3P1"
+        },
+        {
+          "sku_id": "SKU_013",
+          "name": "Crunch Biscuits 120g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 50.0,
+          "slot_id": "B2S3P1"
+        },
+        {
+          "sku_id": "SKU_021",
+          "name": "Crunch Biscuits 100g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 55.0,
+          "slot_id": "B3S3P1"
+        }
+      ],
+      "stations_visited": [
+        "B1",
+        "B2",
+        "B3"
+      ],
+      "end_reason": "checkout",
+      "end_note": null,
+      "n_turns": 9,
+      "n_rejections": 0
+    },
+    {
+      "shopper_index": 5,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S3P1",
+          "reason": "I always get Crunch Biscuits; that's the one I came for.",
+          "time_left_s": 64.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S3P1",
+          "reason": "Crunch biscuits are what I came for; putting them in my basket.",
+          "time_left_s": 60.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "next_station",
+          "target": null,
+          "reason": "Need Crunch nuts; no Crunch nuts here, moving on.",
+          "time_left_s": 52.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S3P1",
+          "reason": "Crunch biscuits are my brand; grabbing the eye-level pack.",
+          "time_left_s": 46.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S3P1",
+          "reason": "Crunch biscuits, exactly what I came for.",
+          "time_left_s": 42.0
+        },
+        {
+          "turn": 6,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S3P1",
+          "reason": "I always grab Crunch biscuits when I see them.",
+          "time_left_s": 38.0
+        },
+        {
+          "turn": 7,
+          "station_id": "B2",
+          "action": "next_station",
+          "target": null,
+          "reason": "No Crunch nuts here; moving on to find them.",
+          "time_left_s": 30.0
+        },
+        {
+          "turn": 8,
+          "station_id": "B3",
+          "action": "pickup",
+          "target": "B3S3P1",
+          "reason": "Crunch biscuits are right here; grabbing another size for the cart.",
+          "time_left_s": 24.0
+        },
+        {
+          "turn": 9,
+          "station_id": "B3",
+          "action": "add_to_cart",
+          "target": "B3S3P1",
+          "reason": "Crunch biscuits are my brand; this one goes in the cart too.",
+          "time_left_s": 20.0
+        },
+        {
+          "turn": 10,
+          "station_id": "B3",
+          "action": "pickup",
+          "target": "B3S3P1",
+          "reason": "Grabbing another Crunch biscuit; can't have too many.",
+          "time_left_s": 14.0
+        },
+        {
+          "turn": 11,
+          "station_id": "B3",
+          "action": "add_to_cart",
+          "target": "B3S3P1",
+          "reason": "Crunch is my brand; these biscuits go straight in.",
+          "time_left_s": 10.0
+        },
+        {
+          "turn": 12,
+          "station_id": "B3",
+          "action": "pickup",
+          "target": "B3S3P1",
+          "reason": "I want more Crunch biscuits; this is my brand.",
+          "time_left_s": 4.0
+        },
+        {
+          "turn": 13,
+          "station_id": "B3",
+          "action": "add_to_cart",
+          "target": "B3S3P1",
+          "reason": "Crunch biscuits are right here; adding another box.",
+          "time_left_s": 0.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_005",
+        "SKU_013",
+        "SKU_013",
+        "SKU_021",
+        "SKU_021",
+        "SKU_021"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_005",
+          "name": "Crunch Biscuits 140g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 45.0,
+          "slot_id": "B1S3P1"
+        },
+        {
+          "sku_id": "SKU_013",
+          "name": "Crunch Biscuits 120g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 50.0,
+          "slot_id": "B2S3P1"
+        },
+        {
+          "sku_id": "SKU_013",
+          "name": "Crunch Biscuits 120g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 50.0,
+          "slot_id": "B2S3P1"
+        },
+        {
+          "sku_id": "SKU_021",
+          "name": "Crunch Biscuits 100g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 55.0,
+          "slot_id": "B3S3P1"
+        },
+        {
+          "sku_id": "SKU_021",
+          "name": "Crunch Biscuits 100g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 55.0,
+          "slot_id": "B3S3P1"
+        },
+        {
+          "sku_id": "SKU_021",
+          "name": "Crunch Biscuits 100g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 55.0,
+          "slot_id": "B3S3P1"
+        }
+      ],
+      "stations_visited": [
+        "B1",
+        "B2",
+        "B3"
+      ],
+      "end_reason": "out_of_time",
+      "end_note": null,
+      "n_turns": 13,
+      "n_rejections": 0
+    },
+    {
+      "shopper_index": 6,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S3P1",
+          "reason": "I want Crunch biscuits; that's my brand.",
+          "time_left_s": 64.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S3P1",
+          "reason": "Crunch biscuits are my brand; into the cart.",
+          "time_left_s": 60.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "next_station",
+          "target": null,
+          "reason": "Already have Crunch biscuits; I need Crunch nuts, so I'll check the next bay.",
+          "time_left_s": 52.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S3P1",
+          "reason": "I want more Crunch biscuits; this is my brand.",
+          "time_left_s": 46.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S3P1",
+          "reason": "Crunch biscuits are my brand; adding these.",
+          "time_left_s": 42.0
+        },
+        {
+          "turn": 6,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S3P1",
+          "reason": "Crunch is my brand; grabbing another box of their biscuits.",
+          "time_left_s": 36.0
+        },
+        {
+          "turn": 7,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S3P1",
+          "reason": "Crunch biscuits are my brand; putting them in my cart.",
+          "time_left_s": 32.0
+        },
+        {
+          "turn": 8,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S3P1",
+          "reason": "Crunch biscuits are my brand; I'll take another.",
+          "time_left_s": 26.0
+        },
+        {
+          "turn": 9,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S3P1",
+          "reason": "I want more Crunch biscuits; this one goes in too.",
+          "time_left_s": 22.0
+        },
+        {
+          "turn": 10,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S3P1",
+          "reason": "I always grab Crunch Biscuits when I see them.",
+          "time_left_s": 16.0
+        },
+        {
+          "turn": 11,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S3P1",
+          "reason": "Crunch biscuits are my brand; adding another box.",
+          "time_left_s": 12.0
+        },
+        {
+          "turn": 12,
+          "station_id": "B2",
+          "action": "next_station",
+          "target": null,
+          "reason": "I need Crunch nuts; no Crunch nuts here, so moving on.",
+          "time_left_s": 4.0
+        },
+        {
+          "turn": 13,
+          "station_id": "B3",
+          "action": "pickup",
+          "target": "B3S3P1",
+          "reason": "Crunch biscuits are my brand; grabbing this size too.",
+          "time_left_s": 0.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_005",
+        "SKU_013",
+        "SKU_013",
+        "SKU_013",
+        "SKU_013"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_005",
+          "name": "Crunch Biscuits 140g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 45.0,
+          "slot_id": "B1S3P1"
+        },
+        {
+          "sku_id": "SKU_013",
+          "name": "Crunch Biscuits 120g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 50.0,
+          "slot_id": "B2S3P1"
+        },
+        {
+          "sku_id": "SKU_013",
+          "name": "Crunch Biscuits 120g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 50.0,
+          "slot_id": "B2S3P1"
+        },
+        {
+          "sku_id": "SKU_013",
+          "name": "Crunch Biscuits 120g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 50.0,
+          "slot_id": "B2S3P1"
+        },
+        {
+          "sku_id": "SKU_013",
+          "name": "Crunch Biscuits 120g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 50.0,
+          "slot_id": "B2S3P1"
+        }
+      ],
+      "stations_visited": [
+        "B1",
+        "B2",
+        "B3"
+      ],
+      "end_reason": "out_of_time",
+      "end_note": null,
+      "n_turns": 13,
+      "n_rejections": 0
+    },
+    {
+      "shopper_index": 7,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S3P1",
+          "reason": "Crunch Biscuits are right here; that's my brand.",
+          "time_left_s": 64.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S3P1",
+          "reason": "Crunch biscuits are exactly what I came for; put them in my basket.",
+          "time_left_s": 60.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "next_station",
+          "target": null,
+          "reason": "I have my Crunch biscuits; now I want Crunch nuts, so I'll keep moving.",
+          "time_left_s": 52.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S3P1",
+          "reason": "Crunch Biscuits are right at eye level; I want them.",
+          "time_left_s": 46.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S3P1",
+          "reason": "Crunch biscuits are my brand; adding them.",
+          "time_left_s": 42.0
+        },
+        {
+          "turn": 6,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S3P1",
+          "reason": "Another box of Crunch biscuits\u2014I always stock up on my brand.",
+          "time_left_s": 36.0
+        },
+        {
+          "turn": 7,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S3P1",
+          "reason": "Putting the Crunch biscuits in my cart; it's the only brand I want.",
+          "time_left_s": 32.0
+        },
+        {
+          "turn": 8,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S3P1",
+          "reason": "I want more Crunch biscuits; this is my brand.",
+          "time_left_s": 26.0
+        },
+        {
+          "turn": 9,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S3P1",
+          "reason": "Crunch biscuits are my brand; adding another.",
+          "time_left_s": 22.0
+        },
+        {
+          "turn": 10,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S3P1",
+          "reason": "Crunch biscuits are my brand; grabbing another pack.",
+          "time_left_s": 16.0
+        },
+        {
+          "turn": 11,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S3P1",
+          "reason": "Crunch biscuits are my brand; putting this one in the cart.",
+          "time_left_s": 12.0
+        },
+        {
+          "turn": 12,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S3P1",
+          "reason": "Crunch is my brand; grabbing another pack of biscuits.",
+          "time_left_s": 8.0
+        },
+        {
+          "turn": 13,
+          "station_id": "B2",
+          "action": "next_station",
+          "target": null,
+          "reason": "Looking for Crunch nuts; other brands don't register.",
+          "time_left_s": 0.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_005",
+        "SKU_013",
+        "SKU_013",
+        "SKU_013",
+        "SKU_013",
+        "SKU_013"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_005",
+          "name": "Crunch Biscuits 140g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 45.0,
+          "slot_id": "B1S3P1"
+        },
+        {
+          "sku_id": "SKU_013",
+          "name": "Crunch Biscuits 120g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 50.0,
+          "slot_id": "B2S3P1"
+        },
+        {
+          "sku_id": "SKU_013",
+          "name": "Crunch Biscuits 120g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 50.0,
+          "slot_id": "B2S3P1"
+        },
+        {
+          "sku_id": "SKU_013",
+          "name": "Crunch Biscuits 120g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 50.0,
+          "slot_id": "B2S3P1"
+        },
+        {
+          "sku_id": "SKU_013",
+          "name": "Crunch Biscuits 120g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 50.0,
+          "slot_id": "B2S3P1"
+        },
+        {
+          "sku_id": "SKU_013",
+          "name": "Crunch Biscuits 120g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 50.0,
+          "slot_id": "B2S3P1"
+        }
+      ],
+      "stations_visited": [
+        "B1",
+        "B2",
+        "B3"
+      ],
+      "end_reason": "out_of_time",
+      "end_note": null,
+      "n_turns": 13,
+      "n_rejections": 0
+    },
+    {
+      "shopper_index": 8,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S3P1",
+          "reason": "Crunch Biscuits are right here; that's the brand I came for.",
+          "time_left_s": 64.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S3P1",
+          "reason": "Crunch biscuits are my brand; putting them in my basket.",
+          "time_left_s": 60.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "next_station",
+          "target": null,
+          "reason": "I already have Crunch biscuits; I need Crunch nuts, so I'll check the next bay.",
+          "time_left_s": 52.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S3P1",
+          "reason": "Crunch biscuits are my brand; grabbing another pack.",
+          "time_left_s": 46.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S3P1",
+          "reason": "Crunch biscuits are my brand; putting them in the cart.",
+          "time_left_s": 42.0
+        },
+        {
+          "turn": 6,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S3P1",
+          "reason": "Crunch biscuits are my brand; grabbing another box.",
+          "time_left_s": 36.0
+        },
+        {
+          "turn": 7,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S3P1",
+          "reason": "Crunch biscuits are my brand; putting them in the cart.",
+          "time_left_s": 32.0
+        },
+        {
+          "turn": 8,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S3P1",
+          "reason": "I always stock up on Crunch biscuits; this is my brand.",
+          "time_left_s": 26.0
+        },
+        {
+          "turn": 9,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S3P1",
+          "reason": "Crunch biscuits are my brand; adding this one to the cart.",
+          "time_left_s": 22.0
+        },
+        {
+          "turn": 10,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S3P1",
+          "reason": "Grabbing Crunch biscuits, my brand.",
+          "time_left_s": 16.0
+        },
+        {
+          "turn": 11,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S3P1",
+          "reason": "Crunch biscuits are my brand; adding another box.",
+          "time_left_s": 12.0
+        },
+        {
+          "turn": 12,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S3P1",
+          "reason": "I always grab Crunch Biscuits when I see them.",
+          "time_left_s": 6.0
+        },
+        {
+          "turn": 13,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S3P1",
+          "reason": "Crunch biscuits are my brand; I'll take another box.",
+          "time_left_s": 2.0
+        },
+        {
+          "turn": 14,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S3P1",
+          "reason": "Crunch biscuits are right here, grabbing another box.",
+          "time_left_s": 0.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_005",
+        "SKU_013",
+        "SKU_013",
+        "SKU_013",
+        "SKU_013",
+        "SKU_013"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_005",
+          "name": "Crunch Biscuits 140g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 45.0,
+          "slot_id": "B1S3P1"
+        },
+        {
+          "sku_id": "SKU_013",
+          "name": "Crunch Biscuits 120g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 50.0,
+          "slot_id": "B2S3P1"
+        },
+        {
+          "sku_id": "SKU_013",
+          "name": "Crunch Biscuits 120g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 50.0,
+          "slot_id": "B2S3P1"
+        },
+        {
+          "sku_id": "SKU_013",
+          "name": "Crunch Biscuits 120g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 50.0,
+          "slot_id": "B2S3P1"
+        },
+        {
+          "sku_id": "SKU_013",
+          "name": "Crunch Biscuits 120g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 50.0,
+          "slot_id": "B2S3P1"
+        },
+        {
+          "sku_id": "SKU_013",
+          "name": "Crunch Biscuits 120g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 50.0,
+          "slot_id": "B2S3P1"
+        }
+      ],
+      "stations_visited": [
+        "B1",
+        "B2"
+      ],
+      "end_reason": "out_of_time",
+      "end_note": null,
+      "n_turns": 14,
+      "n_rejections": 0
+    },
+    {
+      "shopper_index": 9,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S3P1",
+          "reason": "I see Crunch Biscuits, my usual; grabbing them.",
+          "time_left_s": 64.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S3P1",
+          "reason": "Crunch biscuits are my brand; putting them in my basket.",
+          "time_left_s": 60.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "next_station",
+          "target": null,
+          "reason": "No Crunch nuts here; I'll check the next bay for them.",
+          "time_left_s": 52.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S3P1",
+          "reason": "Crunch biscuits are my brand; grabbing the 120g pack.",
+          "time_left_s": 46.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S3P1",
+          "reason": "Crunch biscuits are my brand; grabbing this pack too.",
+          "time_left_s": 42.0
+        },
+        {
+          "turn": 6,
+          "station_id": "B2",
+          "action": "next_station",
+          "target": null,
+          "reason": "Need Crunch nuts; other brands don't matter.",
+          "time_left_s": 34.0
+        },
+        {
+          "turn": 7,
+          "station_id": "B3",
+          "action": "pickup",
+          "target": "B3S3P1",
+          "reason": "Crunch Biscuits on the eye shelf; I want them.",
+          "time_left_s": 28.0
+        },
+        {
+          "turn": 8,
+          "station_id": "B3",
+          "action": "add_to_cart",
+          "target": "B3S3P1",
+          "reason": "Crunch biscuits are my brand; putting these in the cart.",
+          "time_left_s": 24.0
+        },
+        {
+          "turn": 9,
+          "station_id": "B3",
+          "action": "pickup",
+          "target": "B3S3P1",
+          "reason": "I always grab Crunch biscuits, especially at eye level.",
+          "time_left_s": 18.0
+        },
+        {
+          "turn": 10,
+          "station_id": "B3",
+          "action": "add_to_cart",
+          "target": "B3S3P1",
+          "reason": "Adding the Crunch biscuits in my hands to the cart.",
+          "time_left_s": 14.0
+        },
+        {
+          "turn": 11,
+          "station_id": "B3",
+          "action": "pickup",
+          "target": "B3S3P1",
+          "reason": "I see Crunch Biscuits; grabbing another box.",
+          "time_left_s": 8.0
+        },
+        {
+          "turn": 12,
+          "station_id": "B3",
+          "action": "add_to_cart",
+          "target": "B3S3P1",
+          "reason": "Putting the Crunch biscuits in my cart.",
+          "time_left_s": 4.0
+        },
+        {
+          "turn": 13,
+          "station_id": "B3",
+          "action": "pickup",
+          "target": "B3S3P1",
+          "reason": "I want more Crunch biscuits; this is my brand.",
+          "time_left_s": 0.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_005",
+        "SKU_013",
+        "SKU_021",
+        "SKU_021",
+        "SKU_021"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_005",
+          "name": "Crunch Biscuits 140g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 45.0,
+          "slot_id": "B1S3P1"
+        },
+        {
+          "sku_id": "SKU_013",
+          "name": "Crunch Biscuits 120g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 50.0,
+          "slot_id": "B2S3P1"
+        },
+        {
+          "sku_id": "SKU_021",
+          "name": "Crunch Biscuits 100g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 55.0,
+          "slot_id": "B3S3P1"
+        },
+        {
+          "sku_id": "SKU_021",
+          "name": "Crunch Biscuits 100g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 55.0,
+          "slot_id": "B3S3P1"
+        },
+        {
+          "sku_id": "SKU_021",
+          "name": "Crunch Biscuits 100g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 55.0,
+          "slot_id": "B3S3P1"
+        }
+      ],
+      "stations_visited": [
+        "B1",
+        "B2",
+        "B3"
+      ],
+      "end_reason": "out_of_time",
+      "end_note": null,
+      "n_turns": 13,
+      "n_rejections": 0
+    },
+    {
+      "shopper_index": 10,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S3P1",
+          "reason": "I came for biscuits and Crunch is my brand.",
+          "time_left_s": 64.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S3P1",
+          "reason": "Got my Crunch biscuits; adding them to the cart.",
+          "time_left_s": 60.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "next_station",
+          "target": null,
+          "reason": "Got my Crunch biscuits; need Crunch nuts, moving on.",
+          "time_left_s": 52.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S3P1",
+          "reason": "Crunch biscuits are my brand; grabbing them.",
+          "time_left_s": 46.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S3P1",
+          "reason": "Crunch biscuits are my brand; put this one in the cart.",
+          "time_left_s": 42.0
+        },
+        {
+          "turn": 6,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S3P1",
+          "reason": "I see Crunch biscuits, grabbing them.",
+          "time_left_s": 36.0
+        },
+        {
+          "turn": 7,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S3P1",
+          "reason": "Adding Crunch biscuits to cart, my brand.",
+          "time_left_s": 32.0
+        },
+        {
+          "turn": 8,
+          "station_id": "B2",
+          "action": "next_station",
+          "target": null,
+          "reason": "Need Crunch nuts; these other brands don't interest me.",
+          "time_left_s": 24.0
+        },
+        {
+          "turn": 9,
+          "station_id": "B3",
+          "action": "pickup",
+          "target": "B3S3P1",
+          "reason": "Crunch biscuits are my brand; grabbing the 100g pack.",
+          "time_left_s": 18.0
+        },
+        {
+          "turn": 10,
+          "station_id": "B3",
+          "action": "add_to_cart",
+          "target": "B3S3P1",
+          "reason": "Crunch biscuits are my brand; adding these.",
+          "time_left_s": 14.0
+        },
+        {
+          "turn": 11,
+          "station_id": "B3",
+          "action": "add_to_cart",
+          "target": "B3S3P1",
+          "reason": "Crunch is my brand; grabbing another pack of biscuits.",
+          "time_left_s": 10.0
+        },
+        {
+          "turn": 12,
+          "station_id": "B3",
+          "action": "pickup",
+          "target": "B3S3P1",
+          "reason": "Crunch Biscuits are right here; I want another box.",
+          "time_left_s": 4.0
+        },
+        {
+          "turn": 13,
+          "station_id": "B3",
+          "action": "add_to_cart",
+          "target": "B3S3P1",
+          "reason": "Crunch biscuits are my brand; put this one in the cart.",
+          "time_left_s": 0.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_005",
+        "SKU_013",
+        "SKU_013",
+        "SKU_021",
+        "SKU_021",
+        "SKU_021"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_005",
+          "name": "Crunch Biscuits 140g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 45.0,
+          "slot_id": "B1S3P1"
+        },
+        {
+          "sku_id": "SKU_013",
+          "name": "Crunch Biscuits 120g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 50.0,
+          "slot_id": "B2S3P1"
+        },
+        {
+          "sku_id": "SKU_013",
+          "name": "Crunch Biscuits 120g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 50.0,
+          "slot_id": "B2S3P1"
+        },
+        {
+          "sku_id": "SKU_021",
+          "name": "Crunch Biscuits 100g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 55.0,
+          "slot_id": "B3S3P1"
+        },
+        {
+          "sku_id": "SKU_021",
+          "name": "Crunch Biscuits 100g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 55.0,
+          "slot_id": "B3S3P1"
+        },
+        {
+          "sku_id": "SKU_021",
+          "name": "Crunch Biscuits 100g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 55.0,
+          "slot_id": "B3S3P1"
+        }
+      ],
+      "stations_visited": [
+        "B1",
+        "B2",
+        "B3"
+      ],
+      "end_reason": "out_of_time",
+      "end_note": null,
+      "n_turns": 13,
+      "n_rejections": 0
+    },
+    {
+      "shopper_index": 11,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S3P1",
+          "reason": "Crunch Biscuits are right here; that's the brand I came for.",
+          "time_left_s": 64.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S3P1",
+          "reason": "Crunch biscuits are already in my hands; into the cart they go.",
+          "time_left_s": 60.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "next_station",
+          "target": null,
+          "reason": "I have my Crunch biscuits; need to find Crunch nuts, not these other brands.",
+          "time_left_s": 52.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S3P1",
+          "reason": "I see Crunch Biscuits, grabbing them.",
+          "time_left_s": 46.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S3P1",
+          "reason": "Adding the Crunch biscuits I picked up; Crunch is my brand.",
+          "time_left_s": 42.0
+        },
+        {
+          "turn": 6,
+          "station_id": "B2",
+          "action": "next_station",
+          "target": null,
+          "reason": "I only want Crunch; no Crunch nuts here, so I'll keep moving.",
+          "time_left_s": 34.0
+        },
+        {
+          "turn": 7,
+          "station_id": "B3",
+          "action": "pickup",
+          "target": "B3S3P1",
+          "reason": "Another Crunch biscuit size; I want it.",
+          "time_left_s": 28.0
+        },
+        {
+          "turn": 8,
+          "station_id": "B3",
+          "action": "add_to_cart",
+          "target": "B3S3P1",
+          "reason": "Crunch is my brand; adding the 100g biscuits.",
+          "time_left_s": 24.0
+        },
+        {
+          "turn": 9,
+          "station_id": "B3",
+          "action": "checkout",
+          "target": null,
+          "reason": "I have my Crunch biscuits; no Crunch nuts here, so I'm done.",
+          "time_left_s": 19.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_005",
+        "SKU_013",
+        "SKU_021"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_005",
+          "name": "Crunch Biscuits 140g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 45.0,
+          "slot_id": "B1S3P1"
+        },
+        {
+          "sku_id": "SKU_013",
+          "name": "Crunch Biscuits 120g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 50.0,
+          "slot_id": "B2S3P1"
+        },
+        {
+          "sku_id": "SKU_021",
+          "name": "Crunch Biscuits 100g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 55.0,
+          "slot_id": "B3S3P1"
+        }
+      ],
+      "stations_visited": [
+        "B1",
+        "B2",
+        "B3"
+      ],
+      "end_reason": "checkout",
+      "end_note": null,
+      "n_turns": 9,
+      "n_rejections": 0
+    },
+    {
+      "shopper_index": 12,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S3P1",
+          "reason": "Crunch Biscuits are my brand; grabbing them first.",
+          "time_left_s": 64.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S3P1",
+          "reason": "Got my Crunch Biscuits; putting them in the cart.",
+          "time_left_s": 60.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "next_station",
+          "target": null,
+          "reason": "Need Crunch nuts; these other brands don't interest me.",
+          "time_left_s": 52.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S3P1",
+          "reason": "I want the Crunch biscuits, brand I trust.",
+          "time_left_s": 48.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B2",
+          "action": "next_station",
+          "target": null,
+          "reason": "Need to see if there's any Crunch nuts; other brands don't interest me.",
+          "time_left_s": 40.0
+        },
+        {
+          "turn": 6,
+          "station_id": "B3",
+          "action": "pickup",
+          "target": "B3S3P1",
+          "reason": "I want more Crunch biscuits; this 100g pack is my brand.",
+          "time_left_s": 34.0
+        },
+        {
+          "turn": 7,
+          "station_id": "B3",
+          "action": "add_to_cart",
+          "target": "B3S3P1",
+          "reason": "Crunch biscuits are my brand; adding these to cart.",
+          "time_left_s": 30.0
+        },
+        {
+          "turn": 8,
+          "station_id": "B3",
+          "action": "pickup",
+          "target": "B3S3P1",
+          "reason": "Crunch Biscuits are my favorite; grabbing another box.",
+          "time_left_s": 24.0
+        },
+        {
+          "turn": 9,
+          "station_id": "B3",
+          "action": "add_to_cart",
+          "target": "B3S3P1",
+          "reason": "Crunch is my brand; putting these biscuits in the cart.",
+          "time_left_s": 20.0
+        },
+        {
+          "turn": 10,
+          "station_id": "B3",
+          "action": "checkout",
+          "target": null,
+          "reason": "Got my Crunch biscuits; no Crunch nuts here, so I'm done.",
+          "time_left_s": 15.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_005",
+        "SKU_013",
+        "SKU_021",
+        "SKU_021"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_005",
+          "name": "Crunch Biscuits 140g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 45.0,
+          "slot_id": "B1S3P1"
+        },
+        {
+          "sku_id": "SKU_013",
+          "name": "Crunch Biscuits 120g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 50.0,
+          "slot_id": "B2S3P1"
+        },
+        {
+          "sku_id": "SKU_021",
+          "name": "Crunch Biscuits 100g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 55.0,
+          "slot_id": "B3S3P1"
+        },
+        {
+          "sku_id": "SKU_021",
+          "name": "Crunch Biscuits 100g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 55.0,
+          "slot_id": "B3S3P1"
+        }
+      ],
+      "stations_visited": [
+        "B1",
+        "B2",
+        "B3"
+      ],
+      "end_reason": "checkout",
+      "end_note": null,
+      "n_turns": 10,
+      "n_rejections": 0
+    },
+    {
+      "shopper_index": 13,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S3P1",
+          "reason": "Crunch biscuits are right here; that's what I came for.",
+          "time_left_s": 64.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S3P1",
+          "reason": "Crunch biscuits are what I came for; into the cart.",
+          "time_left_s": 60.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "next_station",
+          "target": null,
+          "reason": "Already have Crunch biscuits; need Crunch nuts, not these other brands.",
+          "time_left_s": 52.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S3P1",
+          "reason": "Crunch is my brand; grabbing the Crunch biscuits.",
+          "time_left_s": 46.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S3P1",
+          "reason": "Crunch biscuits are my brand; I want these in my cart.",
+          "time_left_s": 42.0
+        },
+        {
+          "turn": 6,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S3P1",
+          "reason": "I want more Crunch biscuits; this is my brand.",
+          "time_left_s": 36.0
+        },
+        {
+          "turn": 7,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S3P1",
+          "reason": "Crunch biscuits are my brand; I'll take another.",
+          "time_left_s": 32.0
+        },
+        {
+          "turn": 8,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S3P1",
+          "reason": "Crunch Biscuits are my brand; I'll take another box.",
+          "time_left_s": 26.0
+        },
+        {
+          "turn": 9,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S3P1",
+          "reason": "Crunch is my brand; adding biscuits.",
+          "time_left_s": 22.0
+        },
+        {
+          "turn": 10,
+          "station_id": "B2",
+          "action": "next_station",
+          "target": null,
+          "reason": "Only competitor nuts here; I want Crunch nuts, so I'll check the next bay.",
+          "time_left_s": 14.0
+        },
+        {
+          "turn": 11,
+          "station_id": "B3",
+          "action": "pickup",
+          "target": "B3S3P1",
+          "reason": "Crunch biscuits on the eye shelf; grabbing them, other brands don't matter.",
+          "time_left_s": 8.0
+        },
+        {
+          "turn": 12,
+          "station_id": "B3",
+          "action": "add_to_cart",
+          "target": "B3S3P1",
+          "reason": "Crunch biscuits are my brand; putting this one in the cart.",
+          "time_left_s": 4.0
+        },
+        {
+          "turn": 13,
+          "station_id": "B3",
+          "action": "pickup",
+          "target": "B3S3P1",
+          "reason": "I always grab Crunch biscuits when I see them.",
+          "time_left_s": 0.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_005",
+        "SKU_013",
+        "SKU_013",
+        "SKU_013",
+        "SKU_021"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_005",
+          "name": "Crunch Biscuits 140g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 45.0,
+          "slot_id": "B1S3P1"
+        },
+        {
+          "sku_id": "SKU_013",
+          "name": "Crunch Biscuits 120g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 50.0,
+          "slot_id": "B2S3P1"
+        },
+        {
+          "sku_id": "SKU_013",
+          "name": "Crunch Biscuits 120g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 50.0,
+          "slot_id": "B2S3P1"
+        },
+        {
+          "sku_id": "SKU_013",
+          "name": "Crunch Biscuits 120g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 50.0,
+          "slot_id": "B2S3P1"
+        },
+        {
+          "sku_id": "SKU_021",
+          "name": "Crunch Biscuits 100g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 55.0,
+          "slot_id": "B3S3P1"
+        }
+      ],
+      "stations_visited": [
+        "B1",
+        "B2",
+        "B3"
+      ],
+      "end_reason": "out_of_time",
+      "end_note": null,
+      "n_turns": 13,
+      "n_rejections": 0
+    },
+    {
+      "shopper_index": 14,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S3P1",
+          "reason": "Crunch Biscuits are right here; I always get these.",
+          "time_left_s": 64.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S3P1",
+          "reason": "Crunch biscuits are what I came for.",
+          "time_left_s": 60.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "next_station",
+          "target": null,
+          "reason": "I already have my Crunch biscuits; I need Crunch nuts, so I'll check the next bay.",
+          "time_left_s": 52.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S3P1",
+          "reason": "I want more Crunch biscuits; this size is fine.",
+          "time_left_s": 46.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S3P1",
+          "reason": "Crunch biscuits are my brand; I want another pack.",
+          "time_left_s": 42.0
+        },
+        {
+          "turn": 6,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S3P1",
+          "reason": "I want more Crunch biscuits; grabbing this box.",
+          "time_left_s": 36.0
+        },
+        {
+          "turn": 7,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S3P1",
+          "reason": "Crunch biscuits are my brand; adding another.",
+          "time_left_s": 32.0
+        },
+        {
+          "turn": 8,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S3P1",
+          "reason": "Crunch is my brand; grabbing more biscuits.",
+          "time_left_s": 26.0
+        },
+        {
+          "turn": 9,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S3P1",
+          "reason": "Crunch biscuits are my brand; adding this box to my cart.",
+          "time_left_s": 22.0
+        },
+        {
+          "turn": 10,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S3P1",
+          "reason": "Crunch biscuits are my brand; I'll grab another pack.",
+          "time_left_s": 16.0
+        },
+        {
+          "turn": 11,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S3P1",
+          "reason": "Crunch biscuits are my brand; adding this one too.",
+          "time_left_s": 12.0
+        },
+        {
+          "turn": 12,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S3P1",
+          "reason": "Crunch biscuits are my brand; I'll take another box.",
+          "time_left_s": 6.0
+        },
+        {
+          "turn": 13,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S3P1",
+          "reason": "Crunch biscuits are what I came for; adding another box.",
+          "time_left_s": 2.0
+        },
+        {
+          "turn": 14,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S3P1",
+          "reason": "I always grab Crunch biscuits when I see them.",
+          "time_left_s": 0.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_005",
+        "SKU_013",
+        "SKU_013",
+        "SKU_013",
+        "SKU_013",
+        "SKU_013"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_005",
+          "name": "Crunch Biscuits 140g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 45.0,
+          "slot_id": "B1S3P1"
+        },
+        {
+          "sku_id": "SKU_013",
+          "name": "Crunch Biscuits 120g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 50.0,
+          "slot_id": "B2S3P1"
+        },
+        {
+          "sku_id": "SKU_013",
+          "name": "Crunch Biscuits 120g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 50.0,
+          "slot_id": "B2S3P1"
+        },
+        {
+          "sku_id": "SKU_013",
+          "name": "Crunch Biscuits 120g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 50.0,
+          "slot_id": "B2S3P1"
+        },
+        {
+          "sku_id": "SKU_013",
+          "name": "Crunch Biscuits 120g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 50.0,
+          "slot_id": "B2S3P1"
+        },
+        {
+          "sku_id": "SKU_013",
+          "name": "Crunch Biscuits 120g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 50.0,
+          "slot_id": "B2S3P1"
+        }
+      ],
+      "stations_visited": [
+        "B1",
+        "B2"
+      ],
+      "end_reason": "out_of_time",
+      "end_note": null,
+      "n_turns": 14,
+      "n_rejections": 0
+    },
+    {
+      "shopper_index": 15,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S3P1",
+          "reason": "I want my Crunch biscuits; that's the brand I always buy.",
+          "time_left_s": 64.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S3P1",
+          "reason": "Got my Crunch Biscuits; adding them to the cart.",
+          "time_left_s": 60.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "next_station",
+          "target": null,
+          "reason": "Looking for Crunch nuts; other brands don't interest me.",
+          "time_left_s": 52.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S3P1",
+          "reason": "I want Crunch biscuits; this eye-level pack is mine.",
+          "time_left_s": 46.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S3P1",
+          "reason": "Crunch is my brand; I want these biscuits too.",
+          "time_left_s": 42.0
+        },
+        {
+          "turn": 6,
+          "station_id": "B2",
+          "action": "next_station",
+          "target": null,
+          "reason": "No Crunch nuts here; moving on to find them.",
+          "time_left_s": 34.0
+        },
+        {
+          "turn": 7,
+          "station_id": "B3",
+          "action": "pickup",
+          "target": "B3S3P1",
+          "reason": "Crunch biscuits are my brand; grabbing the 100g pack too.",
+          "time_left_s": 28.0
+        },
+        {
+          "turn": 8,
+          "station_id": "B3",
+          "action": "add_to_cart",
+          "target": "B3S3P1",
+          "reason": "Crunch biscuits are my brand; adding this one too.",
+          "time_left_s": 24.0
+        },
+        {
+          "turn": 9,
+          "station_id": "B3",
+          "action": "checkout",
+          "target": null,
+          "reason": "Got my Crunch biscuits; no Crunch nuts here, so I'm done.",
+          "time_left_s": 19.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_005",
+        "SKU_013",
+        "SKU_021"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_005",
+          "name": "Crunch Biscuits 140g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 45.0,
+          "slot_id": "B1S3P1"
+        },
+        {
+          "sku_id": "SKU_013",
+          "name": "Crunch Biscuits 120g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 50.0,
+          "slot_id": "B2S3P1"
+        },
+        {
+          "sku_id": "SKU_021",
+          "name": "Crunch Biscuits 100g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 55.0,
+          "slot_id": "B3S3P1"
+        }
+      ],
+      "stations_visited": [
+        "B1",
+        "B2",
+        "B3"
+      ],
+      "end_reason": "checkout",
+      "end_note": null,
+      "n_turns": 9,
+      "n_rejections": 0
+    },
+    {
+      "shopper_index": 16,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S3P1",
+          "reason": "I want the Crunch Biscuits; that's my brand.",
+          "time_left_s": 64.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S3P1",
+          "reason": "Crunch Biscuits are my favorite; putting them in the cart.",
+          "time_left_s": 60.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "next_station",
+          "target": null,
+          "reason": "No Crunch nuts here; I'll check the next bay for them.",
+          "time_left_s": 52.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S3P1",
+          "reason": "I want Crunch biscuits; grabbing the 120g pack.",
+          "time_left_s": 46.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S3P1",
+          "reason": "Crunch biscuits are my brand; this goes straight in the cart.",
+          "time_left_s": 42.0
+        },
+        {
+          "turn": 6,
+          "station_id": "B2",
+          "action": "next_station",
+          "target": null,
+          "reason": "Need Crunch nuts; these other brands don't matter.",
+          "time_left_s": 34.0
+        },
+        {
+          "turn": 7,
+          "station_id": "B3",
+          "action": "pickup",
+          "target": "B3S3P1",
+          "reason": "Crunch biscuits are my brand; grabbing the 100g too.",
+          "time_left_s": 28.0
+        },
+        {
+          "turn": 8,
+          "station_id": "B3",
+          "action": "add_to_cart",
+          "target": "B3S3P1",
+          "reason": "Crunch biscuits are my brand; this size goes in too.",
+          "time_left_s": 24.0
+        },
+        {
+          "turn": 9,
+          "station_id": "B3",
+          "action": "checkout",
+          "target": null,
+          "reason": "Got my Crunch biscuits; no Crunch nuts here, so I'm done.",
+          "time_left_s": 19.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_005",
+        "SKU_013",
+        "SKU_021"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_005",
+          "name": "Crunch Biscuits 140g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 45.0,
+          "slot_id": "B1S3P1"
+        },
+        {
+          "sku_id": "SKU_013",
+          "name": "Crunch Biscuits 120g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 50.0,
+          "slot_id": "B2S3P1"
+        },
+        {
+          "sku_id": "SKU_021",
+          "name": "Crunch Biscuits 100g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 55.0,
+          "slot_id": "B3S3P1"
+        }
+      ],
+      "stations_visited": [
+        "B1",
+        "B2",
+        "B3"
+      ],
+      "end_reason": "checkout",
+      "end_note": null,
+      "n_turns": 9,
+      "n_rejections": 0
+    },
+    {
+      "shopper_index": 17,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S3P1",
+          "reason": "I came for Crunch biscuits; grabbing them now.",
+          "time_left_s": 64.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S3P1",
+          "reason": "Crunch Biscuits are exactly what I came for; into the cart.",
+          "time_left_s": 60.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S3P1",
+          "reason": "Grabbing another box of Crunch biscuits, my go-to brand.",
+          "time_left_s": 54.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S3P1",
+          "reason": "Crunch biscuits are my brand; I want them in the cart.",
+          "time_left_s": 50.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B1",
+          "action": "next_station",
+          "target": null,
+          "reason": "I need Crunch nuts; none here, so I'll check the next bay.",
+          "time_left_s": 42.0
+        },
+        {
+          "turn": 6,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S3P1",
+          "reason": "I see Crunch Biscuits; grabbing them, they're my brand.",
+          "time_left_s": 36.0
+        },
+        {
+          "turn": 7,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S3P1",
+          "reason": "Crunch biscuits are my brand; putting them in my cart.",
+          "time_left_s": 32.0
+        },
+        {
+          "turn": 8,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S3P1",
+          "reason": "Crunch biscuits are the only ones I want; grabbing another.",
+          "time_left_s": 26.0
+        },
+        {
+          "turn": 9,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S3P1",
+          "reason": "Crunch is my brand; this biscuit goes in the cart.",
+          "time_left_s": 22.0
+        },
+        {
+          "turn": 10,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S3P1",
+          "reason": "Crunch is my brand, grabbing more biscuits.",
+          "time_left_s": 16.0
+        },
+        {
+          "turn": 11,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S3P1",
+          "reason": "Crunch biscuits are my brand; I'll take another.",
+          "time_left_s": 12.0
+        },
+        {
+          "turn": 12,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S3P1",
+          "reason": "Need more Crunch Biscuits, my brand.",
+          "time_left_s": 6.0
+        },
+        {
+          "turn": 13,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S3P1",
+          "reason": "Crunch biscuits are my brand; stocking up.",
+          "time_left_s": 2.0
+        },
+        {
+          "turn": 14,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S3P1",
+          "reason": "Crunch Biscuits are right here; I want more.",
+          "time_left_s": 0.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_005",
+        "SKU_005",
+        "SKU_013",
+        "SKU_013",
+        "SKU_013",
+        "SKU_013"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_005",
+          "name": "Crunch Biscuits 140g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 45.0,
+          "slot_id": "B1S3P1"
+        },
+        {
+          "sku_id": "SKU_005",
+          "name": "Crunch Biscuits 140g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 45.0,
+          "slot_id": "B1S3P1"
+        },
+        {
+          "sku_id": "SKU_013",
+          "name": "Crunch Biscuits 120g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 50.0,
+          "slot_id": "B2S3P1"
+        },
+        {
+          "sku_id": "SKU_013",
+          "name": "Crunch Biscuits 120g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 50.0,
+          "slot_id": "B2S3P1"
+        },
+        {
+          "sku_id": "SKU_013",
+          "name": "Crunch Biscuits 120g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 50.0,
+          "slot_id": "B2S3P1"
+        },
+        {
+          "sku_id": "SKU_013",
+          "name": "Crunch Biscuits 120g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 50.0,
+          "slot_id": "B2S3P1"
+        }
+      ],
+      "stations_visited": [
+        "B1",
+        "B2"
+      ],
+      "end_reason": "out_of_time",
+      "end_note": null,
+      "n_turns": 14,
+      "n_rejections": 0
+    },
+    {
+      "shopper_index": 18,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S3P1",
+          "reason": "I want my Crunch Biscuits.",
+          "time_left_s": 64.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S3P1",
+          "reason": "Crunch biscuits are what I came for; putting them in my basket.",
+          "time_left_s": 60.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "next_station",
+          "target": null,
+          "reason": "I have my Crunch biscuits; need Crunch nuts, so I'll check the next bay.",
+          "time_left_s": 52.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S3P1",
+          "reason": "Crunch is my brand; I want these biscuits.",
+          "time_left_s": 46.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S3P1",
+          "reason": "Putting the Crunch biscuits in my basket; Crunch is the only brand I want.",
+          "time_left_s": 42.0
+        },
+        {
+          "turn": 6,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S3P1",
+          "reason": "I always grab Crunch; another pack won't hurt.",
+          "time_left_s": 36.0
+        },
+        {
+          "turn": 7,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S3P1",
+          "reason": "Putting the Crunch biscuits in my basket.",
+          "time_left_s": 32.0
+        },
+        {
+          "turn": 8,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S3P1",
+          "reason": "Grabbing another Crunch Biscuits, my brand.",
+          "time_left_s": 26.0
+        },
+        {
+          "turn": 9,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S3P1",
+          "reason": "Crunch biscuits are my brand; I want more in the cart.",
+          "time_left_s": 22.0
+        },
+        {
+          "turn": 10,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S3P1",
+          "reason": "Crunch biscuits are my brand; I grab them whenever I see them.",
+          "time_left_s": 16.0
+        },
+        {
+          "turn": 11,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S3P1",
+          "reason": "Crunch biscuits are my brand; putting this one in the cart.",
+          "time_left_s": 12.0
+        },
+        {
+          "turn": 12,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S3P1",
+          "reason": "I want more Crunch Biscuits, my favorite.",
+          "time_left_s": 6.0
+        },
+        {
+          "turn": 13,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S3P1",
+          "reason": "Putting the Crunch biscuits in my cart.",
+          "time_left_s": 2.0
+        },
+        {
+          "turn": 14,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S3P1",
+          "reason": "Crunch biscuits are my brand; grabbing another pack.",
+          "time_left_s": 0.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_005",
+        "SKU_013",
+        "SKU_013",
+        "SKU_013",
+        "SKU_013",
+        "SKU_013"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_005",
+          "name": "Crunch Biscuits 140g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 45.0,
+          "slot_id": "B1S3P1"
+        },
+        {
+          "sku_id": "SKU_013",
+          "name": "Crunch Biscuits 120g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 50.0,
+          "slot_id": "B2S3P1"
+        },
+        {
+          "sku_id": "SKU_013",
+          "name": "Crunch Biscuits 120g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 50.0,
+          "slot_id": "B2S3P1"
+        },
+        {
+          "sku_id": "SKU_013",
+          "name": "Crunch Biscuits 120g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 50.0,
+          "slot_id": "B2S3P1"
+        },
+        {
+          "sku_id": "SKU_013",
+          "name": "Crunch Biscuits 120g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 50.0,
+          "slot_id": "B2S3P1"
+        },
+        {
+          "sku_id": "SKU_013",
+          "name": "Crunch Biscuits 120g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 50.0,
+          "slot_id": "B2S3P1"
+        }
+      ],
+      "stations_visited": [
+        "B1",
+        "B2"
+      ],
+      "end_reason": "out_of_time",
+      "end_note": null,
+      "n_turns": 14,
+      "n_rejections": 0
+    },
+    {
+      "shopper_index": 19,
+      "turns": [
+        {
+          "turn": 1,
+          "station_id": "B1",
+          "action": "pickup",
+          "target": "B1S3P1",
+          "reason": "I want my Crunch biscuits; that's the brand I always buy.",
+          "time_left_s": 64.0
+        },
+        {
+          "turn": 2,
+          "station_id": "B1",
+          "action": "add_to_cart",
+          "target": "B1S3P1",
+          "reason": "Crunch biscuits are exactly what I came for; into the cart.",
+          "time_left_s": 60.0
+        },
+        {
+          "turn": 3,
+          "station_id": "B1",
+          "action": "next_station",
+          "target": null,
+          "reason": "Need Crunch nuts; no Crunch nuts here, moving on.",
+          "time_left_s": 52.0
+        },
+        {
+          "turn": 4,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S3P1",
+          "reason": "I see Crunch Biscuits, my brand; grabbing them.",
+          "time_left_s": 46.0
+        },
+        {
+          "turn": 5,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S3P1",
+          "reason": "Crunch biscuits are my brand; this goes straight in.",
+          "time_left_s": 42.0
+        },
+        {
+          "turn": 6,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S3P1",
+          "reason": "Grabbing another Crunch Biscuits; I always stock up on Crunch.",
+          "time_left_s": 36.0
+        },
+        {
+          "turn": 7,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S3P1",
+          "reason": "Crunch biscuits are my brand; putting them in the cart.",
+          "time_left_s": 32.0
+        },
+        {
+          "turn": 8,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S3P1",
+          "reason": "Grabbing more Crunch biscuits, my go-to brand.",
+          "time_left_s": 26.0
+        },
+        {
+          "turn": 9,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S3P1",
+          "reason": "Putting the Crunch biscuits in my cart; only Crunch matters.",
+          "time_left_s": 22.0
+        },
+        {
+          "turn": 10,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S3P1",
+          "reason": "Grabbing more Crunch biscuits, my favorite.",
+          "time_left_s": 16.0
+        },
+        {
+          "turn": 11,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S3P1",
+          "reason": "Crunch biscuits are my brand; I want more in the cart.",
+          "time_left_s": 12.0
+        },
+        {
+          "turn": 12,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S3P1",
+          "reason": "Stocking up on Crunch biscuits, my brand.",
+          "time_left_s": 6.0
+        },
+        {
+          "turn": 13,
+          "station_id": "B2",
+          "action": "add_to_cart",
+          "target": "B2S3P1",
+          "reason": "Crunch is my brand; adding these biscuits.",
+          "time_left_s": 2.0
+        },
+        {
+          "turn": 14,
+          "station_id": "B2",
+          "action": "pickup",
+          "target": "B2S3P1",
+          "reason": "Crunch Biscuits are my brand; grabbing another pack.",
+          "time_left_s": 0.0
+        }
+      ],
+      "rejections": [],
+      "cart": [
+        "SKU_005",
+        "SKU_013",
+        "SKU_013",
+        "SKU_013",
+        "SKU_013",
+        "SKU_013"
+      ],
+      "cart_detail": [
+        {
+          "sku_id": "SKU_005",
+          "name": "Crunch Biscuits 140g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 45.0,
+          "slot_id": "B1S3P1"
+        },
+        {
+          "sku_id": "SKU_013",
+          "name": "Crunch Biscuits 120g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 50.0,
+          "slot_id": "B2S3P1"
+        },
+        {
+          "sku_id": "SKU_013",
+          "name": "Crunch Biscuits 120g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 50.0,
+          "slot_id": "B2S3P1"
+        },
+        {
+          "sku_id": "SKU_013",
+          "name": "Crunch Biscuits 120g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 50.0,
+          "slot_id": "B2S3P1"
+        },
+        {
+          "sku_id": "SKU_013",
+          "name": "Crunch Biscuits 120g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 50.0,
+          "slot_id": "B2S3P1"
+        },
+        {
+          "sku_id": "SKU_013",
+          "name": "Crunch Biscuits 120g",
+          "brand": "Crunch",
+          "category": "biscuits",
+          "price": 50.0,
+          "slot_id": "B2S3P1"
+        }
+      ],
+      "stations_visited": [
+        "B1",
+        "B2"
+      ],
+      "end_reason": "out_of_time",
+      "end_note": null,
+      "n_turns": 14,
+      "n_rejections": 0
+    }
+  ],
+  "n_turns": 245,
+  "n_rejections": 0,
+  "end_reasons": {
+    "out_of_time": 14,
+    "checkout": 6
+  },
+  "carts": {
+    "SKU_005": 21,
+    "SKU_013": 60,
+    "SKU_021": 19
+  }
+}
