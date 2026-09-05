@@ -324,7 +324,7 @@ describe("the dashboard finds the running session", () => {
  * `#/dashboard?session=<id>&variant=<id>` is the spelling README's screens
  * table documents, and the spelling anyone carries over from the spectator URL
  * printed directly above it — `SpectatorView` merges both sides of the hash and
- * lets the hash win (`spectatorQuery`). `Experiment` reads `location.search`
+ * lets the hash win (`session/urlParams.ts`). `Experiment` reads `location.search`
  * only, so before this the hash spelling resolved to *a different session*: the
  * ids in the URL were ignored, the stored fallback was loaded in their place,
  * and the note asserted that no session had been named. That is the one thing

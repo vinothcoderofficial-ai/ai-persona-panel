@@ -10,6 +10,7 @@ import type { GazeTracker } from "@/capture/GazeTracker";
 import { SessionSocket } from "@/capture/SessionSocket";
 import { Launcher } from "@/launcher/Launcher";
 import { readLastSession, rememberSession, type LastSession } from "@/session/lastSession";
+import { mergedQuery } from "@/session/urlParams";
 import { PlanogramScene } from "@/store/PlanogramScene";
 import Experiment from "@/dashboard/Experiment";
 import { SpectatorView } from "@/spectator/SpectatorView";
@@ -54,31 +55,13 @@ const DEV_SKIP_FIELDS: SessionFields = {
  * `/?variant=B` is the participant link `scripts/collect_link.py` writes, and
  * `#/dashboard?session=<id>&variant=<id>` is the spelling README's screens
  * table documents - so both have to be read, everywhere, or a URL that names
- * something is silently answered with something else. That is exactly what
- * happened before this existed: `#/dashboard?session=X` put X in
- * `location.hash`, the dashboard read only `location.search`, found nothing,
- * loaded the remembered session instead, and printed a note saying no session
- * had been named. Wrong data under a confident caption is the worst failure
- * this app has.
- *
- * The hash wins on a collision, because it is the half that names the route -
- * the same rule, deliberately, that `spectator/SpectatorView.tsx:spectatorQuery`
- * has always applied. It is stated twice rather than shared because that module
- * is a page, not a URL library, and the router may not depend on one screen to
- * read another's address; the two are pinned by their own tests
- * (`spectatorParams.test.ts` and `sessionFallback.test.tsx`).
+ * something is silently answered with something else. The rule itself, the hash
+ * winning on a collision, and the two bugs this router caused while it was
+ * reading `location.search` alone - a dashboard that loaded a different session
+ * than the URL named, and a shopper who could be measured on variant A while
+ * their link said D - are all in `session/urlParams.ts`, which is now the only
+ * place any of it is written down.
  */
-function mergedQuery(search: string, hash: string): URLSearchParams {
-  const merged = new URLSearchParams(search);
-  const marker = hash.indexOf("?");
-  if (marker !== -1) {
-    for (const [key, value] of new URLSearchParams(hash.slice(marker + 1))) {
-      merged.set(key, value);
-    }
-  }
-  return merged;
-}
-
 function currentQuery(): URLSearchParams {
   return mergedQuery(window.location.search, window.location.hash);
 }

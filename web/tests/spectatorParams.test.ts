@@ -9,11 +9,12 @@ import {
   mergeLocks,
   resolveLock,
 } from "@/spectator/lock";
-import {
-  DEFAULT_SCREEN,
-  spectatorParamsFromQuery,
-  spectatorQuery,
-} from "@/spectator/SpectatorView";
+import { DEFAULT_SCREEN, spectatorParamsFromQuery } from "@/spectator/SpectatorView";
+// The merge this page's URL is read through. It used to be `spectatorQuery` in
+// SpectatorView.tsx, beside a second copy in main.tsx that did not read the
+// hash at all; `session/urlParams.ts` is now the only statement of the rule,
+// and `web/tests/urlParams.test.ts` fails if a second one reappears.
+import { mergedQueryString } from "@/session/urlParams";
 
 const SHA = "a3f9c0d1e2b3a4958677665544332211aabbccddeeff00112233445566778899";
 
@@ -28,9 +29,9 @@ const LOCK_DOCUMENT = {
   git_commit: "abc1234",
 };
 
-describe("spectatorQuery", () => {
+describe("mergedQueryString, which is how this page reads its URL", () => {
   it("reads params written before the hash, like the dashboard's", () => {
-    expect(spectatorQuery("?session=s-1&fake=1", "#/spectator")).toBe(
+    expect(mergedQueryString("?session=s-1&fake=1", "#/spectator")).toBe(
       new URLSearchParams({ session: "s-1", fake: "1" }).toString(),
     );
   });
@@ -39,21 +40,21 @@ describe("spectatorQuery", () => {
     // `#/spectator?session=s-1` puts the query inside location.hash, where
     // location.search cannot see it. Both spellings have to work or the demo
     // operator loses a take to a blank screen.
-    const params = new URLSearchParams(spectatorQuery("", "#/spectator?session=s-1&fake=1"));
+    const params = new URLSearchParams(mergedQueryString("", "#/spectator?session=s-1&fake=1"));
     expect(params.get("session")).toBe("s-1");
     expect(params.get("fake")).toBe("1");
   });
 
   it("lets the hash win, because it is the part that names this route", () => {
     const params = new URLSearchParams(
-      spectatorQuery("?session=before&ceiling=0.5", "#/spectator?session=after"),
+      mergedQueryString("?session=before&ceiling=0.5", "#/spectator?session=after"),
     );
     expect(params.get("session")).toBe("after");
     expect(params.get("ceiling")).toBe("0.5");
   });
 
   it("copes with no query at all", () => {
-    expect(spectatorQuery("", "#/spectator")).toBe("");
+    expect(mergedQueryString("", "#/spectator")).toBe("");
   });
 });
 

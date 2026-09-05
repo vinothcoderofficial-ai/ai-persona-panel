@@ -18,3 +18,7 @@ data/vision/overlay_frames/
 predictions/dev/
 .idea/
 .vscode/
+# Agent tooling: launch.json is a local dev-server config, and worktrees/ holds
+# whole working copies of this repository. `git add -A` would otherwise commit
+# them.
+.claude/

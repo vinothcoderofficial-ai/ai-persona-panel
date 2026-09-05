@@ -15,6 +15,7 @@ import {
   type LockView,
 } from "@/spectator/lock";
 import { readLastSession, type LastSession } from "@/session/lastSession";
+import { mergedQueryString } from "@/session/urlParams";
 import {
   SpectatorSocket,
   type SpectatorSocketFactory,
@@ -107,26 +108,6 @@ function flag(value: string | null): boolean {
   return value !== null && value !== "0" && value !== "false";
 }
 
-/**
- * The effective query string for this page, from either side of the hash.
- *
- * `#/dashboard` is opened as `/?experiment=<id>#/dashboard`, so params live in
- * `location.search`. But `#/spectator?session=<id>` is how anyone actually
- * types a hash route, and those params land in `location.hash` where
- * `location.search` cannot see them. Both spellings work; the hash wins on a
- * collision, because it is the half that names this route.
- */
-export function spectatorQuery(search: string, hash: string): string {
-  const marker = hash.indexOf("?");
-  const merged = new URLSearchParams(search);
-  if (marker !== -1) {
-    for (const [key, value] of new URLSearchParams(hash.slice(marker + 1))) {
-      merged.set(key, value);
-    }
-  }
-  return merged.toString();
-}
-
 /** Everything this page needs, read out of its own URL. */
 export function spectatorParamsFromQuery(search: string): SpectatorParams {
   const params = new URLSearchParams(search);
@@ -182,8 +163,10 @@ const defaultNow = () => performance.now();
 export function SpectatorView(props: SpectatorViewProps) {
   const fromQuery = useRef<SpectatorParams | null>(null);
   if (fromQuery.current === null) {
+    // Both sides of the `#`, hash winning - `session/urlParams.ts` states that
+    // rule once, for this page and for the router that chose it.
     fromQuery.current = spectatorParamsFromQuery(
-      spectatorQuery(window.location.search, window.location.hash),
+      mergedQueryString(window.location.search, window.location.hash),
     );
   }
   const query = fromQuery.current;
