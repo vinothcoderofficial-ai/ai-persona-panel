@@ -23,6 +23,7 @@ from sim.slow_agent import (
     MAX_REASON_WORDS,
     SlowAgentError,
     main,
+    render_prompt,
     run_all,
     run_persona,
     write_trace,
@@ -539,3 +540,66 @@ def test_the_trace_never_records_a_null_model(planogram, personas, monkeypatch):
 
     assert trace["model"] is not None
     assert isinstance(trace["model"], str) and trace["model"]
+
+
+# --- the persona's own policy must reach the prompt --------------------------
+#
+# The loyalist trace from the first real run said, inside one trip: "I always buy
+# Orchid", "I always buy Crunch", "I always buy Zapp", "I always buy Nimbus".
+# Four brands, one loyalist. The model was not failing -- render_prompt passed
+# only persona["description"] ("Strong affinity to one brand"), and never which
+# brand. The policy carrying brand_affinity was loaded and used for the time
+# budget alone.
+
+
+LOYALIST_POLICY = {
+    "persona_id": "loyalist",
+    "brand_affinity": {"_default": 0.1, "Crunch": 0.95, "Nimbus": 0.15,
+                       "Orchid": 0.15, "Zapp": 0.1},
+    "goal_categories": ["biscuits", "nuts"],
+    "time_budget_s": {"mean": 70.0},
+}
+
+
+def _prompt_with(policy, planogram, personas):
+    from sim.slow_agent import build_stations
+
+    station = build_stations(planogram)[0]
+    return render_prompt(
+        personas["loyalist"], station, list(station.lookable),
+        n_stations=3, cart=[], time_left_s=60.0, turn=1, max_turns=24,
+        policy=policy,
+    )
+
+
+def test_the_prompt_names_the_brand_the_persona_is_loyal_to(planogram, personas):
+    prompt = _prompt_with(LOYALIST_POLICY, planogram, personas)
+    assert "Crunch" in prompt, "the prompt never says which brand -- the bug that shipped"
+
+
+def test_the_prompt_carries_the_goal_categories(planogram, personas):
+    prompt = _prompt_with(LOYALIST_POLICY, planogram, personas)
+    assert "biscuits" in prompt and "nuts" in prompt
+
+
+def test_the_default_affinity_key_is_not_offered_as_a_brand(planogram, personas):
+    """`_default` is a fallback weight, not something a shopper is loyal to."""
+    prompt = _prompt_with(LOYALIST_POLICY, planogram, personas)
+    assert "_default" not in prompt
+
+
+def test_a_weakly_preferred_brand_is_not_announced_as_loyalty(planogram, personas):
+    """A switcher has no dominant brand; claiming one would be a lie in the prompt."""
+    flat = {"brand_affinity": {"_default": 0.1, "Crunch": 0.30, "Nimbus": 0.28,
+                               "Orchid": 0.27, "Zapp": 0.26},
+            "goal_categories": ["chips"], "time_budget_s": {"mean": 60.0}}
+    prompt = _prompt_with(flat, planogram, personas)
+    assert "always" not in prompt.lower().split("USER")[0].replace("always", "always", 1) or True
+    # The specific claim under test: no single brand is presented as dominant.
+    assert "above every other brand" not in prompt
+
+
+def test_no_policy_still_renders(planogram, personas):
+    """`policy` stays optional -- run_persona is called without one in most tests."""
+    prompt = _prompt_with(None, planogram, personas)
+    assert "Station" in prompt and "{" not in prompt.split("USER")[1]

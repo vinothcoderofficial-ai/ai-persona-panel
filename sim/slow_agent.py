@@ -204,13 +204,57 @@ def _ad_line(ad_slot_id: str, ad: Mapping, creative: Mapping, prominence: float)
 # Prompt rendering
 # ---------------------------------------------------------------------------
 
+# A brand counts as dominant only if it is clearly ahead. A switcher's affinities
+# are near-flat, and telling that model it "always buys" the marginal leader
+# would put a falsehood in the prompt.
+BRAND_DOMINANCE_RATIO = 2.0
+
+
+def preferences_block(policy: Mapping | None) -> str:
+    """What this persona wants, in words, for the prompt.
+
+    The persona document carries only a description -- "Strong affinity to one
+    brand" -- and never says which. The policy carries `brand_affinity` and
+    `goal_categories`, and was previously read for the time budget alone, so the
+    model was asked to play a loyalist without being told what it was loyal to.
+    The first real trace run showed exactly that: one shopper claiming "I always
+    buy Orchid", then Crunch, then Zapp, then Nimbus, inside a single trip.
+    """
+    if policy is None:
+        return "Nothing further is known about your preferences."
+
+    lines: list[str] = []
+    affinity = {brand: float(weight)
+                for brand, weight in (policy.get("brand_affinity") or {}).items()
+                if brand != "_default"}
+    if affinity:
+        ranked = sorted(affinity.items(), key=lambda kv: kv[1], reverse=True)
+        leader, best = ranked[0]
+        runner_up = ranked[1][1] if len(ranked) > 1 else 0.0
+        if runner_up <= 0 or best >= BRAND_DOMINANCE_RATIO * runner_up:
+            others = ", ".join(brand for brand, _ in ranked[1:])
+            lines.append(
+                f"You reach for {leader} above every other brand"
+                + (f"; {others} barely register." if others else ".")
+            )
+        else:
+            lines.append("You have no strong brand preference; you compare what is in front of you.")
+
+    goals = [str(category) for category in (policy.get("goal_categories") or [])]
+    if goals:
+        lines.append("You came for: " + ", ".join(goals) + ".")
+
+    return " ".join(lines) if lines else "Nothing further is known about your preferences."
+
+
 def render_prompt(persona: Mapping, station: Station, ordered_targets: Sequence[str], *,
                   n_stations: int, cart: Sequence[Mapping], time_left_s: float, turn: int,
-                  max_turns: int) -> str:
+                  max_turns: int, policy: Mapping | None = None) -> str:
     """Render `prompts/slow_agent.md` for one turn. `ordered_targets` is already shuffled."""
     template = PROMPT_TEMPLATE_PATH.read_text(encoding="utf-8")
     return template.format(
         description=persona["description"],
+        preferences=preferences_block(policy),
         station_id=station.bay_id,
         station_index=station.index + 1,
         n_stations=n_stations,
@@ -293,7 +337,8 @@ def run_shopper(persona: Mapping, stations: Sequence[Station], skus: Mapping[str
                 rng: np.random.Generator, client: Any = None, model: str | None = None,
                 temperature: float = DEFAULT_TEMPERATURE, max_turns: int = DEFAULT_MAX_TURNS,
                 max_reasks: int = DEFAULT_MAX_REASKS,
-                time_budget_s: float = DEFAULT_TIME_BUDGET_S) -> dict:
+                time_budget_s: float = DEFAULT_TIME_BUDGET_S,
+                policy: Mapping | None = None) -> dict:
     """Walk one shopper through the store, returning their trace record.
 
     Every accepted action lands in `turns`; every rejected one lands in `rejections` with the
@@ -315,7 +360,7 @@ def run_shopper(persona: Mapping, stations: Sequence[Station], skus: Mapping[str
         rng.shuffle(order)
         base_prompt = render_prompt(
             persona, station, order, n_stations=len(stations), cart=cart,
-            time_left_s=time_left, turn=turn, max_turns=max_turns,
+            time_left_s=time_left, turn=turn, max_turns=max_turns, policy=policy,
         )
 
         turn_rejections: list[dict] = []
@@ -432,7 +477,7 @@ def run_persona(persona: Mapping, planogram: Mapping, *,
             persona, stations, skus,
             rng=np.random.default_rng([seed, index]), client=client, model=model,
             temperature=temperature, max_turns=max_turns, max_reasks=max_reasks,
-            time_budget_s=time_budget,
+            time_budget_s=time_budget, policy=policy,
         )
         shoppers.append({"shopper_index": index, **record})
 
