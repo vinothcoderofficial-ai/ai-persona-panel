@@ -747,11 +747,47 @@ in increasing value" now describes three built outputs. What follows is what the
 
 Three limits on what the optimizer's ranking and its price tag can be said to show:
 
-* **The order is not settled.** Re-rolling the same 10,000-shopper simulation at seeds 42-46 moves
-  the top pick between +6.2% and +14.2% and the current placement between +1.3% and +8.9%. Those
-  ranges overlap, so "AD_1 on B1_TALKER at +12.7% beats B3_ENDCAP at +4.5%" is a seed-42 result and
-  not a settled ordering. `Ranking.top_pick_is_resolved` is `False` on the committed planogram and
-  `summary()` names every candidate the top pick is unresolved against.
+* **The default ranking is a run-size artefact, not a close call.** At `n_synth = 10,000` the
+  optimizer reports `AD_1 on B1_TALKER` at +12.7% with the current placement 5th of 13 at +4.5%.
+  That is not a lead needing more precision -- it is a *different candidate at every run size*.
+  Measured on the committed aisle, `AD_1@B1_TALKER` goes rank 1 → 10 → 9 → 5 → 4 as `n_synth`
+  grows from 10k to 500k, and the current placement climbs from 5th to 2nd between 10k and 50k:
+
+  ```
+  n =  10,000   top = AD_1 on B1_TALKER  +0.1268   current 5th of 13
+  n =  50,000   top = SKU_008 to top     +0.0970   current 2nd of 13
+  ```
+
+  The cause is where the noise lives: the objective's numerator comes from the ad-**exposed** arm,
+  which holds roughly one purchase event in 42 (about 1,010 exposed against 41,790 unexposed at
+  10k), so σ(lift) ≈ 3.0/√n_synth — three whole points at 10k. The 8-point gap the default run
+  reports is very largely that noise.
+
+* **More seeds cannot fix it; only more shoppers can.** `SeedSpread` reports a min–max range, and
+  the expected range of K draws *widens* with K (1.13σ, 2.33σ, 3.74σ at K = 2, 5, 20 — observed
+  widths track those within ~10%). At K = 2 the top pick looks resolved against both its rivals,
+  which is a false resolution bought by using fewer seeds. Only `n_synth` changes the underlying
+  σ, and runtime is linear in it, so halving the noise costs 4× compute.
+  `check_top_pick_stability()` exists for exactly this: it re-ranks across a ladder of run sizes,
+  which is the check a seed spread structurally cannot make, because every seed it re-rolls is
+  drawn at the same size.
+
+* **Two different claims, and only one of them is buyable.** Top pick versus runner-up is not
+  separable at any feasible size: the gap is ~0.4 points and separating it would need `n_synth`
+  ≈ 3.7 million (~1.8 h per ranking). Top pick versus **the current placement** is separable at
+  `n_synth = 250,000`, where the winner clears it by +1.47 points at all five seeds.
+
+  **The settled recommendation is a SKU move, not an ad move.** No ad placement clears the current
+  placement below 500k. So "moving the creative beats where it is now" is *not* supported by this
+  data; "moving `SKU_008` to the top shelf beats where it is now" is, at 250k. `Ranking.beats_current`
+  names that pair explicitly and returns `None` — not `()` — when the question was not answered.
+
+  One trap worth recording: at 250k the rank-1 slot is still decided by a coin flip between two
+  near-identical SKU moves, so a check that compares only rank 1 against the current placement
+  misses the settled pair. The comparison has to scan every row.
+
+* `Ranking.top_pick_is_resolved` is `False` at every run size measured, and nothing above loosened
+  it; `DEFAULT_N_SYNTH` is still 10,000.
 * **`SeedSpread` is not a confidence interval,** and PLAN §6's example sentence ("+11% (CI 8-14)")
   is not reproduced. It is Monte Carlo run-to-run variability: the spread of the objective when the
   same simulation is re-rolled at different seeds. A confidence interval would measure sampling

@@ -30,7 +30,7 @@ SPEC M8 specifies seven shots. Two of them cannot be recorded honestly:
 |---|---|---|
 | `0:40–1:40` Phone clip → `VisionProgress`, boxes per frame, store assembling | **Cannot record.** S20 was dropped under PLAN §5's four-hour CUDA timebox. No aisle clip was shot; `vision/` is a stub and `web/src/vision/` is empty. | Shot 3: the seed planogram becoming the 3D store, live. |
 | `1:40–2:55` Colleague shops with webcam gaze; agreement meter climbs | **Partly.** There is no collected panel and the S9 webcam pilot never ran, so a webcam take cannot be promised. | Shot 4 as written below: a real, consented, **cursor-only** session. The agreement meter does turn on — it counts cursor dwells rather than fixations — but say on camera that this is agreement against a cursor-only proxy, not gaze. |
-| PLAN §6's optimizer recommendation | **Recordable.** S24 landed; the ranking runs in ~6 s. | Kept, with the seed spread on screen: the top pick's range overlaps the current placement's, so it is stated as a seed-42 result, not a settled ordering. |
+| PLAN §6's optimizer recommendation | **Recordable.** S24 landed; the ranking runs in ~6 s. | Kept, but narrated as a search rather than a recommendation. The default ranking reorders with run size, so the on-screen order is stated as unsettled; the one claim that does settle (at 250k) is a SKU move, not an ad move, and is said aloud rather than shown. |
 
 Everything else is recorded as specified.
 
@@ -161,12 +161,23 @@ both in the terminal, both fast enough to run live (~6 s each).
 python scripts/optimize.py --creative AD_1 --focal-sku SKU_008
 ```
 
-Thirteen configurations ranked by ad-to-purchase lift. Point at two things and nothing else:
+Thirteen configurations ranked by ad-to-purchase lift, in about six seconds. Point at two things
+and nothing else:
 
-* the current placement sits **5th of 13**, and
-* the line that begins `The order is not resolved against` — the top pick's seed spread overlaps
-  four other candidates', so this is a seed-42 ordering, not a settled one. Say that on camera.
-  It is the difference between a recommendation engine and a slot machine.
+* the current placement sits **5th of 13** at this run size, and
+* the line that begins `The order is not resolved against`, followed by the line saying **more
+  seeds will not settle it**.
+
+Say the second one on camera. It is the difference between a recommendation engine and a slot
+machine, and it is a stronger claim than "the ranking is noisy": at 10,000 shoppers the leader is
+`AD_1 on B1_TALKER`; at 50,000 it is a `SKU_008` move and the current placement has climbed to
+2nd. The ordering is a **run-size artefact**, not a close call. The one claim that does settle —
+at 250,000 shoppers, off-camera — is that moving `SKU_008` to the top shelf beats today's
+placement. **No ad move clears it below 500k.**
+
+So do not say "so we should move the creative to the shelf talker". The honest line is: *this is
+the search, this is what it returns at a run size you can watch live, and this is the module
+telling you not to trust the order yet.*
 
 Then price it:
 

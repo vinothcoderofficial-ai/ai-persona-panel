@@ -36,10 +36,12 @@ Three outputs, in increasing value (PLAN §1):
    because they do not model purchase. *Built, and computed for the synthetic panel.*
 3. **Placement optimizer** — search every slot × creative and recommend the best. *Built*
    (S24), with a slot-value layer that prices the winner (S25). This is the jump from an A/B tool
-   to a recommendation engine. It scores all 13 placements on this aisle in ~6 s and ranks the
-   current one 5th — but the ranking is **not resolved**: across seeds 42–46 the top pick spans
-   +6.2%..+14.2% and the current placement +1.3%..+8.9%, and those ranges overlap. Treat the
-   ordering as a seed-42 result, not a settled one (METHODOLOGY §12.13).
+   to a recommendation engine. It scores all 13 placements on this aisle in ~6 s at the default
+   run size — and the honest headline is that **that run size is too small to rank them**. The
+   leader changes with `n_synth`: `AD_1 on B1_TALKER` at 10k, a `SKU_008` move at 50k, while the
+   current placement climbs from 5th to 2nd. At 250k one claim does settle, and it is not the one
+   you would guess: **moving `SKU_008` to the top shelf** beats today's placement. No *ad* move
+   clears it below 500k. See METHODOLOGY §12.13 before quoting any of this.
 
 ---
 
@@ -267,9 +269,10 @@ whose bars would all be zero, because an axis of zero-height bars reads as a mea
   the template report with an LLM-written headline only (S16–S19).
 - The Brand Lift / CPS integration artifact and the persona post-shop survey (S22).
 - The placement optimizer and the slot-value pricing on top of it (S24, S25). The optimizer
-  scores all 13 placements on this aisle in ~6 s and ranks the current one 5th; the pricing
+  scores all 13 placements on this aisle in ~6 s, and `check_top_pick_stability()` re-ranks them
+  across run sizes — which is how we know the default ranking reorders. The pricing
   layer turns a lift into money. Read the caveat in the next section before quoting either:
-  the ranking is **not resolved** across seeds, and every figure the pricing prints rests on
+  the ranking is **not resolved** at the default run size, and every figure the pricing prints rests on
   commercial inputs this project does not have and does not invent.
 
 **Not built — and not implied anywhere else in this repository**
@@ -325,7 +328,7 @@ PLAN §12's table, with an honest status against each row.
 | AI personas autonomously navigating and buying | **S13** + S2 | **Partial** | S2's simulator is Met — 40,000 shopper-trips in ~175–205 ms, deterministic per seed. S13's agent loop is built, validated (target must exist at the current station; ≤ 20-word reason; slot order reshuffled every turn) and tested against an injected fake — but it has **never been run against a real language model**, so there are no traces. This is the criterion's headline and it is half-delivered. |
 | Identical experiments, both panels | Shared resolved variant JSON; S14 lock | **Built, unexercised** | Both panels read the same server-resolved planogram, and `POST /sessions` writes the lock before the session row exists while the events endpoint and the ingest socket both refuse a session without one. With no sessions there are no locks, so the ordering has been verified by tests, never by evidence. |
 | Defined accuracy metrics, benchmarked | S16, S17, S19 | **Built, unexercised** | Spearman, KL, purchase-share MAE, Ad Slot Index, decision agreement, the 200-split noise ceiling, and the known-effect check are implemented and unit-tested; the calibration recovery test recovers a known persona mix to 0.05. Every one of them needs a real panel, and the only *measured* result is the synthetic side of the known effect. |
-| Automated actionable insights | S18 lift, S19 report, **S24 optimizer** | **Partial** | `make eval` regenerates `RESULTS.md` and the figures from committed evidence, refuses to write a report if the integrity checks fail, and lets a language model write only the headline sentence. Ad-to-Purchase Lift is computed for the synthetic panel. S24, the optimizer that turns this from an A/B tool into a recommendation engine, **is built**: it scores all 13 placements on this aisle in ~6 s and ranks the current one 5th. But its ordering is **not resolved** — at seeds 42-46 the top pick spans +6.2%..+14.2% and the current placement +1.3%..+8.9%, and those overlap, so the recommendation is a seed-42 result (METHODOLOGY §12.13). |
+| Automated actionable insights | S18 lift, S19 report, **S24 optimizer** | **Partial** | `make eval` regenerates `RESULTS.md` and the figures from committed evidence, refuses to write a report if the integrity checks fail, and lets a language model write only the headline sentence. Ad-to-Purchase Lift is computed for the synthetic panel. S24, the optimizer that turns this from an A/B tool into a recommendation engine, **is built** — and it is honest about the fact that its default ranking does not hold. The leader changes with run size (`AD_1@B1_TALKER` at 10k, a `SKU_008` move at 50k); only one claim settles, at 250k, and it is a **SKU move rather than an ad move**. More seeds cannot fix this and larger runs can: `check_top_pick_stability()` is the check that shows it (METHODOLOGY §12.13). |
 | Reduce time and cost | SPEC §8 table | **Partial** | PLAN required SPEC §8's table recomputed on Day 8. Done, cell by cell, and it splits in two. The **95 % CI row is arithmetic and checks out exactly** — a normal-approximation interval on p = 0.30 gives ±12.70 pp at n = 50, ±14.20 pp at n = 40 and ±0.90 pp at n = 10,000, matching the ±13 / ±14 / ±0.9 printed there; n = 10,000 is this repo's actual `N_SYNTH`. The **compute row is measured and better than claimed**: a full 10,000-shopper population per persona in ~175–205 ms and a what-if answer at p95 under 11 ms warm, so "minutes for a what-if" overstates the cost by orders of magnitude. The **cost and calendar-time cells cannot be recomputed here** — $100K+ physical stores and $10–30K surveys are external market figures cited from the proposal, and no study of any kind has been commissioned by this project. SPEC.md is left unedited as the historical brief; this row is the recompute. |
 | Roadmap for Brand Lift / CPS | **S22** — [`docs/integration.md`](docs/integration.md) + `sim/persona_survey.py` | **Partial** | Delivered as a written artifact plus code, not a slide: the survey instrument, the per-persona and population roll-up, and the design for seeding persona shares from CPS demographics. But **no CPS data has been obtained or used**, no Brand Lift study has been run, and no survey answer has been produced — that needs an LLM key, and the survey module refuses to write a cache without one, exactly as `slow_agent.py` does. |
 | Foundation for AR / spatial / AI shopping | Planogram JSON renderer-agnostic; S20 video ingest | **Partial** | The planogram is a plain JSON document with metric bay dimensions and per-slot geometry; the React renderer is one consumer of it and the API never assumes a renderer. The S20 video-ingest path that would let a phone clip become a store was dropped. |

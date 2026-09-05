@@ -146,10 +146,18 @@ carries the reasoning, and the rule that still governs that stream.)*
 >
 > Today's planogram comes **fifth of thirteen**.
 >
-> And read this line, because it is the honest half: *the order is not resolved.* Re-roll the same
-> simulation at four more seeds and the top pick's range overlaps four other candidates'. So the
-> recommendation is "the shelf talker looks better than the endcap at this seed", not "the shelf
-> talker is better". A tool that hid that line would be easier to sell and worse to trust.
+> Now read these two lines, because they are the honest half. *The order is not resolved* — and
+> *more seeds will not settle it.* That second line matters more than it looks. It is not saying
+> the answer is noisy. It is saying the ranking depends on how many shoppers you simulate: at ten
+> thousand the winner is the shelf talker, at fifty thousand it is a shelf move for the focal
+> product, and today's placement has climbed from fifth to second.
+>
+> So I am not going to stand here and tell you to move the creative. What settles, when we run it
+> two hundred and fifty thousand shoppers deep, is something else entirely — move the focal
+> product to the top shelf. No ad placement beats where it is now at any size we can afford to run.
+>
+> That is the recommendation engine working. A tool that printed the ten-thousand-shopper answer
+> as a recommendation would be easier to sell and worse to trust.
 
 *(Re-run with the commercial flags.)*
 
