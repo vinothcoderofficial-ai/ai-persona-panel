@@ -5,7 +5,7 @@ import { ClockOverlay } from "@/spectator/ClockOverlay";
 import { GazeTrail } from "@/spectator/GazeTrail";
 import { LiveHeatmap } from "@/spectator/LiveHeatmap";
 import { PredictionBadge } from "@/spectator/PredictionBadge";
-import { formatElapsed, type LiveUpdate } from "@/spectator/liveMessage";
+import { EVIDENCE_LABEL, formatElapsed, type LiveUpdate } from "@/spectator/liveMessage";
 import {
   NO_LOCK,
   fetchLock,
@@ -380,7 +380,17 @@ export function SpectatorView(props: SpectatorViewProps) {
           <div style={panel}>
             <div style={panelHeading}>Session</div>
             <div style={statsRowStyle}>
-              <Stat testId="stat-n-fixations" label="fixations" value={update?.n_fixations} />
+              {/* Labelled with the kind the server says it counted, so a
+                  cursor_only session's dwells are never captioned as
+                  fixations. Before the first frame the mode is unknown, and
+                  the stat is empty anyway. */}
+              <Stat
+                testId="stat-evidence"
+                label={
+                  update === null ? "evidence" : EVIDENCE_LABEL[update.evidence_kind]
+                }
+                value={update?.evidence_count}
+              />
               <Stat
                 testId="stat-stations-visited"
                 label="stations"
@@ -397,7 +407,8 @@ export function SpectatorView(props: SpectatorViewProps) {
           <AgreementMeter
             spearman={update?.spearman ?? null}
             meaningful={update?.meaningful ?? false}
-            nFixations={update?.n_fixations ?? 0}
+            evidenceCount={update?.evidence_count ?? 0}
+            evidenceKind={update?.evidence_kind ?? null}
             ceiling={ceiling}
           />
         </section>

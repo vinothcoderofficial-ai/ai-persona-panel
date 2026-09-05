@@ -1,5 +1,9 @@
 import type { CSSProperties } from "react";
-import { MEANINGFUL_MIN_FIXATIONS } from "@/spectator/liveMessage";
+import {
+  EVIDENCE_LABEL,
+  MEANINGFUL_MIN_EVIDENCE,
+  type EvidenceKind,
+} from "@/spectator/liveMessage";
 import { GREY, PANEL_BORDER, REAL, bigNumber, note, panel, panelHeading } from "@/spectator/styles";
 
 /**
@@ -12,7 +16,15 @@ import { GREY, PANEL_BORDER, REAL, bigNumber, note, panel, panelHeading } from "
  * at all. Four fixations into a session the rank correlation over a handful of
  * slots swings wildly, and a spectator who reads 0.94 off a recording at second
  * three has been misled by the thing that exists to prevent exactly that. The
- * count of fixations is shown instead, so the meter is still visibly alive.
+ * count of evidence so far is shown instead, so the meter is still visibly
+ * alive.
+ *
+ * **What is being counted is named, not assumed.** SPEC 4.7's `n_fixations` is
+ * only the right count for a webcam session; a `cursor_only` session - the only
+ * kind the demo produces - has none, and counts cursor dwells instead. The
+ * server sends `evidence_count` with an `evidence_kind` beside it and this
+ * component prints the label it was given, so the meter never reads "n of 15
+ * fixations" over a number that is not fixations.
  *
  * The threshold is never re-derived here: `meaningful` is the server's verdict
  * and this component obeys it.
@@ -21,9 +33,16 @@ import { GREY, PANEL_BORDER, REAL, bigNumber, note, panel, panelHeading } from "
 export interface AgreementMeterProps {
   /** Spearman rho against the locked prediction, or null if none was sent. */
   spearman: number | null;
-  /** The server's verdict. Below 15 fixations it is false. */
+  /** The server's verdict. Below 15 units of evidence it is false. */
   meaningful: boolean;
-  nFixations: number;
+  /** `evidence_count` from the frame: fixations, or cursor dwells. */
+  evidenceCount: number;
+  /**
+   * Which of the two `evidenceCount` holds. Null before the first frame has
+   * arrived, when the mode is simply not known yet - the meter then says it is
+   * waiting rather than guessing a label.
+   */
+  evidenceKind: EvidenceKind | null;
   /**
    * The panel's split-half noise ceiling, when one is known
    * (`?ceiling=` on the spectator URL). Without it, relative agreement is not
@@ -57,10 +76,12 @@ function trackPosition(rho: number): string {
 export function AgreementMeter({
   spearman,
   meaningful,
-  nFixations,
+  evidenceCount,
+  evidenceKind,
   ceiling,
 }: AgreementMeterProps) {
   const relative = meaningful ? relativeAgreement(spearman, ceiling) : null;
+  const label = evidenceKind === null ? null : EVIDENCE_LABEL[evidenceKind];
 
   if (!meaningful) {
     return (
@@ -68,8 +89,15 @@ export function AgreementMeter({
         <div style={panelHeading}>Agreement with the locked prediction</div>
         <div style={{ ...bigNumber, color: GREY }}>Warming up</div>
         <div style={{ ...note, marginTop: 6 }}>
-          {nFixations} of {MEANINGFUL_MIN_FIXATIONS} fixations. No correlation is shown
-          until the session has enough of them to mean anything.
+          {label === null ? (
+            <>Waiting for the first update from this session.</>
+          ) : (
+            <>
+              {evidenceCount} of {MEANINGFUL_MIN_EVIDENCE} {label}.
+            </>
+          )}{" "}
+          No correlation is shown until the session carries enough evidence to mean
+          anything.
         </div>
         <div style={trackStyle}>
           <div style={{ ...fillStyle, width: "0%", background: GREY }} />
@@ -112,7 +140,9 @@ export function AgreementMeter({
           )}
         </>
       )}
-      <div style={{ ...note, marginTop: 8 }}>{nFixations} fixations so far.</div>
+      <div style={{ ...note, marginTop: 8 }}>
+        {evidenceCount} {label ?? "events"} so far.
+      </div>
     </div>
   );
 }

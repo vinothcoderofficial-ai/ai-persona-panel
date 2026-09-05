@@ -21,9 +21,11 @@ import pytest
 from sqlmodel import Session, select
 from starlette.websockets import WebSocketDisconnect
 
-from analytics.fusion import fuse_session
+from analytics.fusion import fuse_session, fuse_synthetic, trimmed_mean
 from analytics.metrics import attention_spearman
 from api.app import live as live_module
+from api.app import prediction as prediction_module
+from api.app import simcache
 from api.app.db import EventRecord, SessionRecord
 from api.app.routers import ws as ws_module
 
@@ -33,6 +35,9 @@ LIVE_MESSAGE_FIELDS = {
     "session_id",
     "t_ms",
     "n_fixations",
+    "n_cursor_dwells",
+    "evidence_count",
+    "evidence_kind",
     "stations_visited",
     "attention",
     "latest_gaze",
@@ -156,7 +161,7 @@ def test_running_fusion_equals_offline_fusion(client, predictions_dir, mode):
     slot_ids = live_module.slot_vocabulary(lock)
     events = recorded_session(slot_ids)
 
-    state = live_module.open_state(session_id, mode=mode, lock=lock)
+    state = open_live_state(client, session_id, lock, mode=mode)
     message = None
     for batch in batches(events):
         message = state.fold(batch)
@@ -226,7 +231,8 @@ def test_replayed_events_reach_the_database(client, predictions_dir, test_engine
 
 
 # ---------------------------------------------------------------------------
-# meaningful: false below 15 fixations, true at 15 (SPEC 4.7)
+# meaningful: false below 15 fixations, true at 15, for a WEBCAM session
+# (SPEC 4.7 verbatim). The cursor_only counterpart is in the defect 2 section.
 # ---------------------------------------------------------------------------
 
 
@@ -236,19 +242,24 @@ def fixation(slot_id: str, t_ms: int) -> dict:
                         "shelf_id": None}}
 
 
-def test_meaningful_flips_exactly_at_fifteen_fixations(client, predictions_dir):
+def test_meaningful_flips_exactly_at_fifteen_fixations(client, predictions_dir, capsys):
     session_id, lock = create_session(client, predictions_dir)
     slot_ids = live_module.slot_vocabulary(lock)
-    state = live_module.open_state(session_id, mode="webcam", lock=lock)
+    state = open_live_state(client, session_id, lock, mode="webcam")
 
-    assert live_module.MEANINGFUL_MIN_FIXATIONS == 15
+    assert live_module.MEANINGFUL_MIN_EVIDENCE == 15
 
     for i in range(14):
         message = state.fold([fixation(slot_ids[i % len(slot_ids)], 100 * i)])
         assert message["n_fixations"] == i + 1
+        assert message["evidence_count"] == i + 1
+        assert message["evidence_kind"] == "fixations"
         assert message["meaningful"] is False, f"meaningful at {i + 1} fixations"
 
     message = state.fold([fixation(slot_ids[0], 9999)])
+    with capsys.disabled():
+        print(f"\n[defect 2/webcam] meaningful flips at "
+              f"{message['evidence_count']} {message['evidence_kind']}")
     assert message["n_fixations"] == 15
     assert message["meaningful"] is True
 
@@ -257,18 +268,23 @@ def test_meaningful_flips_exactly_at_fifteen_fixations(client, predictions_dir):
     assert message["meaningful"] is True
 
 
-def test_non_fixation_events_do_not_count_towards_meaningful(client, predictions_dir):
+def test_events_that_carry_no_evidence_do_not_count_towards_meaningful(
+    client, predictions_dir
+):
+    """Neither mode counts an event that is not its own evidence channel."""
     session_id, lock = create_session(client, predictions_dir)
     slot_ids = live_module.slot_vocabulary(lock)
-    state = live_module.open_state(session_id, mode="webcam", lock=lock)
+    state = open_live_state(client, session_id, lock, mode="webcam")
 
     noise = [
-        {"t_ms": i, "type": "cursor_dwell", "station_id": "B1",
-         "payload": {"slot_id": slot_ids[0], "dur_ms": 100}}
+        {"t_ms": i, "type": "hover", "station_id": "B1",
+         "payload": {"sku_id": "SKU_001", "slot_id": slot_ids[0]}}
         for i in range(50)
     ]
     message = state.fold(noise)
     assert message["n_fixations"] == 0
+    assert message["n_cursor_dwells"] == 0
+    assert message["evidence_count"] == 0
     assert message["meaningful"] is False
 
 
@@ -277,33 +293,10 @@ def test_non_fixation_events_do_not_count_towards_meaningful(client, predictions
 # ---------------------------------------------------------------------------
 
 
-def test_spearman_is_measured_against_the_locked_vector(client, predictions_dir):
-    session_id, lock = create_session(client, predictions_dir)
-    slot_ids = live_module.slot_vocabulary(lock)
-    events = recorded_session(slot_ids)
-
-    state = live_module.open_state(session_id, mode="webcam", lock=lock)
-    message = state.fold(events)
-
-    expected = attention_spearman(
-        message["attention"], lock["population_fixation_prob"], slot_ids
-    )
-    assert message["spearman"] == pytest.approx(expected)
-
-    # It is the lock that is being compared against, not a fresh simulation:
-    # perturbing the locked vector must move the number.
-    tampered = dict(lock)
-    tampered["population_fixation_prob"] = {
-        slot_id: float(i) for i, slot_id in enumerate(slot_ids)
-    }
-    other = live_module.open_state(session_id + "-x", mode="webcam", lock=tampered)
-    assert other.fold(events)["spearman"] != message["spearman"]
-
-
 def test_t_ms_stations_visited_and_latest_gaze_track_the_stream(client, predictions_dir):
     session_id, lock = create_session(client, predictions_dir)
     slot_ids = live_module.slot_vocabulary(lock)
-    state = live_module.open_state(session_id, mode="webcam", lock=lock)
+    state = open_live_state(client, session_id, lock, mode="webcam")
 
     assert state.snapshot()["latest_gaze"] is None
     assert state.snapshot()["stations_visited"] == 0
@@ -341,7 +334,7 @@ def test_batch_fold_stays_under_20ms(client, predictions_dir, capsys):
     # the accumulated session, so the last batch is the worst case.
     events = recorded_session(slot_ids, n_events=3000, seed=11)
 
-    state = live_module.open_state(session_id, mode="webcam", lock=lock)
+    state = open_live_state(client, session_id, lock, mode="webcam")
     timings = []
     for batch in batches(events, sizes=(25,)):
         started = time.perf_counter()
@@ -507,3 +500,316 @@ def test_real_spectator_stream_is_never_marked_fake(client, predictions_dir):
 
     assert "fake" not in message
     assert message["session_id"] == session_id
+
+
+# ===========================================================================
+# DEFECT 1 - the live meter and scripts/eval.py compare against the SAME
+# synthetic vector
+# ===========================================================================
+
+
+def resolved_planogram(client, variant_id: str) -> dict:
+    """The resolved planogram for a variant, through the public route.
+
+    CLAUDE.md: resolve() lives only in api/app/resolve.py, so the test asks the
+    server for the resolved document rather than assembling one.
+    """
+    resp = client.get(f"/variants/{variant_id}/resolved")
+    assert resp.status_code == 200, resp.text
+    return resp.json()
+
+
+def open_live_state(client, session_id: str, lock: dict, mode: str = "webcam"):
+    """`live.open_state` with the resolved planogram its comparison needs."""
+    return live_module.open_state(
+        session_id,
+        mode=mode,
+        lock=lock,
+        resolved_planogram=resolved_planogram(client, lock["variant_id"]),
+    )
+
+
+def offline_spearman(client, lock: dict, events: list, mode: str) -> float:
+    """The comparison `scripts/eval.py` performs, rebuilt from its own parts.
+
+    `_analyse()` in eval.py, for one variant:
+
+        planogram = resolve(base, variant)
+        slot_ids  = prediction.occupied_slot_ids(planogram)
+        bundle    = simcache.population(planogram, variant_id, n_synth, seed)
+        synth     = fuse_synthetic(bundle.population, planogram, slot_ids, mode)
+        attention = trimmed_mean([fuse_session(e, slot_ids, mode) for e in panel])
+        rho       = attention_spearman(attention, synth, slot_ids)
+
+    The panel here is one session, which is what makes a per-session live
+    number and eval.py's per-panel number comparable at all: `trimmed_mean`
+    over one session drops int(1 * 0.10) == 0 values per tail and is the
+    identity, and `dominant_mode` of a one-session panel is that session's own
+    mode.
+    """
+    planogram = resolved_planogram(client, lock["variant_id"])
+    slot_ids = prediction_module.occupied_slot_ids(planogram)
+    bundle = simcache.population(
+        planogram,
+        lock["variant_id"],
+        n_synth=prediction_module.N_SYNTH,
+        seed=prediction_module.SEED,
+    )
+    synth = fuse_synthetic(bundle.population, planogram, slot_ids, mode=mode)
+    attention = trimmed_mean([fuse_session(events, slot_ids, mode=mode)], slot_ids)
+    return attention_spearman(attention, synth, slot_ids)
+
+
+@pytest.mark.parametrize("mode", ["cursor_only", "webcam"])
+def test_live_spearman_equals_the_offline_evaluation_spearman(
+    client, predictions_dir, mode, capsys
+):
+    """The headline of defect 1: one session, two code paths, one number.
+
+    The spectator screen and RESULTS.md must not be able to show different
+    agreement figures for the same session.
+    """
+    session_id, lock = create_session(client, predictions_dir, mode=mode)
+    events = recorded_session(live_module.slot_vocabulary(lock))
+
+    state = open_live_state(client, session_id, lock, mode=mode)
+    live_rho = state.fold(events)["spearman"]
+    offline_rho = offline_spearman(client, lock, events, mode)
+
+    with capsys.disabled():
+        print(f"\n[defect 1/{mode}] live rho {live_rho!r} vs offline rho "
+              f"{offline_rho!r} (delta {abs(live_rho - offline_rho):.3e})")
+
+    # The two paths index their vectors in different orders -- live.py sorts the
+    # lock's keys, eval.py takes the planogram's order -- so the tolerance is
+    # for float summation order, not for a difference in what is computed.
+    assert live_rho == pytest.approx(offline_rho, abs=1e-12)
+
+
+def test_spearman_is_measured_against_the_fused_locked_prediction(client, predictions_dir):
+    """The live synthetic side is `fuse_synthetic` of the LOCKED run.
+
+    Not the raw `population_fixation_prob` (that was the defect) and not a
+    fresh, unverified simulation (that would drop the pre-registration).
+    """
+    session_id, lock = create_session(client, predictions_dir)
+    slot_ids = live_module.slot_vocabulary(lock)
+    events = recorded_session(slot_ids)
+    planogram = resolved_planogram(client, lock["variant_id"])
+
+    state = open_live_state(client, session_id, lock, mode="webcam")
+    message = state.fold(events)
+
+    bundle = simcache.population(
+        planogram, lock["variant_id"],
+        n_synth=prediction_module.N_SYNTH, seed=prediction_module.SEED,
+    )
+    expected = attention_spearman(
+        message["attention"],
+        fuse_synthetic(bundle.population, planogram, slot_ids, mode="webcam"),
+        slot_ids,
+    )
+    assert message["spearman"] == pytest.approx(expected, abs=1e-12)
+
+    # And it is measurably NOT the old raw-vector comparison, which is the
+    # whole reason this changed.
+    raw = attention_spearman(
+        message["attention"], lock["population_fixation_prob"], slot_ids
+    )
+    assert message["spearman"] != pytest.approx(raw, abs=1e-9)
+
+
+def test_the_locked_vector_still_drives_the_comparison(client, predictions_dir):
+    """Fusing is a deterministic transform OF the locked run, not a replacement."""
+    session_id, lock = create_session(client, predictions_dir)
+    slot_ids = live_module.slot_vocabulary(lock)
+    planogram = resolved_planogram(client, lock["variant_id"])
+    bundle = simcache.population(
+        planogram, lock["variant_id"],
+        n_synth=prediction_module.N_SYNTH, seed=prediction_module.SEED,
+    )
+    synthetic = live_module.synthetic_vector(
+        lock, planogram, slot_ids, mode="cursor_only"
+    )
+
+    assert synthetic == pytest.approx(
+        fuse_synthetic(bundle.population, planogram, slot_ids, mode="cursor_only")
+    )
+    assert set(synthetic) == set(lock["population_fixation_prob"])
+
+
+def test_a_lock_whose_vector_no_longer_matches_the_simulator_is_refused(
+    client, predictions_dir
+):
+    """A stale lock fails loudly rather than being silently compared against."""
+    create_session(client, predictions_dir)
+    _, lock = create_session(client, predictions_dir)
+    planogram = resolved_planogram(client, lock["variant_id"])
+    slot_ids = live_module.slot_vocabulary(lock)
+
+    tampered = dict(lock)
+    tampered["population_fixation_prob"] = {
+        slot_id: float(i) for i, slot_id in enumerate(slot_ids)
+    }
+
+    with pytest.raises(live_module.StalePredictionLock) as excinfo:
+        live_module.synthetic_vector(tampered, planogram, slot_ids, mode="webcam")
+    assert "population_fixation_prob" in str(excinfo.value)
+
+
+def test_a_lock_with_a_foreign_sim_run_id_is_refused(client, predictions_dir):
+    _, lock = create_session(client, predictions_dir)
+    planogram = resolved_planogram(client, lock["variant_id"])
+    slot_ids = live_module.slot_vocabulary(lock)
+
+    tampered = dict(lock)
+    tampered["sim_run_id"] = "0123456789ab"
+
+    with pytest.raises(live_module.StalePredictionLock) as excinfo:
+        live_module.synthetic_vector(tampered, planogram, slot_ids, mode="webcam")
+    assert "sim_run_id" in str(excinfo.value)
+
+
+def test_open_state_refuses_a_stale_lock(client, predictions_dir):
+    session_id, lock = create_session(client, predictions_dir)
+    tampered = dict(lock)
+    tampered["sim_run_id"] = "0123456789ab"
+
+    with pytest.raises(live_module.StalePredictionLock):
+        open_live_state(client, session_id, tampered, mode="webcam")
+
+
+def test_ws_session_refused_when_the_lock_is_stale(client, predictions_dir):
+    """End to end: a stale lock closes the ingest socket instead of measuring."""
+    session_id, lock = create_session(client, predictions_dir)
+    stale = dict(lock)
+    stale["sim_run_id"] = "0123456789ab"
+    (predictions_dir / f"{session_id}.json").write_text(
+        json.dumps(stale, indent=2, sort_keys=True), encoding="utf-8"
+    )
+
+    with pytest.raises(WebSocketDisconnect) as excinfo:
+        with client.websocket_connect(f"/ws/session/{session_id}"):
+            pass
+    assert excinfo.value.code == ws_module.CLOSE_PREDICTION_LOCK_STALE
+
+
+def test_the_lock_hash_still_verifies_and_gained_no_hashed_fields(client, predictions_dir):
+    """The pre-registration is untouched: same three fields, same digest."""
+    _, lock = create_session(client, predictions_dir)
+
+    assert lock["sha256"] == prediction_module.compute_sha256(
+        lock["population_fixation_prob"], lock["sim_run_id"], lock["created_at"]
+    )
+    # The document on disk carries exactly the SPEC 4.6 fields -- nothing this
+    # change needed was added to it, hashed or otherwise.
+    assert set(lock) == {
+        "prediction_id", "session_id", "variant_id", "sim_run_id", "created_at",
+        "population_fixation_prob", "sha256", "git_commit",
+    }
+
+
+def test_the_synthetic_vector_is_computed_once_not_per_batch(client, predictions_dir,
+                                                             monkeypatch):
+    """No simulation, and no database read, on the hot path.
+
+    `open_state` pays for the comparison vector once; every `fold` after that
+    must be pure in-memory work. Making the simulator explode proves it.
+    """
+    session_id, lock = create_session(client, predictions_dir)
+    slot_ids = live_module.slot_vocabulary(lock)
+    state = open_live_state(client, session_id, lock, mode="webcam")
+
+    def explode(*args, **kwargs):
+        raise AssertionError("simcache.population called on the hot path")
+
+    monkeypatch.setattr(simcache, "population", explode)
+    message = state.fold([fixation(slot_ids[0], 100)])
+    assert message["spearman"] == state.snapshot()["spearman"]
+
+
+# ===========================================================================
+# DEFECT 2 - `meaningful` reflects the evidence the session actually produces
+# ===========================================================================
+
+
+def cursor_dwell(slot_id: str, t_ms: int) -> dict:
+    return {"t_ms": t_ms, "type": "cursor_dwell", "station_id": "B1",
+            "payload": {"slot_id": slot_id, "dur_ms": 320}}
+
+
+def test_a_cursor_only_session_becomes_meaningful_at_exactly_fifteen_dwells(
+    client, predictions_dir, capsys
+):
+    """The demo's only session type must be able to turn the meter on.
+
+    SPEC 4.7 counts fixations; a cursor_only session has none by construction,
+    so it counts the channel that carries 70 % of its attention formula.
+    """
+    session_id, lock = create_session(client, predictions_dir, mode="cursor_only")
+    slot_ids = live_module.slot_vocabulary(lock)
+    state = open_live_state(client, session_id, lock, mode="cursor_only")
+
+    assert live_module.MEANINGFUL_MIN_EVIDENCE == 15
+
+    for i in range(14):
+        message = state.fold([cursor_dwell(slot_ids[i % len(slot_ids)], 100 * i)])
+        assert message["evidence_count"] == i + 1
+        assert message["evidence_kind"] == "cursor_dwells"
+        assert message["meaningful"] is False, f"meaningful at {i + 1} dwells"
+
+    message = state.fold([cursor_dwell(slot_ids[0], 9999)])
+    with capsys.disabled():
+        print(f"\n[defect 2/cursor_only] meaningful flips at "
+              f"{message['evidence_count']} {message['evidence_kind']}")
+    assert message["evidence_count"] == 15
+    assert message["meaningful"] is True
+
+    message = state.fold([cursor_dwell(slot_ids[1], 10_000)])
+    assert message["evidence_count"] == 16
+    assert message["meaningful"] is True
+
+
+def test_fixations_do_not_make_a_cursor_only_session_meaningful(client, predictions_dir):
+    """A cursor_only session's gaze trail is empty; a stray fixation is not
+    evidence its meter may count."""
+    session_id, lock = create_session(client, predictions_dir, mode="cursor_only")
+    slot_ids = live_module.slot_vocabulary(lock)
+    state = open_live_state(client, session_id, lock, mode="cursor_only")
+
+    message = state.fold([fixation(slot_ids[0], 100 * i) for i in range(50)])
+    assert message["n_fixations"] == 50
+    assert message["evidence_count"] == 0
+    assert message["meaningful"] is False
+
+
+def test_cursor_dwells_do_not_make_a_webcam_session_meaningful(client, predictions_dir):
+    """SPEC 4.7, unchanged, for the mode it was written for."""
+    session_id, lock = create_session(client, predictions_dir, mode="webcam")
+    slot_ids = live_module.slot_vocabulary(lock)
+    state = open_live_state(client, session_id, lock, mode="webcam")
+
+    message = state.fold([cursor_dwell(slot_ids[0], 100 * i) for i in range(50)])
+    assert message["n_cursor_dwells"] == 50
+    assert message["evidence_count"] == 0
+    assert message["evidence_kind"] == "fixations"
+    assert message["meaningful"] is False
+
+
+def test_every_count_in_the_message_describes_what_it_holds(client, predictions_dir):
+    """No mislabelled counts: each field is checkable against the stream."""
+    for mode, kind in (("webcam", "fixations"), ("cursor_only", "cursor_dwells")):
+        session_id, lock = create_session(client, predictions_dir, mode=mode)
+        slot_ids = live_module.slot_vocabulary(lock)
+        state = open_live_state(client, session_id, lock, mode=mode)
+
+        events = ([fixation(slot_ids[0], 10 * i) for i in range(3)]
+                  + [cursor_dwell(slot_ids[1], 1000 + 10 * i) for i in range(7)])
+        message = state.fold(events)
+
+        assert message["n_fixations"] == 3
+        assert message["n_cursor_dwells"] == 7
+        assert message["evidence_kind"] == kind
+        assert message["evidence_count"] == (
+            message["n_fixations"] if kind == "fixations" else message["n_cursor_dwells"]
+        )

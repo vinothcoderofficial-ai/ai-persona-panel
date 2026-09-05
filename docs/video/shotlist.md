@@ -29,7 +29,7 @@ SPEC M8 specifies seven shots. Two of them cannot be recorded honestly:
 | SPEC shot | Status | Replaced with |
 |---|---|---|
 | `0:40–1:40` Phone clip → `VisionProgress`, boxes per frame, store assembling | **Cannot record.** S20 was dropped under PLAN §5's four-hour CUDA timebox. No aisle clip was shot; `vision/` is a stub and `web/src/vision/` is empty. | Shot 3: the seed planogram becoming the 3D store, live. |
-| `1:40–2:55` Colleague shops with webcam gaze; agreement meter climbs | **Partly.** There is no collected panel and the S9 webcam pilot never ran, so a webcam take cannot be promised. | Shot 4 as written below: a real, consented, **cursor-only** session, with the meter's provisional state explained on camera rather than hidden. |
+| `1:40–2:55` Colleague shops with webcam gaze; agreement meter climbs | **Partly.** There is no collected panel and the S9 webcam pilot never ran, so a webcam take cannot be promised. | Shot 4 as written below: a real, consented, **cursor-only** session. The agreement meter does turn on — it counts cursor dwells rather than fixations — but say on camera that this is agreement against a cursor-only proxy, not gaze. |
 | PLAN §6's optimizer recommendation | **Cannot record.** S24 is not started. | Cut. The runtime it would have used goes to the honesty panel. |
 
 Everything else is recorded as specified.
@@ -101,14 +101,17 @@ a person shopping it, this is what happens if we move something.
 | `ClockOverlay` | Running wall clock. |
 | `LiveHeatmap` | Builds from cursor dwell and interactions. Works. |
 | `GazeTrail` | **Stays empty.** Only `gaze` and `fixation` events carry a screen position and a cursor-only session emits neither. |
-| `AgreementMeter` | **Stays provisional.** `meaningful` requires 15 fixation events; a cursor-only session produces zero, so the meter never turns on. |
+| `AgreementMeter` | **Turns on mid-shot.** `meaningful` counts 15 events of the session's own evidence channel, which in a cursor-only session is cursor dwells, not fixations. The label counts up ("9 of 15 cursor dwells") and ρ appears once it reaches 15 — so shop long enough to cross it on camera. |
 
-Do not hide the empty trail or the greyed-out meter. Narrate both (see `script.md`).
+Do not hide the empty gaze trail, and do not let the meter coming on pass without saying what it
+counted. Narrate both (see `script.md`).
 
-**Then, and only after the live take has ended**, show what the meter looks like when it *is* live
-by cutting to the labelled demo stream. This cutaway is a separate ~10-second beat inside shot 4's
-time budget; it is **not** part of the one-take segment, and the edit point must land after the
-live take is finished so nothing is spliced into it.
+**Optional, and only after the live take has ended**, cut to the labelled demo stream. This beat
+existed because the meter used to stay grey for the whole cursor-only take; it now comes on once
+the shopper crosses fifteen cursor dwells, so cut this unless the take fell short of that. If it
+is kept it is a separate ~10-second beat inside shot 4's time budget; it is **not** part of the
+one-take segment, and the edit point must land after the live take is finished so nothing is
+spliced into it.
 
 ```
 http://localhost:5173/#/spectator?session=demo&fake=1

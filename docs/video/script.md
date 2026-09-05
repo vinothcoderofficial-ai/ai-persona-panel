@@ -90,16 +90,22 @@ Timings are the outer edge of each shot. Speak under them; the live shots need s
 > The heatmap on the left is building from what I am doing right now. The one on the right is the
 > locked prediction; it has not moved and it cannot.
 >
-> Two things on this screen are deliberately *not* working, and I would rather point at them than
-> let you notice later. The gaze trail is empty, because this is a cursor-only session and there
-> is no gaze to draw. And the agreement meter is greyed out — it needs fifteen fixations before it
-> will show a correlation, and a cursor-only session produces none. It refuses to print a number
-> it has not earned.
+> One thing on this screen is deliberately *not* working, and I would rather point at it than let
+> you notice later. The gaze trail is empty, because this is a cursor-only session and there is no
+> gaze to draw.
+>
+> The agreement meter does come on, and I want to be exact about what it is counting. It waits for
+> fifteen pieces of evidence from whichever channel this session actually has — fixations in a
+> webcam session, cursor dwells in this one — and until it has them it refuses to print a number it
+> has not earned. So the correlation you are about to see is against a cursor proxy for attention,
+> not against gaze. That is a weaker claim than the one we would make with a webcam panel, and it
+> is the honest one to make here.
 
 *(End of the one-take segment. The cutaway below is a separate beat, spliced on after it — never
-into it.)*
+into it. It is now optional: the meter comes on during the live take, so cut this beat unless the
+take crossed fewer than fifteen cursor dwells.)*
 
-> Here is what that meter looks like when it is live.
+> Here is that meter again on a stream built to exercise it.
 >
 > *(Cut to `#/spectator?session=demo&fake=1`, yellow border and banner in frame.)*
 >

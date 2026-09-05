@@ -22,10 +22,17 @@ at connect, before the socket is even accepted - the same rule
 `POST /sessions/{id}/events` enforces (CLAUDE.md: locks are written on
 `POST /sessions`, before any event is accepted).
 
-**No database reads on the hot path.** The session document and the lock are
-read once, at connect, to build the `LiveState`. After that a batch costs a
-fold and a broadcast; the only database work is an append of exactly the batch
-just accepted.
+**No database reads on the hot path.** The session document, the lock and the
+variant the lock was computed over are read once, at connect, to build the
+`LiveState`. After that a batch costs a fold and a broadcast; the only database
+work is an append of exactly the batch just accepted.
+
+**The lock must still describe the simulator.** The live agreement meter scores
+the shopper against `fuse_synthetic` of the locked run, the same vector
+`scripts/eval.py` uses, so `live.open_state` needs the resolved planogram and
+recomputes the locked simulation to verify it. A lock the simulator no longer
+reproduces closes the socket (`CLOSE_PREDICTION_LOCK_STALE`) rather than
+recording a session that could never be evaluated honestly afterwards.
 """
 from __future__ import annotations
 
@@ -39,7 +46,16 @@ from fastapi import APIRouter, Depends, Query, WebSocket, WebSocketDisconnect
 from sqlmodel import Session
 
 from api.app import live, prediction
-from api.app.db import PLANOGRAMS_DIR, EventRecord, SessionRecord, get_session, get_validator
+from api.app.db import (
+    PLANOGRAMS_DIR,
+    EventRecord,
+    PlanogramRecord,
+    SessionRecord,
+    VariantRecord,
+    get_session,
+    get_validator,
+)
+from api.app.resolve import PatchError, resolve
 
 router = APIRouter(tags=["ws"])
 log = logging.getLogger(__name__)
@@ -47,6 +63,11 @@ log = logging.getLogger(__name__)
 # Application close codes (the 4000-4999 range is reserved for exactly this).
 CLOSE_UNKNOWN_SESSION = 4404
 CLOSE_NO_PREDICTION_LOCK = 4409
+CLOSE_PREDICTION_LOCK_STALE = 4410
+
+# A close reason travels in the WebSocket close frame, which is capped at 123
+# bytes; a longer one is a protocol error rather than a message.
+_MAX_CLOSE_REASON = 120
 
 # Fake-stream constants. They are constants, and not derived from the request,
 # precisely so a fake frame can never be mistaken for a real one.
@@ -117,8 +138,27 @@ async def session_socket(
         )
         return
 
+    # The planogram the lock was computed over, from the same rows
+    # POST /sessions resolved. The live meter's synthetic side is
+    # `fuse_synthetic` of the locked run and needs it; loading it from disk
+    # instead would risk fusing against a different document than the one that
+    # was locked, which is precisely the inconsistency this is here to remove.
+    resolved = _resolved_planogram(db, lock["variant_id"])
+    if resolved is None:
+        await _close_stale(
+            websocket, session_id,
+            f"lock names variant {lock['variant_id']!r}, which no longer resolves",
+        )
+        return
+
     session_document = json.loads(record.data)
-    state = live.open_state(session_id, mode=session_document["mode"], lock=lock)
+    try:
+        state = live.open_state(session_id, mode=session_document["mode"], lock=lock,
+                                resolved_planogram=resolved)
+    except live.StalePredictionLock as exc:
+        await _close_stale(websocket, session_id, str(exc))
+        return
+
     validator = get_validator("event.schema.json")
 
     await websocket.accept()
@@ -148,6 +188,41 @@ async def session_socket(
     finally:
         # Whatever is still buffered belongs in the database, disconnect or not.
         _flush(db, session_id, pending)
+
+
+def _resolved_planogram(db: Session, variant_id: str) -> Optional[Dict[str, Any]]:
+    """The resolved planogram for a variant, or None if it cannot be resolved.
+
+    `routers/sessions.py` does the same lookup and raises HTTPException, which
+    is meaningless on a socket that has not been accepted yet - hence the
+    separate, non-raising form. The resolution itself is still the one
+    implementation: `api/app/resolve.py:resolve` (CLAUDE.md).
+    """
+    variant_record = db.get(VariantRecord, variant_id)
+    if variant_record is None:
+        return None
+    variant = json.loads(variant_record.data)
+
+    planogram_record = db.get(PlanogramRecord, variant["base_planogram_id"])
+    if planogram_record is None:
+        return None
+
+    try:
+        return resolve(json.loads(planogram_record.data), variant)
+    except PatchError:
+        return None
+
+
+async def _close_stale(websocket: WebSocket, session_id: str, reason: str) -> None:
+    """Refuse a session whose lock no longer describes the simulator.
+
+    Logged at ERROR, not warning: it means a committed prediction and the code
+    that produced it have diverged, so every number downstream of this session
+    would be unusable as evidence.
+    """
+    log.error("ws/session %s refused - stale prediction lock: %s", session_id, reason)
+    await websocket.close(code=CLOSE_PREDICTION_LOCK_STALE,
+                          reason=reason[:_MAX_CLOSE_REASON])
 
 
 def _parse_batch(raw: str, validator) -> tuple[List[Dict[str, Any]], Optional[str]]:
@@ -244,19 +319,25 @@ async def fake_stream(websocket: WebSocket) -> None:
 
     The numbers are a seeded random walk over the demo aisle's real slot ids,
     so the heatmap has something plausibly shaped to render, and `meaningful`
-    flips at the same 15-fixation boundary the real engine uses.
+    flips at the same 15-unit boundary the real engine uses.
+
+    Shaped like a `cursor_only` session - no fixations, evidence carried by
+    cursor dwells - because that is the only kind of session the demo can
+    actually produce (see `api/app/live.py` on `meaningful`). A stand-in that
+    behaved like a mode nothing runs in would exercise the wrong half of the
+    spectator UI.
     """
     log.warning("ws/spectator opened in FAKE mode - these frames are not measurements")
     rng = random.Random(20260903)
     slot_ids = _fake_slot_ids()
     attention = {slot_id: rng.random() for slot_id in slot_ids}
     t_ms = 0
-    n_fixations = 0
+    n_cursor_dwells = 0
 
     try:
         while True:
             t_ms += rng.randint(200, 600)
-            n_fixations += rng.randint(0, 2)
+            n_cursor_dwells += rng.randint(0, 2)
             for slot_id in slot_ids:
                 attention[slot_id] = max(0.0, attention[slot_id] + rng.uniform(-0.05, 0.05))
             total = sum(attention.values()) or 1.0
@@ -264,12 +345,15 @@ async def fake_stream(websocket: WebSocket) -> None:
             await websocket.send_json({
                 "session_id": FAKE_SESSION_ID,
                 "t_ms": t_ms,
-                "n_fixations": n_fixations,
+                "n_fixations": 0,
+                "n_cursor_dwells": n_cursor_dwells,
+                "evidence_count": n_cursor_dwells,
+                "evidence_kind": "cursor_dwells",
                 "stations_visited": min(3, 1 + t_ms // 20_000),
                 "attention": {k: v / total for k, v in attention.items()},
                 "latest_gaze": {"x": rng.randint(0, 1439), "y": rng.randint(0, 899)},
                 "spearman": round(rng.uniform(-0.2, 0.9), 3),
-                "meaningful": n_fixations >= live.MEANINGFUL_MIN_FIXATIONS,
+                "meaningful": n_cursor_dwells >= live.MEANINGFUL_MIN_EVIDENCE,
                 "prediction_id": FAKE_PREDICTION_ID,
                 "fake": True,
             })

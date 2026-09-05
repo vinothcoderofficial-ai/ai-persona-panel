@@ -60,10 +60,15 @@ afterEach(() => {
 const SHA = "a3f9c0d1e2b3a4958677665544332211aabbccddeeff00112233445566778899";
 
 describe("AgreementMeter", () => {
-  it("is grey and reads 'warming up' below the 15-fixation threshold", () => {
-    // n_fixations = 14: api/app/live.py sets meaningful = false here.
+  it("is grey and reads 'warming up' below the 15-unit threshold", () => {
+    // evidence_count = 14: api/app/live.py sets meaningful = false here.
     const view = mount(
-      <AgreementMeter spearman={0.91} meaningful={false} nFixations={14} />,
+      <AgreementMeter
+        spearman={0.91}
+        meaningful={false}
+        evidenceCount={14}
+        evidenceKind="fixations"
+      />,
     );
     const meter = find(view.container, "agreement-meter");
 
@@ -73,27 +78,77 @@ describe("AgreementMeter", () => {
     expect(has(view.container, "agreement-rho")).toBe(false);
     expect(text(meter)).not.toContain("0.91");
     expect(text(meter)).toContain("14");
+    expect(text(meter)).toContain("fixations");
+
+    view.unmount();
+  });
+
+  it("labels a cursor_only session's evidence as cursor dwells, never fixations", () => {
+    // The mislabelling guard: in cursor_only mode the count is cursor dwells,
+    // and the screen must not call them something they are not.
+    const view = mount(
+      <AgreementMeter
+        spearman={0.91}
+        meaningful={false}
+        evidenceCount={9}
+        evidenceKind="cursor_dwells"
+      />,
+    );
+    const meter = find(view.container, "agreement-meter");
+
+    expect(text(meter)).toContain("cursor dwells");
+    expect(text(meter)).not.toContain("fixations");
+    expect(text(meter)).toContain("9");
+
+    view.unmount();
+  });
+
+  it("says it is waiting rather than naming a kind it has not been told", () => {
+    const view = mount(
+      <AgreementMeter
+        spearman={null}
+        meaningful={false}
+        evidenceCount={0}
+        evidenceKind={null}
+      />,
+    );
+    const meter = find(view.container, "agreement-meter");
+
+    expect(meter.dataset.state).toBe("warming_up");
+    expect(text(meter)).not.toContain("fixations");
+    expect(text(meter)).not.toContain("cursor dwells");
 
     view.unmount();
   });
 
   it("shows rho once the server says the session is meaningful", () => {
-    // n_fixations = 15: the boundary, and the first message live.py flags true.
+    // evidence_count = 15: the boundary, and the first message live.py flags true.
     const view = mount(
-      <AgreementMeter spearman={0.58} meaningful={true} nFixations={15} />,
+      <AgreementMeter
+        spearman={0.58}
+        meaningful={true}
+        evidenceCount={15}
+        evidenceKind="cursor_dwells"
+      />,
     );
     const meter = find(view.container, "agreement-meter");
 
     expect(meter.dataset.state).toBe("meaningful");
     expect(text(find(view.container, "agreement-rho"))).toContain("0.58");
     expect(text(meter).toLowerCase()).not.toContain("warming up");
+    expect(text(meter)).toContain("cursor dwells");
 
     view.unmount();
   });
 
   it("says so rather than showing a number when the server sent no rho", () => {
     const view = mount(
-      <AgreementMeter spearman={null} meaningful={true} nFixations={40} />,
+      <AgreementMeter
+        spearman={null}
+        meaningful={true}
+        evidenceCount={40}
+        evidenceKind="fixations"
+      />,
     );
     expect(has(view.container, "agreement-rho")).toBe(false);
     expect(text(view.container).toLowerCase()).toContain("no agreement figure");
@@ -102,13 +157,24 @@ describe("AgreementMeter", () => {
 
   it("shows relative-to-ceiling only when a ceiling was supplied", () => {
     const without = mount(
-      <AgreementMeter spearman={0.58} meaningful={true} nFixations={20} />,
+      <AgreementMeter
+        spearman={0.58}
+        meaningful={true}
+        evidenceCount={20}
+        evidenceKind="fixations"
+      />,
     );
     expect(has(without.container, "agreement-relative")).toBe(false);
     without.unmount();
 
     const withCeiling = mount(
-      <AgreementMeter spearman={0.58} meaningful={true} nFixations={20} ceiling={0.72} />,
+      <AgreementMeter
+        spearman={0.58}
+        meaningful={true}
+        evidenceCount={20}
+        evidenceKind="fixations"
+        ceiling={0.72}
+      />,
     );
     expect(text(find(withCeiling.container, "agreement-relative"))).toContain("0.81");
     withCeiling.unmount();

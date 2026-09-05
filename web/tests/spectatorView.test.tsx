@@ -18,6 +18,9 @@ interface Message {
   session_id?: string;
   t_ms?: number;
   n_fixations?: number;
+  n_cursor_dwells?: number;
+  evidence_count?: number;
+  evidence_kind?: string;
   stations_visited?: number;
   attention?: Record<string, number>;
   latest_gaze?: { x: number; y: number } | null;
@@ -33,6 +36,9 @@ function frame(overrides: Message = {}): string {
     session_id: "sess-1",
     t_ms: 41_200,
     n_fixations: 37,
+    n_cursor_dwells: 12,
+    evidence_count: 37,
+    evidence_kind: "fixations",
     stations_visited: 2,
     attention: { B1S3P1: 0.11 },
     latest_gaze: { x: 812, y: 344 },
@@ -182,7 +188,7 @@ describe("incoming SPEC 4.7 messages", () => {
     open(view);
     deliver(view, frame());
 
-    expect(text(find(view.container, "stat-n-fixations"))).toContain("37");
+    expect(text(find(view.container, "stat-evidence"))).toContain("37");
     expect(text(find(view.container, "stat-stations-visited"))).toContain("2");
     expect(text(find(view.container, "stat-elapsed"))).toContain("0:41");
 
@@ -205,14 +211,46 @@ describe("incoming SPEC 4.7 messages", () => {
     const view = render();
     open(view);
 
-    deliver(view, frame({ n_fixations: 14, meaningful: false, spearman: 0.94 }));
+    deliver(view, frame({ n_fixations: 14, evidence_count: 14, meaningful: false,
+                          spearman: 0.94 }));
     expect(find(view.container, "agreement-meter").dataset.state).toBe("warming_up");
     expect(has(view.container, "agreement-rho")).toBe(false);
     expect(text(view.container)).not.toContain("0.94");
 
-    deliver(view, frame({ n_fixations: 15, meaningful: true, spearman: 0.58 }));
+    deliver(view, frame({ n_fixations: 15, evidence_count: 15, meaningful: true,
+                          spearman: 0.58 }));
     expect(find(view.container, "agreement-meter").dataset.state).toBe("meaningful");
     expect(text(find(view.container, "agreement-rho"))).toContain("0.58");
+
+    view.unmount();
+  });
+
+  it("does the same for a cursor_only session, and labels its count honestly", () => {
+    // The demo's only session type. Before the fix its meter could never leave
+    // "warming up", because n_fixations is 0 for the whole session.
+    const cursorOnly = (count: number, meaningful: boolean, spearman: number) =>
+      frame({
+        n_fixations: 0,
+        n_cursor_dwells: count,
+        evidence_count: count,
+        evidence_kind: "cursor_dwells",
+        meaningful,
+        spearman,
+      });
+
+    const view = render();
+    open(view);
+
+    deliver(view, cursorOnly(14, false, 0.94));
+    expect(find(view.container, "agreement-meter").dataset.state).toBe("warming_up");
+    expect(has(view.container, "agreement-rho")).toBe(false);
+    expect(text(find(view.container, "agreement-meter"))).toContain("cursor dwells");
+
+    deliver(view, cursorOnly(15, true, 0.58));
+    expect(find(view.container, "agreement-meter").dataset.state).toBe("meaningful");
+    expect(text(find(view.container, "agreement-rho"))).toContain("0.58");
+    // The session stat reads the same count under the same name.
+    expect(text(find(view.container, "stat-evidence"))).toContain("15");
 
     view.unmount();
   });

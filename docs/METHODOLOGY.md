@@ -177,19 +177,80 @@ to variant and a fixed slot id would measure the new occupant of the old shelf p
 
 This change was made because it was measured, not because it sounded better: see §9.
 
-### 3.3 The live meter is not the offline evaluation
+### 3.3 The live meter and the offline evaluation compute the same ρ
 
-One asymmetry worth knowing before you read a number off a recording. `api/app/live.py` fuses the
-real side with `fuse_session` — the same function, imported — but compares it against the lock's
-`population_fixation_prob` **raw**, because that vector is what was hashed and comparing against
-anything re-derived now would quietly drop the pre-registration. The offline evaluation in
-`scripts/eval.py` applies `fuse_synthetic` to the synthetic side first (§3.2). So the ρ on the
-spectator screen and the ρ in `RESULTS.md` are computed against two different synthetic vectors
-and need not agree. The live meter is a progress indicator; the report is the result.
+`api/app/live.py` fuses the real side with `fuse_session` and the synthetic side with
+`fuse_synthetic` — the same two functions `scripts/eval.py` calls, imported, not reimplemented.
+The ρ on the spectator screen during a recording and the ρ in `RESULTS.md` are therefore
+correlations against the *same* synthetic vector.
 
-`meaningful` is `n_fixations >= 15`, and only `fixation` events count. A **cursor-only session
-therefore never becomes meaningful** — the meter stays visibly provisional for its whole
-duration, by design, rather than displaying a ρ built from no gaze at all.
+They were not always. Until this was fixed the live meter compared against the lock's
+`population_fixation_prob` **raw** while `eval.py` compared against `fuse_synthetic` of the same
+run (§3.2), so a demo could show one number while the report showed another. Replaying one
+session through both paths now gives identical values —
+`api/tests/test_live.py::test_live_spearman_equals_the_offline_evaluation_spearman` measures
+0.4417391304347826 both ways in webcam mode and 0.248695652173913 both ways in cursor-only mode,
+a difference of exactly 0.
+
+**This does not weaken the pre-registration.** `fuse_synthetic` is a deterministic transform of
+the locked run: the locked vector *is* its looking channel, and the other input is the same
+resolved planogram and `purchase_share` the lock was computed from. Nothing was added to the lock
+file, and `sha256` still covers exactly `population_fixation_prob` + `sim_run_id` + `created_at`
+(§6). The lock stores neither the SimResult nor the planogram, so `live.open_state` recomputes the
+locked simulation once per session through the same cached, deterministic `simcache.population`
+call `prediction.write_lock` made, and then **verifies** it: `sim_run_id` must match, and the
+freshly simulated `population_fixation_prob` must still equal the locked one to within `1e-12`. A
+lock the simulator no longer reproduces closes the ingest socket (close code 4410) rather than
+letting a session be recorded that could never be evaluated honestly. The second check is the one
+with teeth — `sim_run_id` is a hash of `variant_id|persona_id|n_runs|seed` alone, so it does not
+notice a changed planogram, changed policies or changed saliency maths, and the vector comparison
+does.
+
+**What the spectator screen shows beside the meter is still the raw locked vector, deliberately.**
+`GET /sessions/{id}/prediction` serves `population_fixation_prob` unchanged and `LiveHeatmap`
+draws that column, because its job is to display the exact vector the badge's hash covers. So the
+locked heatmap column and the meter's ρ are against slightly different vectors — the fused one is
+that column renormalised at weight 0.7 (or 0.8 in webcam mode) plus a `purchase_share` term, so
+the two differ only where purchases reorder the ranking. Showing the fused vector there instead
+would make the on-screen evidence something other than what was committed, which is a worse trade
+than this footnote.
+
+**One asymmetry remains, and it is in `eval.py`, not the live meter.** Each real session is fused
+with its own `mode`, but the synthetic vector is one vector per variant, so `eval.py` fuses it
+with the panel's *dominant* mode. On a mixed-mode panel a single session's live ρ and its
+contribution to the offline number would use different synthetic weights. Every session that
+exists is `cursor_only`, so this is currently a difference of nothing; it becomes real the day a
+webcam panel is collected alongside a cursor-only one.
+
+#### `meaningful`: a deliberate deviation from SPEC 4.7
+
+SPEC 4.7 says *"`meaningful` is false until `n_fixations >= 15`"*. That was written assuming a
+webcam session. There is no webcam panel — `data/sessions/anon/` is empty, the S9 pilot was never
+run, and every session the demo can produce is `cursor_only`, a mode whose gaze trail is empty by
+construction and whose fixation count is therefore permanently 0. Read literally, SPEC 4.7 leaves
+the agreement meter reading "warming up" for the whole of every session that exists. That is not
+a conservative safeguard; it is a dead readout on a headline shot.
+
+So `meaningful` counts the channel that actually carries each mode's attention signal:
+
+| mode | counts | threshold |
+|---|---|---|
+| `webcam` | `fixation` events — SPEC 4.7 unchanged | 15 |
+| `cursor_only` | `cursor_dwell` events — the 0.7 term of its fusion formula | 15 |
+
+The threshold stays 15 in both, and the two are comparable units rather than a reused number: a
+fixation must last 100 ms to be emitted at all (`MIN_FIXATION_MS`) and a cursor dwell must last
+300 ms (`CURSOR_DWELL_MIN_MS`), so 15 dwells is if anything the stricter bar in elapsed
+attention. Measured boundaries, both exact: a cursor-only session is not meaningful at 14 dwells
+and is at 15; a webcam session is not meaningful at 14 fixations and is at 15. Neither mode
+counts the other's channel.
+
+**No count on screen is labelled as something it is not.** The SPEC 4.7 message keeps
+`n_fixations` with its literal meaning, adds `n_cursor_dwells` with its own, and adds
+`evidence_count` / `evidence_kind` naming which of the two the threshold was applied to.
+`web/src/spectator/AgreementMeter.tsx` prints the label the server sent, so a cursor-only
+session's meter reads "9 of 15 cursor dwells", never "9 of 15 fixations", and it still refuses to
+render ρ at all while `meaningful` is false.
 
 ---
 
@@ -558,7 +619,10 @@ itself will be estimated from those same few sessions.
   read with that in mind.
 - Sessions that fail calibration are not discarded but downgraded to `cursor_only`, so the panel
   will be a mixture of two fusion formulas, and the mode split is a reported quantity rather than
-  a footnote.
+  a footnote. On such a panel `eval.py` fuses its single synthetic vector per variant with the
+  panel's *dominant* mode, so a minority-mode session's live ρ and its contribution to the
+  offline ρ use different synthetic weights (§3.3). Today every session is `cursor_only` and this
+  costs nothing; it becomes a real discrepancy the first time both modes appear in one panel.
 
 ### 12.4 Residual calibration mismatch, which grows with panel size
 
