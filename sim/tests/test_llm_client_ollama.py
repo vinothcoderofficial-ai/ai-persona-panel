@@ -355,3 +355,31 @@ def test_complete_json_sends_exactly_what_resolve_model_reports(monkeypatch):
     transport = OllamaTransport([VALID_TEXT])
     complete_json("hi", SCHEMA, client=transport)
     assert transport.calls[0]["json"]["model"] == llm_client.resolve_model(None)
+
+
+# --- timeout ---------------------------------------------------------------
+
+def test_the_request_timeout_defaults_to_the_module_constant(monkeypatch):
+    use_ollama(monkeypatch)
+    transport = OllamaTransport([VALID_TEXT])
+    complete_json("hi", SCHEMA, client=transport)
+    assert transport.calls[0]["timeout"] == llm_client.DEFAULT_TIMEOUT_S
+
+
+def test_the_request_timeout_can_be_raised_from_the_environment(monkeypatch):
+    """A hosted reasoning model can think for longer than 30 s.
+
+    A trace run is hundreds of sequential calls; one timeout aborts the lot,
+    so this must be tunable without editing the module.
+    """
+    use_ollama(monkeypatch, LLM_TIMEOUT_S="180")
+    transport = OllamaTransport([VALID_TEXT])
+    complete_json("hi", SCHEMA, client=transport)
+    assert transport.calls[0]["timeout"] == 180.0
+
+
+def test_an_unparsable_timeout_falls_back_to_the_default(monkeypatch):
+    use_ollama(monkeypatch, LLM_TIMEOUT_S="soon")
+    transport = OllamaTransport([VALID_TEXT])
+    complete_json("hi", SCHEMA, client=transport)
+    assert transport.calls[0]["timeout"] == llm_client.DEFAULT_TIMEOUT_S

@@ -174,6 +174,24 @@ def _request_for(provider: str, *, model: str, prompt: str, temperature: float, 
     return f"{base_url}/messages", headers, payload, WIRE_ANTHROPIC
 
 
+def resolve_timeout() -> float:
+    """Per-request timeout in seconds, `LLM_TIMEOUT_S` overriding the default.
+
+    A hosted reasoning model can think for longer than 30 s, and a trace run is
+    hundreds of sequential calls -- one timeout aborts the whole run. An
+    unparsable value falls back to the default rather than crashing: a bad
+    number in a config file should not stop the process starting.
+    """
+    raw = os.environ.get("LLM_TIMEOUT_S", "").strip()
+    if not raw:
+        return DEFAULT_TIMEOUT_S
+    try:
+        value = float(raw)
+    except ValueError:
+        return DEFAULT_TIMEOUT_S
+    return value if value > 0 else DEFAULT_TIMEOUT_S
+
+
 def _default_model_for(provider: str) -> str:
     return DEFAULT_OLLAMA_MODEL if provider == PROVIDER_OLLAMA else DEFAULT_MODEL
 
@@ -244,6 +262,7 @@ def complete_json(
 
     model_name = resolve_model(model)
     transport = client if client is not None else httpx
+    timeout_s = resolve_timeout()
     validator = Draft7Validator(schema)
 
     current_prompt = prompt
@@ -257,7 +276,7 @@ def complete_json(
             temperature=temperature,
             api_key=api_key,
         )
-        response = transport.post(url, json=payload, headers=headers, timeout=DEFAULT_TIMEOUT_S)
+        response = transport.post(url, json=payload, headers=headers, timeout=timeout_s)
         raise_for_status = getattr(response, "raise_for_status", None)
         if callable(raise_for_status):
             raise_for_status()
