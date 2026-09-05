@@ -9,8 +9,15 @@ reads.
 
 **Generating real traces.** There is no API key in this repository, so the committed
 `data/cache/traces/` is empty on purpose: a trace generated against a test double would be
-fabricated persona reasoning presented as real, which is not something the demo may show. Once
-`LLM_API_KEY` (and optionally `LLM_BASE_URL` / `LLM_MODEL`) are set in `.env`, run:
+fabricated persona reasoning presented as real, which is not something the demo may show.
+
+Two ways to get a real model. Either set `LLM_API_KEY` for Anthropic, or run a local model with
+no key and no account:
+
+    LLM_PROVIDER=ollama            # posts to http://localhost:11434/api/chat
+    LLM_MODEL=llama3.1:8b          # whatever `ollama list` shows
+
+Then, with either provider configured, run:
 
     python -m sim.slow_agent --all --n 20              # all four personas, 20 shoppers each
     python -m sim.slow_agent --persona mission --n 20  # one persona
@@ -494,8 +501,9 @@ def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="python -m sim.slow_agent",
         description="Run LLM persona shoppers through the store and cache their decision traces. "
-                    "Requires LLM_API_KEY; there is no offline fallback, because a trace that did "
-                    "not come from a model is not evidence of anything.",
+                    "Requires a configured provider (LLM_API_KEY, or LLM_PROVIDER=ollama for a "
+                    "local model); there is no offline fallback, because a trace that "
+                    "did not come from a model is not evidence of anything.",
     )
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--persona", action="append", choices=PERSONA_IDS,

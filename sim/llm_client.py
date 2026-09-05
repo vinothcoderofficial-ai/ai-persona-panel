@@ -28,9 +28,24 @@ ANTHROPIC_VERSION = "2023-06-01"
 DEFAULT_MAX_TOKENS = 1024
 DEFAULT_TIMEOUT_S = 30.0
 
+# Providers. `LLM_PROVIDER` selects one; Anthropic stays the default so no
+# existing configuration changes meaning.
+PROVIDER_ANTHROPIC = "anthropic"
+PROVIDER_OLLAMA = "ollama"
+PROVIDERS = (PROVIDER_ANTHROPIC, PROVIDER_OLLAMA)
+
+# Ollama's daemon listens here and needs no key. This is what makes the S13
+# persona traces producible without an Anthropic account.
+DEFAULT_OLLAMA_BASE_URL = "http://localhost:11434"
+DEFAULT_OLLAMA_MODEL = "llama3.1:8b"
+
 
 class LLMClientError(Exception):
     """Base class for every error this module raises."""
+
+
+class LLMConfigError(LLMClientError):
+    """The configuration names something this module cannot honour."""
 
 
 class LLMUnavailableError(LLMClientError):
@@ -49,17 +64,78 @@ def _is_offline() -> bool:
     return os.environ.get("LLM_OFFLINE", "0").strip() == "1"
 
 
-def _extract_text(body: Any) -> str:
-    """Pull the assistant's text out of a Messages API response body.
+def resolve_provider() -> str:
+    """The configured provider name, validated.
 
-    Raises (KeyError/IndexError/TypeError) on a malformed envelope, which the caller folds into
-    the same retry path as "the model's text was not valid JSON" -- both mean this attempt did
-    not produce a usable completion.
+    Unknown names are refused rather than silently falling back to Anthropic: a
+    typo in `LLM_PROVIDER` would otherwise send an Ollama-shaped workload to
+    api.anthropic.com with whatever key happened to be in the environment.
     """
+    name = (os.environ.get("LLM_PROVIDER") or PROVIDER_ANTHROPIC).strip().lower()
+    if not name:
+        return PROVIDER_ANTHROPIC
+    if name not in PROVIDERS:
+        raise LLMConfigError(
+            f"LLM_PROVIDER={name!r} is not supported; expected one of "
+            f"{', '.join(PROVIDERS)}."
+        )
+    return name
+
+
+def _extract_text(body: Any, provider: str = PROVIDER_ANTHROPIC) -> str:
+    """Pull the assistant's text out of a response body for `provider`.
+
+    Raises (KeyError/IndexError/TypeError/ValueError) on a malformed envelope, which the caller
+    folds into the same retry path as "the model's text was not valid JSON" -- both mean this
+    attempt did not produce a usable completion.
+    """
+    if provider == PROVIDER_OLLAMA:
+        # /api/chat with stream=false: {"message": {"role": ..., "content": ...}}
+        return body["message"]["content"]
+
     for block in body["content"]:
         if block.get("type") == "text":
             return block["text"]
     raise ValueError("LLM response contained no text content block")
+
+
+def _request_for(provider: str, *, model: str, prompt: str, temperature: float, api_key: str):
+    """The (url, headers, payload) triple this provider expects."""
+    if provider == PROVIDER_OLLAMA:
+        base_url = (os.environ.get("LLM_BASE_URL") or DEFAULT_OLLAMA_BASE_URL).rstrip("/")
+        headers = {"content-type": "application/json"}
+        # A local daemon takes no key. Ollama Cloud does, as a bearer token.
+        if api_key:
+            headers["Authorization"] = f"Bearer {api_key}"
+        payload = {
+            "model": model,
+            "messages": [{"role": "user", "content": prompt}],
+            # A streamed reply would not survive `.json()`, and `format: json`
+            # stops the model wrapping its object in prose -- which is the most
+            # common way a small local model burns a retry.
+            "stream": False,
+            "format": "json",
+            "options": {"temperature": temperature},
+        }
+        return f"{base_url}/api/chat", headers, payload
+
+    base_url = (os.environ.get("LLM_BASE_URL") or DEFAULT_BASE_URL).rstrip("/")
+    headers = {
+        "content-type": "application/json",
+        "x-api-key": api_key,
+        "anthropic-version": ANTHROPIC_VERSION,
+    }
+    payload = {
+        "model": model,
+        "max_tokens": DEFAULT_MAX_TOKENS,
+        "temperature": temperature,
+        "messages": [{"role": "user", "content": prompt}],
+    }
+    return f"{base_url}/messages", headers, payload
+
+
+def _default_model_for(provider: str) -> str:
+    return DEFAULT_OLLAMA_MODEL if provider == PROVIDER_OLLAMA else DEFAULT_MODEL
 
 
 def _validation_error_summary(errors: list) -> str:
@@ -102,34 +178,32 @@ def complete_json(
             "The caller is expected to serve a cached result instead."
         )
 
+    provider = resolve_provider()
     api_key = os.environ.get("LLM_API_KEY", "")
-    if client is None and not api_key:
+    # Only Anthropic needs a key. A local Ollama daemon has none, and demanding
+    # one there would block the only path to persona traces without an account.
+    if provider == PROVIDER_ANTHROPIC and client is None and not api_key:
         raise LLMUnavailableError(
             "LLM_API_KEY is not set and no client was injected. Set LLM_API_KEY in .env, "
+            "or set LLM_PROVIDER=ollama to use a local model, "
             "or set LLM_OFFLINE=1 to serve cached results instead."
         )
 
-    base_url = os.environ.get("LLM_BASE_URL", DEFAULT_BASE_URL).rstrip("/")
-    model_name = model or os.environ.get("LLM_MODEL") or DEFAULT_MODEL
+    model_name = model or os.environ.get("LLM_MODEL") or _default_model_for(provider)
     transport = client if client is not None else httpx
-    url = f"{base_url}/messages"
-    headers = {
-        "content-type": "application/json",
-        "x-api-key": api_key,
-        "anthropic-version": ANTHROPIC_VERSION,
-    }
     validator = Draft7Validator(schema)
 
     current_prompt = prompt
     last_error = "no attempts were made"
 
     for _ in range(retries):
-        payload = {
-            "model": model_name,
-            "max_tokens": DEFAULT_MAX_TOKENS,
-            "temperature": temperature,
-            "messages": [{"role": "user", "content": current_prompt}],
-        }
+        url, headers, payload = _request_for(
+            provider,
+            model=model_name,
+            prompt=current_prompt,
+            temperature=temperature,
+            api_key=api_key,
+        )
         response = transport.post(url, json=payload, headers=headers, timeout=DEFAULT_TIMEOUT_S)
         raise_for_status = getattr(response, "raise_for_status", None)
         if callable(raise_for_status):
@@ -137,7 +211,7 @@ def complete_json(
 
         try:
             body = response.json()
-            text = _extract_text(body)
+            text = _extract_text(body, provider)
             data = json.loads(text)
         except (ValueError, KeyError, TypeError, IndexError) as exc:
             last_error = f"response was not valid JSON: {exc}"
