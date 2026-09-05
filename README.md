@@ -155,7 +155,7 @@ the store will render.
 | `make validate` | Check every data file against `schemas/` — currently **12 files, 0 errors** |
 | `make gen-types` | Regenerate `web/src/contracts/` and `api/app/schemas.py` from `schemas/` |
 | `make api` / `make web` | FastAPI on `:8000` / Vite on `:5173` |
-| `make test` | `pytest` + `vitest` — **510 Python tests and 315 web tests across 30 files, all green** at the time of writing |
+| `make test` | `pytest` + `vitest` — **535 Python tests and 315 web tests across 30 files, all green** at the time of writing |
 | `make eval` | Regenerate `RESULTS.md` and `docs/figures/*.png` from committed evidence |
 
 There is no `make demo` and no `make readme-gif` (PLAN §13 cut Docker Compose and `make demo`;
@@ -263,7 +263,7 @@ whose bars would all be zero, because an axis of zero-height bars reads as a mea
 
 | | Why |
 |---|---|
-| **The real panel** (S9 pilot, S21 collection) | Needs people and laptops. `data/sessions/anon/` is empty; `scripts/anonymise_sessions.py` and `scripts/collect_link.py` were never written. |
+| **The real panel** (S9 pilot, S21 collection) | Needs people and laptops — this is the only thing left that code cannot supply. `data/sessions/anon/` is empty and `predictions/` holds no locks. The **tooling is built**: `scripts/collect_link.py` hands out balanced, seed-reproducible links and `scripts/anonymise_sessions.py` exports the database into the corpus `make eval` reads, verified end to end (link → session → lock → events → anonymise → `eval.py` exit 0). What is missing is shoppers. |
 | **Persona decision traces** (S13 output) | No `LLM_API_KEY`. The loop is built and tested against an injected fake; it will not write a trace a test double produced, because those traces appear on screen. Run `python -m sim.slow_agent --all --n 20` once a key exists. |
 | **Video → planogram** (S20) | Dropped under PLAN §5's own four-hour CUDA timebox. No aisle clip was recorded and the available GPU (GeForce MX250) is far below what fp16 Grounding DINO needs. `vision/` is a package stub; `web/src/vision/` is empty. |
 | **The GLB store shell** (S6) | Cut under PLAN §9's drop order ("GLB shell → back to procedural"). `data/models/` is empty. **This means the portal's "sample 3D model from github or huggingface" requirement is not met.** |
