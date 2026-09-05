@@ -34,9 +34,12 @@ Three outputs, in increasing value (PLAN §1):
 2. **Ad-to-Purchase Lift** — what the exposure was worth. Attention alone is a commodity;
    predictive-attention vendors already sell heatmaps. This is the number they cannot produce,
    because they do not model purchase. *Built, and computed for the synthetic panel.*
-3. **Placement optimizer** — search every slot × creative and recommend the best.
-   **Not started** (S24, Phase 2). This is the jump from an A/B tool to a recommendation engine,
-   and it is the one of the three that does not exist.
+3. **Placement optimizer** — search every slot × creative and recommend the best. *Built*
+   (S24), with a slot-value layer that prices the winner (S25). This is the jump from an A/B tool
+   to a recommendation engine. It scores all 13 placements on this aisle in ~6 s and ranks the
+   current one 5th — but the ranking is **not resolved**: across seeds 42–46 the top pick spans
+   +6.2%..+14.2% and the current placement +1.3%..+8.9%, and those ranges overlap. Treat the
+   ordering as a seed-42 result, not a settled one (METHODOLOGY §12.13).
 
 ---
 
@@ -62,7 +65,7 @@ flowchart TD
 
     subgraph SYN["4 · Synthetic panel — BUILT"]
         POL["Persona policies<br/>Mission · Browser · Loyalist · Switcher"]
-        SAL --> SIM["Simulator<br/>10,000 shoppers × 4 personas, ~150–250 ms"]
+        SAL --> SIM["Simulator<br/>10,000 shoppers × 4 personas, ~175–205 ms"]
         POL --> SIM
         SIM --> LOCK["Prediction LOCKED<br/>SHA-256 + created_at<br/>before any event is accepted"]
     end
@@ -121,8 +124,8 @@ make web            # terminal 2
 
 The panel re-runs 10,000 synthetic shoppers per persona and prints `elapsed_ms` on screen —
 labelled as server compute, not as a wall-clock promise. The acceptance test measures 20 warm
-in-process calls and prints the result on every run; two consecutive runs gave **p50 6.3 / p95
-6.8 ms** and **p50 5.7 / p95 7.0 ms**, against a 1,000 ms budget. The first call after startup is
+in-process calls and prints the result on every run; two consecutive runs at the Day-8 number lock gave **p50 8.4 / p95
+10.3 ms** and **p50 8.4 / p95 8.9 ms**, against a 1,000 ms budget. The first call after startup is
 slower, which is what the startup warm-up exists to absorb.
 
 ## How to run
@@ -152,7 +155,7 @@ the store will render.
 | `make validate` | Check every data file against `schemas/` — currently **12 files, 0 errors** |
 | `make gen-types` | Regenerate `web/src/contracts/` and `api/app/schemas.py` from `schemas/` |
 | `make api` / `make web` | FastAPI on `:8000` / Vite on `:5173` |
-| `make test` | `pytest` + `vitest` — **463 Python tests and 315 web tests across 30 files, all green** at the time of writing |
+| `make test` | `pytest` + `vitest` — **510 Python tests and 315 web tests across 30 files, all green** at the time of writing |
 | `make eval` | Regenerate `RESULTS.md` and `docs/figures/*.png` from committed evidence |
 
 There is no `make demo` and no `make readme-gif` (PLAN §13 cut Docker Compose and `make demo`;
@@ -221,9 +224,9 @@ causes are understood and written up in
 
 | | Measured | Budget |
 |---|---|---|
-| 10,000 shoppers × 4 personas | 142 ms (252 ms on a second machine) | 800 ms |
-| `POST /whatif`, 20 warm in-process calls | p95 6.8 ms and 7.0 ms on two runs | p95 < 1,000 ms |
-| Calibration grid, 1,771 candidates | 0.79 s | — |
+| 10,000 shoppers × 4 personas | 176 ms and 206 ms on two runs | 800 ms |
+| `POST /whatif`, 20 warm in-process calls | p95 10.3 ms and 8.9 ms on two runs | p95 < 1,000 ms |
+| Calibration grid, 1,771 candidates | 1.15 s and 1.28 s on two runs | — |
 | Persona-share recovery from a known mix | worst per-share error 0.05 | ±0.10 |
 | `exploration = 1` vs pure saliency | worst per-target deviation 0.0037 | 0.02 |
 
@@ -250,6 +253,11 @@ whose bars would all be zero, because an axis of zero-height bars reads as a mea
 - Fusion, metrics, noise ceiling, calibration, Ad-to-Purchase Lift, known effect, `eval.py` and
   the template report with an LLM-written headline only (S16–S19).
 - The Brand Lift / CPS integration artifact and the persona post-shop survey (S22).
+- The placement optimizer and the slot-value pricing on top of it (S24, S25). The optimizer
+  scores all 13 placements on this aisle in ~6 s and ranks the current one 5th; the pricing
+  layer turns a lift into money. Read the caveat in the next section before quoting either:
+  the ranking is **not resolved** across seeds, and every figure the pricing prints rests on
+  commercial inputs this project does not have and does not invent.
 
 **Not built — and not implied anywhere else in this repository**
 
@@ -259,7 +267,6 @@ whose bars would all be zero, because an axis of zero-height bars reads as a mea
 | **Persona decision traces** (S13 output) | No `LLM_API_KEY`. The loop is built and tested against an injected fake; it will not write a trace a test double produced, because those traces appear on screen. Run `python -m sim.slow_agent --all --n 20` once a key exists. |
 | **Video → planogram** (S20) | Dropped under PLAN §5's own four-hour CUDA timebox. No aisle clip was recorded and the available GPU (GeForce MX250) is far below what fp16 Grounding DINO needs. `vision/` is a package stub; `web/src/vision/` is empty. |
 | **The GLB store shell** (S6) | Cut under PLAN §9's drop order ("GLB shell → back to procedural"). `data/models/` is empty. **This means the portal's "sample 3D model from github or huggingface" requirement is not met.** |
-| **Placement optimizer and slot value** (S24, S25) | Phase 2. Not started. |
 | **CI workflow** | SPEC M8 asks for one; it was not built. |
 
 The persona policies in `data/cache/policies/` were **written by hand** in S2. The LLM policy
@@ -303,11 +310,11 @@ PLAN §12's table, with an honest status against each row.
 | Browser-based virtual retail store | S4, S6 | **Partial** | The store works: 3 bays, 5 shelves, 30 slots, fixed shelf stations, hover/pickup/cart/checkout, every slot hit-tested at every station. The GLB shell was cut, so the portal's **sample-3D-model requirement is not met** — the store is procedural. |
 | Webcam gaze and engagement | S10, S11 | **Built, unexercised** | Consent → intake → camera check → 9-point calibration → 4-point validation, WebGazer with video and prediction points off, the I-DT fixation filter, and the cursor-only fallback above 12 % validation error. The S9 pilot on five laptops was never run and no webcam session has ever been recorded. |
 | Dwell, interactions, navigation, purchases | S4, S11, S16 | **Built, unexercised** | The event model, the logger, the WebSocket ingest and the fusion formula all exist and are tested end to end against replayed fixtures. Zero real sessions have passed through them. |
-| AI personas autonomously navigating and buying | **S13** + S2 | **Partial** | S2's simulator is Met — 40,000 shopper-trips in ~150 ms, deterministic per seed. S13's agent loop is built, validated (target must exist at the current station; ≤ 20-word reason; slot order reshuffled every turn) and tested against an injected fake — but it has **never been run against a real language model**, so there are no traces. This is the criterion's headline and it is half-delivered. |
+| AI personas autonomously navigating and buying | **S13** + S2 | **Partial** | S2's simulator is Met — 40,000 shopper-trips in ~175–205 ms, deterministic per seed. S13's agent loop is built, validated (target must exist at the current station; ≤ 20-word reason; slot order reshuffled every turn) and tested against an injected fake — but it has **never been run against a real language model**, so there are no traces. This is the criterion's headline and it is half-delivered. |
 | Identical experiments, both panels | Shared resolved variant JSON; S14 lock | **Built, unexercised** | Both panels read the same server-resolved planogram, and `POST /sessions` writes the lock before the session row exists while the events endpoint and the ingest socket both refuse a session without one. With no sessions there are no locks, so the ordering has been verified by tests, never by evidence. |
 | Defined accuracy metrics, benchmarked | S16, S17, S19 | **Built, unexercised** | Spearman, KL, purchase-share MAE, Ad Slot Index, decision agreement, the 200-split noise ceiling, and the known-effect check are implemented and unit-tested; the calibration recovery test recovers a known persona mix to 0.05. Every one of them needs a real panel, and the only *measured* result is the synthetic side of the known effect. |
 | Automated actionable insights | S18 lift, S19 report, **S24 optimizer** | **Partial** | `make eval` regenerates `RESULTS.md` and the figures from committed evidence, refuses to write a report if the integrity checks fail, and lets a language model write only the headline sentence. Ad-to-Purchase Lift is computed for the synthetic panel. S24, the optimizer that turns this from an A/B tool into a recommendation engine, **is built**: it scores all 13 placements on this aisle in ~6 s and ranks the current one 5th. But its ordering is **not resolved** — at seeds 42-46 the top pick spans +6.2%..+14.2% and the current placement +1.3%..+8.9%, and those overlap, so the recommendation is a seed-42 result (METHODOLOGY §12.13). |
-| Reduce time and cost | SPEC §8 table | **Partial** | PLAN required SPEC §8's table recomputed on Day 8. Done, cell by cell, and it splits in two. The **95 % CI row is arithmetic and checks out exactly** — a normal-approximation interval on p = 0.30 gives ±12.70 pp at n = 50, ±14.20 pp at n = 40 and ±0.90 pp at n = 10,000, matching the ±13 / ±14 / ±0.9 printed there; n = 10,000 is this repo's actual `N_SYNTH`. The **compute row is measured and better than claimed**: a full 10,000-shopper population per persona in ~150 ms and a what-if answer in single-digit milliseconds warm, so "minutes for a what-if" overstates the cost. The **cost and calendar-time cells cannot be recomputed here** — $100K+ physical stores and $10–30K surveys are external market figures cited from the proposal, and no study of any kind has been commissioned by this project. SPEC.md is left unedited as the historical brief; this row is the recompute. |
+| Reduce time and cost | SPEC §8 table | **Partial** | PLAN required SPEC §8's table recomputed on Day 8. Done, cell by cell, and it splits in two. The **95 % CI row is arithmetic and checks out exactly** — a normal-approximation interval on p = 0.30 gives ±12.70 pp at n = 50, ±14.20 pp at n = 40 and ±0.90 pp at n = 10,000, matching the ±13 / ±14 / ±0.9 printed there; n = 10,000 is this repo's actual `N_SYNTH`. The **compute row is measured and better than claimed**: a full 10,000-shopper population per persona in ~175–205 ms and a what-if answer at p95 under 11 ms warm, so "minutes for a what-if" overstates the cost by orders of magnitude. The **cost and calendar-time cells cannot be recomputed here** — $100K+ physical stores and $10–30K surveys are external market figures cited from the proposal, and no study of any kind has been commissioned by this project. SPEC.md is left unedited as the historical brief; this row is the recompute. |
 | Roadmap for Brand Lift / CPS | **S22** — [`docs/integration.md`](docs/integration.md) + `sim/persona_survey.py` | **Partial** | Delivered as a written artifact plus code, not a slide: the survey instrument, the per-persona and population roll-up, and the design for seeding persona shares from CPS demographics. But **no CPS data has been obtained or used**, no Brand Lift study has been run, and no survey answer has been produced — that needs an LLM key, and the survey module refuses to write a cache without one, exactly as `slow_agent.py` does. |
 | Foundation for AR / spatial / AI shopping | Planogram JSON renderer-agnostic; S20 video ingest | **Partial** | The planogram is a plain JSON document with metric bay dimensions and per-slot geometry; the React renderer is one consumer of it and the API never assumes a renderer. The S20 video-ingest path that would let a phone clip become a store was dropped. |
 
