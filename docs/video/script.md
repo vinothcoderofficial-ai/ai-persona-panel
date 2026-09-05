@@ -247,7 +247,7 @@ Kept here so a retake does not drift into them.
 | Do not say | Because |
 |---|---|
 | "The synthetic panel matches real shoppers" / "…is 87 % accurate" | Nothing has been compared. There is no real panel. |
-| "More accurate than a human panel" | Not a coherent claim — see shot 6 and METHODOLOGY §8. |
+| "More accurate than a human panel" | Not a coherent claim — see shot 7 and METHODOLOGY §8. |
 | "Our AI personas reasoned about this shelf" *(over the simulator)* | The simulator is numpy. The LLM agents are built but have produced no traces. |
 | "The personas were designed by an LLM" | The committed policies were hand-written. The generator has never run against a real model. |
 | "We scanned a real aisle with a phone" | S20 was dropped. No clip was recorded. |
