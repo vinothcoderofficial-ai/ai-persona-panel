@@ -29,6 +29,8 @@ export interface SimResult {
   ad_unexposed_purchase_share?: {
     [k: string]: number;
   };
+  n_purchases_exposed?: number;
+  n_purchases_unexposed?: number;
   path: {
     stations_mean: number;
     duration_s_mean: number;

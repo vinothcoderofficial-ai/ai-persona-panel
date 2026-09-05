@@ -311,6 +311,8 @@ class SimResult(BaseModel):
     purchase_share: Dict[str, confloat(ge=0.0, le=1.0)]
     ad_exposed_purchase_share: Optional[Dict[str, float]] = None
     ad_unexposed_purchase_share: Optional[Dict[str, float]] = None
+    n_purchases_exposed: Optional[conint(ge=0)] = None
+    n_purchases_unexposed: Optional[conint(ge=0)] = None
     path: Path
     traces: Optional[List[str]] = None
 
@@ -364,6 +366,7 @@ class AdToPurchaseLift(BaseModel):
     real: Optional[float] = None
     synth: Optional[float] = None
     ci95: Optional[List[float]] = Field(None, max_length=2, min_length=2)
+    synth_mc95: Optional[List[float]] = Field(None, max_length=2, min_length=2)
 
 
 class ExperimentMetrics(BaseModel):

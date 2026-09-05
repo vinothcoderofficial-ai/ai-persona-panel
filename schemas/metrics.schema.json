@@ -63,7 +63,8 @@
         "properties": {
           "real": { "type": ["number", "null"] },
           "synth": { "type": "number" },
-          "ci95": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 }
+          "ci95": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 },
+          "synth_mc95": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 }
         }
       }
     },

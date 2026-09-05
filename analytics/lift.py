@@ -46,26 +46,15 @@ In the emitted block, an undefined `real` is the JSON value `null` (the
 schema types it `["number", "null"]`) and an undefined `synth` is an ABSENT
 key, because the schema types `synth` as a plain number and cannot hold null.
 
-The confidence interval
------------------------
-`ci95` is the bootstrap interval around **`real`**, produced by resampling
-the real panel's SHOPPERS with replacement -- the same unit, the same
-`np.random.default_rng(seed)` and the same 2.5/97.5 percentiles as
-`analytics/fusion.py:bootstrap_ci`. Two reasons it attaches to `real`:
+The two intervals, and why they are not the same kind of thing
+--------------------------------------------------------------
+A row can carry two intervals, under deliberately different names.
 
-* It is the estimate with genuine sampling uncertainty. `synth` is a
-  deterministic function of (planogram, policy, seed, n_runs); its Monte
-  Carlo error is a run-size decision, not a sampling interval, and it is the
-  number being *judged* -- "the synthetic lift of +18 % sits inside the real
-  panel's 95 % CI of [11 %, 25 %]" is the sentence this block exists to
-  support. `noise_ceiling.ci95` in the same schema is likewise an interval
-  over the real panel.
-* It is the only interval this module can compute honestly. A SimResult
-  carries the two arms as normalised *shares*, not per-shopper baskets and
-  not even the arms' purchase counts, so there is nothing synthetic to
-  resample. `bootstrap_lift_ci` is public and panel-agnostic: the moment a
-  caller holds per-shopper synthetic baskets it will produce the synthetic
-  interval with the identical code.
+**`ci95` is a confidence interval and it belongs to `real`.** It resamples the
+real panel's SHOPPERS with replacement -- the same unit, the same
+`np.random.default_rng(seed)` and the same 2.5/97.5 percentiles as
+`analytics/fusion.py:bootstrap_ci`. `noise_ceiling.ci95` in the same schema is
+likewise an interval over the real panel, and this name keeps meaning that.
 
 The panel is resampled POOLED, keeping each shopper's exposure flag, and then
 re-split -- so the uncertainty in the exposure rate itself is inside the
@@ -73,6 +62,26 @@ interval, which it would not be if the two arms were resampled separately at
 fixed sizes. Resamples whose own denominator is undefined are dropped, and if
 fewer than `MIN_DEFINED_FRACTION` of them survive there is no interval at all
 rather than one built from a minority of the draws.
+
+**`synth_mc95` is not a confidence interval.** `synth` is a deterministic
+function of (planogram, policy, seed, n_runs), and the synthetic panel is not
+a sample drawn from a population of shoppers, so it has no sampling
+uncertainty to report. What `synth_mc95` reports is Monte Carlo resolution:
+resample each arm's purchase EVENTS at that arm's own event count and see how
+far the ratio moves. It answers "is this number resolved at `n_runs`, or is it
+noise?" -- the same question `analytics/optimizer.py` answers with
+`SeedSpread`, and it is named apart from `ci95` for the same reason.
+
+The interval the project is judged on stays `ci95`. "The synthetic lift of
++18 % sits inside the real panel's 95 % CI of [11 %, 25 %]" is the sentence
+this block exists to support, and it needs `ci95` to keep meaning the real
+panel. `synth_mc95` only says whether that +18 % is itself resolved; a tight
+one is not evidence that the personas are right.
+
+`synth_mc95` needs `n_purchases_exposed` / `n_purchases_unexposed`, the arms'
+purchase-event counts. `sim/simulator.py` emits them and they are optional in
+schemas/simresult.schema.json, so a SimResult predating them still reports
+`synth` -- just without an interval.
 
 Pure: no HTTP, no file I/O, no globals, no wall-clock randomness. `seed` is
 required and keyword-only, because `scripts/eval.py` has to regenerate
@@ -112,6 +121,12 @@ MIN_DEFINED_FRACTION = 0.5
 # has to be an error rather than a silent "undefined".
 EXPOSED_FIELD = "ad_exposed_purchase_share"
 UNEXPOSED_FIELD = "ad_unexposed_purchase_share"
+
+# The arms' purchase-event counts, which the two share vectors above cannot
+# carry because `sim.simulator._share` normalises them. Also optional in the
+# schema: a SimResult predating them reports `synth` without `synth_mc95`.
+EXPOSED_COUNT_FIELD = "n_purchases_exposed"
+UNEXPOSED_COUNT_FIELD = "n_purchases_unexposed"
 
 
 @dataclass(frozen=True)
@@ -402,6 +417,105 @@ def bootstrap_lift_ci(
     return float(np.percentile(lifts, tail)), float(np.percentile(lifts, 100.0 - tail))
 
 
+def bootstrap_synth_lift_ci(
+    sim_result: Mapping,
+    *,
+    brand_of_sku: Mapping[str, str],
+    brand: str,
+    seed: int,
+    n_boot: int = DEFAULT_N_BOOT,
+    ci: float = DEFAULT_CI,
+) -> tuple[float, float] | None:
+    """Monte Carlo interval around `synth_lift`, over resampled purchase events.
+
+    **This is not a confidence interval and it is not `ci95`.** The synthetic
+    panel is a deterministic function of (planogram, policy, seed, n_runs), not
+    a sample from a population of shoppers. What this measures is how far the
+    reported lift would move if the same configuration were re-run at the same
+    `n_runs` -- Monte Carlo resolution, not sampling uncertainty. See the
+    module docstring, and `analytics/optimizer.py:SeedSpread` for the same
+    distinction drawn about a different number.
+
+    **What is resampled:** each arm's purchase EVENTS, `n_boot` times, as a
+    multinomial over that arm's own per-SKU share vector at that arm's own
+    event count. Only the advertised brand's marginal reaches the ratio, and
+    the marginal of a `Multinomial(n, p)` summed over the brand's SKUs is
+    exactly `Binomial(n, brand share)` -- so that is what is drawn. The
+    identity is checked numerically against a written-out multinomial
+    bootstrap in `analytics/tests/test_lift.py`, not just asserted here.
+
+    **What it does not capture,** and why it is systematically narrower than
+    the real panel's interval:
+
+    * The two arms' event counts are held FIXED at what the run produced.
+      `bootstrap_lift_ci` resamples shoppers pooled and re-splits, so the
+      exposure rate's own uncertainty is inside `ci95` and is not inside this.
+    * Nothing about whether the personas, the policies or the saliency model
+      are right. A tight interval here says the simulator is self-consistent
+      at this run size, not that it is correct.
+
+    Returns None -- never `inf`, never `nan` -- when either arm recorded no
+    purchases (nothing to resample), when either arm's brand share is
+    undefined, or when fewer than `MIN_DEFINED_FRACTION` of the draws land
+    with a non-zero denominator. Raises ValueError on a SimResult carrying no
+    purchase-event counts: a run predating them is a different thing from a
+    run whose arms were empty, and must not be reported as one.
+
+    `seed` is required and keyword-only for the reason `bootstrap_lift_ci`'s
+    is -- RESULTS.md has to regenerate byte-identically. It feeds a separate
+    `np.random.default_rng(seed)`; the two bootstraps run over disjoint data
+    with different draw shapes, so sharing a seed couples nothing.
+    """
+    if n_boot < 1:
+        raise ValueError(f"n_boot must be at least 1, got {n_boot!r}")
+    if not 0.0 < ci < 1.0:
+        raise ValueError(f"ci must be in (0, 1), got {ci!r}")
+
+    counts: list[int] = []
+    for field in (EXPOSED_COUNT_FIELD, UNEXPOSED_COUNT_FIELD):
+        value = sim_result.get(field)
+        if value is None:
+            raise ValueError(
+                f"SimResult has no {field!r}; the synthetic interval needs both arms' "
+                "purchase-event counts"
+            )
+        count = int(value)
+        if count < 0:
+            raise ValueError(f"{field} must be at least 0, got {count!r}")
+        counts.append(count)
+    n_exposed, n_unexposed = counts
+
+    shares = []
+    for field in (EXPOSED_FIELD, UNEXPOSED_FIELD):
+        arm = sim_result.get(field)
+        if arm is None:
+            raise ValueError(
+                f"SimResult has no {field!r}; ad-to-purchase lift needs both arm vectors"
+            )
+        shares.append(brand_share(arm, brand_of_sku, brand))
+    exposed_share, unexposed_share = shares
+
+    if not n_exposed or not n_unexposed:
+        return None
+    if exposed_share is None or unexposed_share is None:
+        return None
+
+    rng = np.random.default_rng(seed)
+    drawn_exposed = rng.binomial(n_exposed, exposed_share, size=n_boot) / n_exposed
+    drawn_unexposed = rng.binomial(n_unexposed, unexposed_share, size=n_boot) / n_unexposed
+
+    # The same zero-denominator guard as `lift`, expressed as a mask: a draw in
+    # which the unexposed arm bought none of the brand has no ratio.
+    defined = drawn_unexposed > 0.0
+    if int(defined.sum()) < MIN_DEFINED_FRACTION * n_boot:
+        return None
+
+    lifts = (drawn_exposed[defined] - drawn_unexposed[defined]) / drawn_unexposed[defined]
+
+    tail = (1.0 - ci) / 2.0 * 100.0
+    return float(np.percentile(lifts, tail)), float(np.percentile(lifts, 100.0 - tail))
+
+
 # ---------------------------------------------------------------------------
 # the reported block
 # ---------------------------------------------------------------------------
@@ -429,16 +543,22 @@ def ad_to_purchase_lift(
     does not have and it raises, because a mistyped `archetype_label` would
     otherwise make a whole segment of the real panel silently vanish.
 
-    Each row holds at most three keys, and each is absent rather than faked:
+    Each row holds at most four keys, and each is absent rather than faked:
 
       * `synth` -- the synthetic lift. ABSENT when undefined, because the
         schema types it as a plain number and cannot carry null.
+      * `synth_mc95` -- `[low, high]` Monte Carlo spread around `synth`, from
+        `bootstrap_synth_lift_ci`. NOT a confidence interval (see the module
+        docstring). Present only when `synth` is a number, the SimResult
+        carries the arms' purchase-event counts, and the resample could
+        support an interval.
       * `real` -- the real panel's lift, or `null` when undefined. Present
         for every row `real` covers; never 0.0 standing in for "we do not
         know".
-      * `ci95` -- `[low, high]` around `real`, from `bootstrap_lift_ci`.
-        Present only when `real` is a number and the bootstrap could support
-        an interval.
+      * `ci95` -- `[low, high]` confidence interval around `real`, from
+        `bootstrap_lift_ci`. Present only when `real` is a number and the
+        bootstrap could support an interval. It is the REAL panel's interval
+        and stays that way; `synth_mc95` never displaces it.
 
     Rows come out in sorted key order so RESULTS.md regenerates identically.
     """
@@ -454,9 +574,19 @@ def ad_to_purchase_lift(
     for key in sorted(synth):
         row: dict = {}
 
-        synthetic = synth_lift(synth[key], brand_of_sku=brand_of_sku, brand=brand)
+        result = synth[key]
+        synthetic = synth_lift(result, brand_of_sku=brand_of_sku, brand=brand)
         if synthetic is not None:
             row["synth"] = float(synthetic)
+            # Skipped rather than raised when the counts are absent: that is a
+            # SimResult predating them, and `synth` is still perfectly good.
+            if EXPOSED_COUNT_FIELD in result and UNEXPOSED_COUNT_FIELD in result:
+                spread = bootstrap_synth_lift_ci(
+                    result, brand_of_sku=brand_of_sku, brand=brand,
+                    seed=seed, n_boot=n_boot, ci=ci,
+                )
+                if spread is not None:
+                    row["synth_mc95"] = [float(spread[0]), float(spread[1])]
 
         if real is not None and key in real:
             shoppers = real[key]

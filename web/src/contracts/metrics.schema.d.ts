@@ -47,6 +47,11 @@ export interface ExperimentMetrics {
        * @maxItems 2
        */
       ci95?: [number, number];
+      /**
+       * @minItems 2
+       * @maxItems 2
+       */
+      synth_mc95?: [number, number];
     };
   };
   segment_fidelity?: {

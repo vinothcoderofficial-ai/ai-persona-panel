@@ -18,6 +18,8 @@
     "purchase_share": { "type": "object", "additionalProperties": { "type": "number", "minimum": 0, "maximum": 1 } },
     "ad_exposed_purchase_share": { "type": "object", "additionalProperties": { "type": "number" } },
     "ad_unexposed_purchase_share": { "type": "object", "additionalProperties": { "type": "number" } },
+    "n_purchases_exposed": { "type": "integer", "minimum": 0 },
+    "n_purchases_unexposed": { "type": "integer", "minimum": 0 },
     "path": {
       "type": "object",
       "required": ["stations_mean", "duration_s_mean"],

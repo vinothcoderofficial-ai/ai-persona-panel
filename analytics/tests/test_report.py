@@ -376,3 +376,39 @@ def test_the_prompt_carries_the_numbers_it_is_grounded_against():
 
     assert payload["relative_agreement"] == 0.87
     assert payload["panel"]["n_real_accepted"] == 11
+
+
+# ---------------------------------------------------------------------------
+# The lift table carries two intervals, and never confuses them
+# ---------------------------------------------------------------------------
+
+
+def test_the_lift_table_prints_the_real_and_synthetic_intervals_in_separate_columns():
+    """`ci95` is the real panel's bootstrap over shoppers; `synth_mc95` is the
+    simulator's Monte Carlo spread at this run size. They are different kinds
+    of object and a reader must not be able to mistake one for the other."""
+    data = _report_input()
+    data["ad_to_purchase_lift"]["rows"][0]["synth_mc95"] = [0.06, 0.17]
+
+    markdown = report.render(data, headline_text="Headline.")
+    section = markdown.split("## Ad-to-Purchase Lift", 1)[1].split("\n## ", 1)[0]
+
+    assert "0.08 to 0.31" in section  # the real panel's ci95
+    assert "0.06 to 0.17" in section  # the synthetic Monte Carlo spread
+    assert "not a confidence interval" in section.lower()
+    assert "monte carlo" in section.lower()
+
+
+def test_a_row_without_a_synthetic_interval_renders_not_collected():
+    """A SimResult predating the purchase-event counts carries no interval.
+    That is an absence, and the report's one formatting rule is that an
+    absence never renders as a number."""
+    data = _report_input()
+    assert "synth_mc95" not in data["ad_to_purchase_lift"]["rows"][0]
+
+    markdown = report.render(data, headline_text="Headline.")
+    section = markdown.split("## Ad-to-Purchase Lift", 1)[1].split("\n## ", 1)[0]
+    row = [line for line in section.splitlines() if line.startswith("| population")]
+
+    assert len(row) == 1
+    assert row[0].count(report.NOT_COLLECTED) == 1

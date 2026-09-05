@@ -353,7 +353,12 @@ def run(store: Store, policy: Mapping, *, n_runs: int, seed: int, variant_id: st
 
 def combine(results: Sequence[Mapping], shares: Sequence[float], *,
             persona_id: str = "population") -> dict:
-    """Population result = sum of share_of_population x persona result (SPEC M4)."""
+    """Population result = sum of share_of_population x persona result (SPEC M4).
+
+    Every mapping field blends as `sum(share x value)`, which for a normalised share vector is a
+    mixture. `n_purchases_exposed` / `n_purchases_unexposed` are counts, not shares, and do not
+    blend that way -- see `_effective_count` for what they become and why.
+    """
     results = list(results)
     shares = [float(s) for s in shares]
     if not results or len(results) != len(shares):
@@ -390,6 +395,8 @@ def combine(results: Sequence[Mapping], shares: Sequence[float], *,
         "purchase_share": blend("purchase_share"),
         "ad_exposed_purchase_share": blend("ad_exposed_purchase_share"),
         "ad_unexposed_purchase_share": blend("ad_unexposed_purchase_share"),
+        "n_purchases_exposed": _effective_count("n_purchases_exposed", results, shares),
+        "n_purchases_unexposed": _effective_count("n_purchases_unexposed", results, shares),
         "path": {
             "stations_mean": sum(s * float(r["path"]["stations_mean"])
                                  for s, r in zip(shares, results)),
@@ -397,6 +404,50 @@ def combine(results: Sequence[Mapping], shares: Sequence[float], *,
                                    for s, r in zip(shares, results)),
         },
     }
+
+
+def _effective_count(field: str, results: Sequence[Mapping], shares: Sequence[float]) -> int:
+    """The purchase-event count that belongs with a share-WEIGHTED arm vector.
+
+    The population arm vector is `sum(share_i x p_i)` -- a weighted average of per-persona
+    estimates, not a pooled sample. So the count behind it is the effective sample size of that
+    weighted average (Kish):
+
+        n_eff = (sum w_i)^2 / sum(w_i^2 / n_i)
+
+    Neither simpler rule survives an example.
+
+    * A **plain sum** claims pooled precision the mixture does not have. Two personas with 100 and
+      9,900 events, weighted 0.9 / 0.1, would report 10,000 behind a vector that is 90 % the thin
+      persona's 100 events. `n_eff` says 123.
+    * A **share-weighted sum** throws away precision that is really there. Four personas at share
+      0.25 with 4,000 events each give 4,000 -- but their equal-weight mixture IS the 16,000-event
+      pool, and `n_eff` says 16,000.
+
+    `n_eff` equals the plain sum exactly when the shares are proportional to the arms' event
+    counts, which is the one case where the mixture and the pool are the same distribution. That
+    is the property `sim/tests/test_simulator.py` pins.
+
+    A persona whose arm recorded nothing is dropped and the weights renormalised over the rest:
+    its all-zero vector adds nothing to the mixture and `analytics/lift.py:brand_share`
+    renormalises it away, so counting its weight here would report a sample size for shoppers who
+    contributed no events. Every arm empty -> 0.
+    """
+    live: list[tuple[float, int]] = []
+    for share, result in zip(shares, results):
+        if field not in result:
+            raise ValueError(
+                f"cannot combine a result with no {field!r}; sim.simulator.run emits it, and the "
+                "population row needs it to carry a synthetic interval"
+            )
+        count = int(result[field])
+        if count > 0 and share > 0.0:
+            live.append((share, count))
+
+    if not live:
+        return 0
+    weight = sum(share for share, _ in live)
+    return round(weight * weight / sum(share * share / count for share, count in live))
 
 
 def _aggregate(*, store: Store, variant_id: str, persona_id: str, n_runs: int, seed: int,
@@ -432,6 +483,11 @@ def _aggregate(*, store: Store, variant_id: str, persona_id: str, n_runs: int, s
         "purchase_share": _share(purchased, n_sku, store.sku_ids),
         "ad_exposed_purchase_share": _share(purchased[exposed_event], n_sku, store.sku_ids),
         "ad_unexposed_purchase_share": _share(purchased[~exposed_event], n_sku, store.sku_ids),
+        # `_share` normalises, so the two vectors above cannot say how many purchase events are
+        # behind them -- and `n_runs` is the shopper count, not the event count, because a shopper
+        # buys 0..n_bays items. These are that missing pair; analytics/lift.py resamples them.
+        "n_purchases_exposed": int(exposed_event.sum()),
+        "n_purchases_unexposed": int((~exposed_event).sum()),
         "path": {
             "stations_mean": float(stations.mean()),
             "duration_s_mean": float(elapsed.mean()),

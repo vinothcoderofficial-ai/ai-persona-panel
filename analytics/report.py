@@ -551,20 +551,27 @@ def _lift_section(lines: list[str], data: Mapping[str, Any]) -> None:
     lines.append(
         f"Purchase share of `{experiment['focal_brand']}` among shoppers exposed to "
         f"`{experiment['focal_creative']}` versus not, on variant `{block['variant_id']}`. "
-        f"The interval is a {_fmt_int(experiment['ci_percent'])}% bootstrap over "
+        f"The {_fmt_int(experiment['ci_percent'])}% CI is a bootstrap over "
         f"{_fmt_int(experiment['n_boot'])} resamples of the real panel's shoppers."
     )
     lines.append("")
-    lines.append(f"| Segment | Real lift | {_fmt_int(experiment['ci_percent'])}% CI | Synthetic lift |")
-    lines.append("|---|---|---|---|")
+    lines.append(
+        "The last column is the synthetic panel's **Monte Carlo spread**, from resampling that "
+        f"run's own purchase events {_fmt_int(experiment['n_boot'])} times. It is **not a "
+        "confidence interval**: the synthetic panel is not a sample drawn from a population, so "
+        "the spread says only whether the synthetic number is resolved at this run size. A wide "
+        "one means too few synthetic purchase events, not a disagreement with the real panel."
+    )
+    lines.append("")
+    lines.append(
+        f"| Segment | Real lift | {_fmt_int(experiment['ci_percent'])}% CI | Synthetic lift "
+        "| Synthetic MC spread |"
+    )
+    lines.append("|---|---|---|---|---|")
     for row in block["rows"]:
-        interval = (
-            f"{_fmt(row['ci95'][0])} to {_fmt(row['ci95'][1])}"
-            if row.get("ci95")
-            else NOT_COLLECTED
-        )
         lines.append(
-            f"| {row['row']} | {_fmt(row.get('real'))} | {interval} | {_fmt(row.get('synth'))} |"
+            f"| {row['row']} | {_fmt(row.get('real'))} | {_fmt_interval(row.get('ci95'))} "
+            f"| {_fmt(row.get('synth'))} | {_fmt_interval(row.get('synth_mc95'))} |"
         )
     lines.append("")
 
@@ -664,6 +671,18 @@ def _fmt(value: Optional[float], decimals: int = 2) -> str:
     if float(text) == 0.0:
         text = f"{0.0:.{decimals}f}"
     return text
+
+
+def _fmt_interval(pair: Optional[Sequence[float]]) -> str:
+    """`[low, high]` as `low to high`, or `NOT_COLLECTED` when there is none.
+
+    An absent interval is an absence -- a real panel too thin to bootstrap, or
+    a SimResult predating the purchase-event counts -- and must never render
+    as a number.
+    """
+    if not pair:
+        return NOT_COLLECTED
+    return f"{_fmt(pair[0])} to {_fmt(pair[1])}"
 
 
 def _fmt_int(value: Optional[int]) -> str:

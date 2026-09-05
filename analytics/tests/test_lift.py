@@ -27,6 +27,7 @@ import json
 import math
 from pathlib import Path
 
+import numpy as np
 import pytest
 from jsonschema import Draft7Validator
 
@@ -38,6 +39,7 @@ from analytics.lift import (
     ad_slots_showing,
     ad_to_purchase_lift,
     bootstrap_lift_ci,
+    bootstrap_synth_lift_ci,
     brand_share,
     creative_brand,
     lift,
@@ -714,3 +716,252 @@ def test_end_to_end_on_the_committed_demo_aisle(demo_planogram, demo_policies, m
     assert switcher["real"] == pytest.approx(1.0)  # 2/3 exposed vs 1/3 unexposed
     assert switcher["ci95"][0] <= switcher["real"] <= switcher["ci95"][1]
     assert all("real" not in block[p] for p in ("browser", "loyalist", "mission"))
+
+
+# ---------------------------------------------------------------------------
+# 4. the SYNTHETIC arm's interval
+#
+# A SimResult now carries `n_purchases_exposed` / `n_purchases_unexposed`, so
+# the synthetic arms can be resampled. What comes back is Monte Carlo spread
+# at this run size -- NOT a confidence interval over a population, and NOT a
+# replacement for `ci95`, which stays the real panel's. These tests pin all
+# three of those claims.
+# ---------------------------------------------------------------------------
+
+# Crunch = 0.50 exposed, 0.25 unexposed -> a hand-checkable lift of exactly +1.
+ARM_EXPOSED = {"A1": 0.30, "A2": 0.20, "B1": 0.30, "B2": 0.20}
+ARM_UNEXPOSED = {"A1": 0.15, "A2": 0.10, "B1": 0.45, "B2": 0.30}
+
+
+def counted(n_exposed: int, n_unexposed: int, *, exposed=None, unexposed=None) -> dict:
+    """A SimResult carrying both arm vectors AND their purchase-event counts."""
+    return sim_result(
+        exposed if exposed is not None else ARM_EXPOSED,
+        unexposed if unexposed is not None else ARM_UNEXPOSED,
+        n_purchases_exposed=n_exposed,
+        n_purchases_unexposed=n_unexposed,
+    )
+
+
+def test_synth_interval_brackets_the_synthetic_point_estimate():
+    result = counted(400, 600)
+    point = synth_lift(result, brand_of_sku=BRAND_OF_SKU, brand="Crunch")
+    interval = bootstrap_synth_lift_ci(
+        result, brand_of_sku=BRAND_OF_SKU, brand="Crunch", seed=3
+    )
+
+    assert point == pytest.approx(1.0)
+    assert interval is not None
+    low, high = interval
+    assert low < point < high
+
+
+def test_synth_interval_matches_an_explicit_multinomial_bootstrap():
+    """The implementation resamples each arm's purchase events as
+    Binomial(n, brand share). That IS the advertised brand's marginal of a
+    Multinomial(n, per-SKU share) resample summed over the brand's SKUs, so it
+    must agree with a written-out multinomial bootstrap over the SKU vector.
+    Checked numerically rather than asserted in a comment.
+    """
+    n_exposed, n_unexposed = 400, 600
+    interval = bootstrap_synth_lift_ci(
+        counted(n_exposed, n_unexposed),
+        brand_of_sku=BRAND_OF_SKU, brand="Crunch", seed=17, n_boot=20_000,
+    )
+
+    order = ["A1", "A2", "B1", "B2"]
+    crunch = [BRAND_OF_SKU[s] == "Crunch" for s in order]
+    rng = np.random.default_rng(101)
+    exposed = rng.multinomial(n_exposed, [ARM_EXPOSED[s] for s in order], size=20_000)
+    unexposed = rng.multinomial(n_unexposed, [ARM_UNEXPOSED[s] for s in order], size=20_000)
+    share_e = exposed[:, crunch].sum(axis=1) / n_exposed
+    share_u = unexposed[:, crunch].sum(axis=1) / n_unexposed
+    reference = (share_e - share_u) / share_u
+    low, high = np.percentile(reference, [2.5, 97.5])
+
+    assert interval[0] == pytest.approx(float(low), abs=0.03)
+    assert interval[1] == pytest.approx(float(high), abs=0.03)
+
+
+def test_synth_interval_narrows_as_the_purchase_event_counts_grow():
+    """The whole point of carrying the counts. The two arm SHARE vectors are
+    identical here -- only the number of events behind them differs -- so a
+    method that ignored the counts could not tell these two runs apart."""
+    def width(n: int) -> float:
+        low, high = bootstrap_synth_lift_ci(
+            counted(n, n), brand_of_sku=BRAND_OF_SKU, brand="Crunch", seed=5, n_boot=4000
+        )
+        return high - low
+
+    small, large = width(100), width(10_000)
+    print(f"\nsynthetic interval width: n=100 -> {small:.4f}, n=10,000 -> {large:.4f}")
+    assert large < small / 5.0
+
+
+def test_synth_interval_is_reproducible_from_its_seed():
+    kwargs = dict(brand_of_sku=BRAND_OF_SKU, brand="Crunch")
+    result = counted(400, 600)
+
+    first = bootstrap_synth_lift_ci(result, seed=42, **kwargs)
+    second = bootstrap_synth_lift_ci(result, seed=42, **kwargs)
+    other = bootstrap_synth_lift_ci(result, seed=43, **kwargs)
+
+    assert first == second
+    assert first != other
+
+
+def test_synth_interval_requires_an_explicit_seed():
+    with pytest.raises(TypeError):
+        bootstrap_synth_lift_ci(counted(400, 600), brand_of_sku=BRAND_OF_SKU, brand="Crunch")
+
+
+def test_synth_interval_is_none_when_either_arm_recorded_no_purchases():
+    """Nothing to resample. Same stance as an empty real panel."""
+    kwargs = dict(brand_of_sku=BRAND_OF_SKU, brand="Crunch", seed=5)
+    empty = {"A1": 0.0, "A2": 0.0, "B1": 0.0, "B2": 0.0}
+
+    assert bootstrap_synth_lift_ci(counted(0, 600, exposed=empty), **kwargs) is None
+    assert bootstrap_synth_lift_ci(counted(400, 0, unexposed=empty), **kwargs) is None
+
+
+def test_synth_interval_is_none_when_too_few_resamples_have_a_denominator():
+    """A thin unexposed arm that almost never buys the brand: most resamples
+    land on a zero denominator, and the percentiles would then describe a
+    minority of the draws. Same MIN_DEFINED_FRACTION rule as the real panel."""
+    barely = {"A1": 0.02, "A2": 0.0, "B1": 0.98, "B2": 0.0}
+    interval = bootstrap_synth_lift_ci(
+        counted(400, 10, unexposed=barely),
+        brand_of_sku=BRAND_OF_SKU, brand="Crunch", seed=5,
+    )
+    assert interval is None
+
+
+def test_synth_interval_raises_on_a_simresult_that_carries_no_counts():
+    """Same stance as `synth_lift` on a missing arm vector: a run that cannot
+    answer the question says so, rather than returning None as if the arms
+    were empty."""
+    with pytest.raises(ValueError, match="n_purchases_exposed"):
+        bootstrap_synth_lift_ci(
+            sim_result(ARM_EXPOSED, ARM_UNEXPOSED),
+            brand_of_sku=BRAND_OF_SKU, brand="Crunch", seed=5,
+        )
+
+
+def test_synth_interval_never_returns_inf_or_nan():
+    arms = [
+        {"A1": 0.0, "A2": 0.0, "B1": 0.0, "B2": 0.0},
+        {"A1": 0.0, "A2": 0.0, "B1": 0.6, "B2": 0.4},
+        {"A1": 1.0, "A2": 0.0, "B1": 0.0, "B2": 0.0},
+        {"A1": 0.25, "A2": 0.25, "B1": 0.25, "B2": 0.25},
+    ]
+    for exposed in arms:
+        for unexposed in arms:
+            for n_exposed, n_unexposed in ((0, 0), (1, 1), (50, 50), (5000, 5000)):
+                interval = bootstrap_synth_lift_ci(
+                    counted(n_exposed, n_unexposed, exposed=exposed, unexposed=unexposed),
+                    brand_of_sku=BRAND_OF_SKU, brand="Crunch", seed=2, n_boot=200,
+                )
+                assert interval is None or all(math.isfinite(v) for v in interval)
+
+
+# --- the emitted block -------------------------------------------------------
+
+
+def test_the_block_carries_the_synthetic_interval_under_its_own_key():
+    block = ad_to_purchase_lift(
+        {"switcher": counted(400, 600)},
+        brand_of_sku=BRAND_OF_SKU, brand="Crunch", seed=11,
+    )
+    row = block["switcher"]
+
+    assert row["synth"] == pytest.approx(1.0)
+    assert len(row["synth_mc95"]) == 2
+    assert row["synth_mc95"][0] < row["synth"] < row["synth_mc95"][1]
+    # It is NOT ci95: that name is the real panel's, and no real panel was passed.
+    assert "ci95" not in row
+    assert "real" not in row
+
+
+def test_the_synthetic_interval_does_not_displace_the_real_panels_ci95():
+    """Decision: `ci95` keeps meaning the REAL panel's bootstrap, exactly as
+    `noise_ceiling.ci95` does. Adding counts to the SimResult must leave it
+    byte-identical, and add a separately named key instead."""
+    panel = real_panel(60, 60, exposed_crunch=36, unexposed_crunch=24)
+    kwargs = dict(brand_of_sku=BRAND_OF_SKU, brand="Crunch",
+                  real={"switcher": panel}, seed=13)
+
+    without = ad_to_purchase_lift({"switcher": sim_result(ARM_EXPOSED, ARM_UNEXPOSED)}, **kwargs)
+    with_counts = ad_to_purchase_lift({"switcher": counted(400, 600)}, **kwargs)
+
+    assert with_counts["switcher"]["real"] == without["switcher"]["real"]
+    assert with_counts["switcher"]["ci95"] == without["switcher"]["ci95"]
+    assert "synth_mc95" not in without["switcher"]
+    assert "synth_mc95" in with_counts["switcher"]
+
+
+def test_the_block_omits_the_synthetic_interval_when_the_synthetic_lift_is_undefined():
+    """An undefined point estimate carries no interval -- the same rule the
+    real side already follows."""
+    undefined = counted(400, 600, unexposed={"A1": 0.0, "A2": 0.0, "B1": 0.6, "B2": 0.4})
+    block = ad_to_purchase_lift(
+        {"mission": undefined}, brand_of_sku=BRAND_OF_SKU, brand="Crunch", seed=1
+    )
+
+    assert block["mission"] == {}
+
+
+def test_the_block_with_a_synthetic_interval_validates_against_the_schema(metrics_schema):
+    block = ad_to_purchase_lift(
+        {
+            "switcher": counted(400, 600),
+            POPULATION_KEY: counted(900, 900),
+        },
+        brand_of_sku=BRAND_OF_SKU,
+        brand="Crunch",
+        real={"switcher": real_panel(60, 60, exposed_crunch=36, unexposed_crunch=24)},
+        seed=13,
+    )
+
+    round_tripped = json.loads(json.dumps(block, allow_nan=False))
+    assert round_tripped == block
+    Draft7Validator(metrics_schema["properties"]["ad_to_purchase_lift"]).validate(block)
+
+    assert set(block["switcher"]) == {"synth", "synth_mc95", "real", "ci95"}
+    assert set(block[POPULATION_KEY]) == {"synth", "synth_mc95"}
+
+
+def test_the_block_is_reproducible_with_both_intervals():
+    kwargs = dict(brand_of_sku=BRAND_OF_SKU, brand="Crunch",
+                  real={"switcher": real_panel(60, 60, exposed_crunch=36, unexposed_crunch=24)})
+    synth = {"switcher": counted(400, 600)}
+
+    assert (ad_to_purchase_lift(synth, seed=11, **kwargs)
+            == ad_to_purchase_lift(synth, seed=11, **kwargs))
+
+
+def test_end_to_end_the_committed_simulator_now_supplies_its_own_interval(
+    demo_planogram, demo_policies, metrics_schema
+):
+    """The counts come out of `run()` untouched by hand, so the synthetic
+    interval is available for every row of the real eval."""
+    store = build_store(demo_planogram)
+    brand = creative_brand(demo_planogram, "AD_1")
+    synth = {
+        persona: run(store, policy, n_runs=4_000, seed=20250905, variant_id="A",
+                     archetype=persona)
+        for persona, policy in demo_policies.items()
+    }
+
+    block = ad_to_purchase_lift(
+        synth, brand_of_sku=sku_brands(demo_planogram), brand=brand, seed=20250905
+    )
+    Draft7Validator(metrics_schema["properties"]["ad_to_purchase_lift"]).validate(block)
+
+    for persona, row in block.items():
+        interval = row["synth_mc95"]
+        print(f"\n{persona:9s} synth={row['synth']:+.4f} "
+              f"mc95=[{interval[0]:+.4f}, {interval[1]:+.4f}]  "
+              f"n_exposed={synth[persona]['n_purchases_exposed']} "
+              f"n_unexposed={synth[persona]['n_purchases_unexposed']}")
+        assert all(math.isfinite(v) for v in interval)
+        assert interval[0] <= row["synth"] <= interval[1]

@@ -57,15 +57,17 @@ Variant B moves `SKU_008` from `B1S5P1` (bottom shelf) to `B1S3P2` (eye level). 
 
 ## Ad-to-Purchase Lift
 
-Purchase share of `Crunch` among shoppers exposed to `AD_1` versus not, on variant `A`. The interval is a 95% bootstrap over 1000 resamples of the real panel's shoppers.
+Purchase share of `Crunch` among shoppers exposed to `AD_1` versus not, on variant `A`. The 95% CI is a bootstrap over 1000 resamples of the real panel's shoppers.
 
-| Segment | Real lift | 95% CI | Synthetic lift |
-|---|---|---|---|
-| browser | not yet collected | not yet collected | 0.32 |
-| loyalist | not yet collected | not yet collected | 0.02 |
-| mission | not yet collected | not yet collected | -0.08 |
-| population | not yet collected | not yet collected | 0.04 |
-| switcher | not yet collected | not yet collected | 0.11 |
+The last column is the synthetic panel's **Monte Carlo spread**, from resampling that run's own purchase events 1000 times. It is **not a confidence interval**: the synthetic panel is not a sample drawn from a population, so the spread says only whether the synthetic number is resolved at this run size. A wide one means too few synthetic purchase events, not a disagreement with the real panel.
+
+| Segment | Real lift | 95% CI | Synthetic lift | Synthetic MC spread |
+|---|---|---|---|---|
+| browser | not yet collected | not yet collected | 0.32 | 0.19 to 0.46 |
+| loyalist | not yet collected | not yet collected | 0.02 | -0.01 to 0.06 |
+| mission | not yet collected | not yet collected | -0.08 | -0.33 to 0.18 |
+| population | not yet collected | not yet collected | 0.04 | -0.03 to 0.12 |
+| switcher | not yet collected | not yet collected | 0.11 | 0.03 to 0.19 |
 
 ## Decision agreement
 

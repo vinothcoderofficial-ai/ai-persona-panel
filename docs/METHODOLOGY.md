@@ -432,12 +432,34 @@ gives `None`, never `inf` and never `0.0`. In the emitted block an undefined rea
 `null` and an undefined synthetic value is an **absent key**, because the schema types `synth` as
 a plain number and cannot hold null.
 
-*The interval.* `ci95` is a bootstrap over the **real** panel's shoppers, resampled pooled with
-each shopper's exposure flag kept and then re-split, so uncertainty in the exposure rate itself is
-inside the interval. It attaches to `real` only, and that is a limitation, not a preference: a
-`SimResult` carries the two arms as normalised shares, not per-shopper baskets, so there is
-nothing synthetic to resample. `bootstrap_lift_ci` is panel-agnostic and will produce the
-synthetic interval the moment a caller holds per-shopper synthetic baskets.
+*The two intervals.* A row can carry two, named apart because they are not the same kind of
+object. `ci95` is a **confidence interval** and belongs to `real`: a bootstrap over the real
+panel's shoppers, resampled pooled with each shopper's exposure flag kept and then re-split, so
+uncertainty in the exposure rate itself is inside it. `noise_ceiling.ci95` means the same kind of
+thing, and this name keeps meaning it.
+
+`synth_mc95` is **not** a confidence interval. The synthetic panel is a deterministic function of
+(planogram, policy, seed, `n_runs`) and is not a sample from a population, so it has no sampling
+uncertainty. `synth_mc95` reports Monte Carlo resolution instead: each arm's purchase *events* are
+resampled at that arm's own event count — a multinomial over the arm's per-SKU shares, drawn as
+the advertised brand's `Binomial(n, brand share)` marginal — and the ratio's 2.5 / 97.5
+percentiles are reported. It answers "is this synthetic number resolved at this run size?", the
+same question `analytics/optimizer.py` answers with `SeedSpread`.
+
+It is systematically narrower than `ci95` and must not be read against it. The arms' event counts
+are held fixed at what the run produced, so unlike the real bootstrap it does not carry the
+exposure rate's own uncertainty; and nothing in it speaks to whether the personas are right. The
+sentence the block exists to support — "the synthetic lift sits inside the real panel's 95 % CI"
+— is still a statement about `ci95`.
+
+This needs the arms' purchase-event counts, which normalised share vectors cannot carry.
+`sim/simulator.py` emits them as `n_purchases_exposed` / `n_purchases_unexposed`; they are
+optional in `schemas/simresult.schema.json`, so a `SimResult` predating them still reports `synth`,
+just without an interval. On the population row `sim.simulator.combine` reports not the pooled
+count but the **effective sample size** of the share-weighted mixture,
+`n_eff = (sum w)^2 / sum(w^2 / n)`, which equals the pooled count exactly when the persona shares
+are proportional to the arms' event counts and shrinks when a thinly simulated persona dominates
+the weighting.
 
 ---
 
@@ -670,12 +692,17 @@ hold on the demo aisle for the mission and loyalist personas, and both causes ar
 The tests assert monotonicity where the mechanism is isolated and say in the docstring why it is
 not asserted elsewhere. This is a known non-monotonicity, not an unexplained one.
 
-### 12.7 No synthetic confidence interval
+### 12.7 The synthetic interval is Monte Carlo error, not a confidence interval
 
-`ci95` attaches to the real panel only, for both the noise ceiling and the lift. A committed
-`SimResult` carries normalised shares, not per-shopper baskets, so there is nothing to resample.
-The synthetic number's Monte Carlo error is a run-size decision, not a sampling interval — but a
-reader used to seeing intervals on both sides of a table should know why only one side has them.
+`ci95` still attaches to the real panel only, for both the noise ceiling and the lift. The
+synthetic side now reports `synth_mc95` (§7), and the two columns in the lift table are not
+comparable: one is sampling uncertainty about a population, the other is how well resolved a
+simulation is at its run size. A narrow `synth_mc95` means the simulator ran enough shoppers, and
+says nothing whatever about whether the personas are right.
+
+`synth_mc95` is also narrower than a like-for-like resample would be, because it holds each arm's
+purchase-event count fixed at the value the run produced. The real panel's bootstrap resamples
+shoppers pooled and re-splits, so it carries the exposure rate's own uncertainty; this does not.
 
 ### 12.8 Persona policies are hand-written today
 
