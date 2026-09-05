@@ -11,8 +11,8 @@ The synthetic panel ran 10000 shoppers per variant; the real panel is not yet co
 
 **Synthetic panel: n = 10000 shoppers per variant** across 4 personas, seed 42.
 
-- Experiment id: `eval-0029dcf1332c`
-- Fit variant: `A`; holdout: `B`, `C`
+- Experiment id: `eval-9746db230bd9`
+- Fit variant: `A`; holdout: `B`, `C`, `D`
 - Focal SKU `SKU_008` (category `nuts`); focal creative `AD_1` (brand `Crunch`)
 - Synthetic attention fused in `cursor_only` mode
 - Capture mode of the accepted panel: not yet collected
@@ -33,6 +33,7 @@ Each session's synthetic prediction was locked and hashed on `POST /sessions`, b
 | A — Baseline | 0 | not yet collected | not yet collected | not yet collected | not yet collected | not yet collected |
 | B — Focal SKU moved to eye level (known effect) | 0 | not yet collected | not yet collected | not yet collected | not yet collected | not yet collected |
 | C — Ad creative moved to the bay 1 shelf talker | 0 | not yet collected | not yet collected | not yet collected | not yet collected | not yet collected |
+| D — Control arm - no ad creative anywhere | 0 | not yet collected | not yet collected | not yet collected | not yet collected | not yet collected |
 
 ## Noise ceiling and relative agreement
 
@@ -42,7 +43,7 @@ Split-half repeatability of the real panel: not yet collected. Every accuracy nu
 
 ## Calibration — fit and holdout
 
-Persona shares are fitted on variant `A` only, with `B`, `C` held out. Not run: not yet collected.
+Persona shares are fitted on variant `A` only, with `B`, `C`, `D` held out. Not run: not yet collected.
 
 ## Known effect — the focal SKU at eye level
 
@@ -82,12 +83,14 @@ Computed from the committed planogram and variants with no real panel involved: 
 | A | `B1S5P1` | 0.0267 | 0.0211 | 0.04 |
 | B | `B1S3P2` | 0.0497 | 0.0454 | 0.03 |
 | C | `B1S5P1` | 0.0254 | 0.0205 | 0.13 |
+| D | `B1S5P1` | 0.0268 | 0.0213 | not yet collected |
 
 ## Figures
 
 - `docs/figures/heatmap_A.png`
 - `docs/figures/heatmap_B.png`
 - `docs/figures/heatmap_C.png`
+- `docs/figures/heatmap_D.png`
 - `docs/figures/agreement_vs_ceiling.png` — not drawn: there is no real panel to measure a noise ceiling on
 - `docs/figures/calibration_fit_vs_holdout.png` — not drawn: calibration needs a real panel on the fit variant
 - `docs/figures/reject_reasons.png` — not drawn: no rejected sessions were committed

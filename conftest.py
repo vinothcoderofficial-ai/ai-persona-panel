@@ -25,7 +25,8 @@ import os
 import pytest
 
 # Everything sim/llm_client.py reads from the environment.
-_LLM_VARS = ("LLM_PROVIDER", "LLM_BASE_URL", "LLM_API_KEY", "LLM_MODEL", "LLM_OFFLINE")
+_LLM_VARS = ("LLM_PROVIDER", "LLM_BASE_URL", "LLM_API_KEY", "LLM_MODEL",
+             "LLM_OFFLINE", "LLM_TIMEOUT_S")
 
 
 @pytest.fixture(autouse=True, scope="session")

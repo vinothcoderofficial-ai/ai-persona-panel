@@ -23,6 +23,17 @@ subtly wrong and impossible to notice afterwards:
     panel. `test_seed_spread_is_not_a_confidence_interval` asserts that the
     field's name, its docstring and the printed summary all say what it
     actually is -- Monte Carlo run-to-run spread across seeds.
+  * **Which lever actually settles a ranking.** The seed spread is a MIN-MAX
+    RANGE, so it grows with the number of seeds it is taken over; only a
+    larger `n_synth` narrows it. The pair
+    `test_adding_seeds_widens_the_range_and_can_unresolve_a_top_pick` and
+    `test_adding_shoppers_narrows_the_range_where_adding_seeds_does_not`
+    pins that down, because reading "unresolved at five seeds" as "resolvable
+    by running more seeds" is the natural and wrong inference.
+  * **A top pick is a function of `n_synth`, not only of the seed.**
+    `check_top_pick_stability` re-ranks at a ladder of run sizes and reports
+    whether the same candidate wins at each. A ranking whose winner changes
+    when the panel grows was never measuring the winner.
 """
 
 from __future__ import annotations
@@ -39,6 +50,7 @@ import pytest
 
 from analytics.optimizer import (
     DEFAULT_SEED,
+    DEFAULT_STABILITY_LADDER,
     KIND_AD_PLACEMENT,
     KIND_SKU_LEVEL,
     LEVELS,
@@ -46,11 +58,14 @@ from analytics.optimizer import (
     CandidateSet,
     SeedSpread,
     Scored,
+    Stability,
     ad_placement_candidates,
     ad_purchase_lift_objective,
+    check_top_pick_stability,
     rank_candidates,
     sku_level_candidates,
     sku_purchase_share_objective,
+    stability_summary,
     summary,
 )
 
@@ -696,3 +711,454 @@ def test_the_same_configuration_scores_the_same_as_a_direct_simulator_call():
 
     assert entry.objective == direct
     assert entry.sim_run_id == bundle.population["sim_run_id"]
+
+
+# ---------------------------------------------------------------------------
+# Which lever settles a ranking: shoppers, not seeds
+# ---------------------------------------------------------------------------
+
+
+def _two_ad_candidates():
+    """Exactly two candidates, so a spread comparison has one pair in it."""
+    return ad_placement_candidates(
+        base_planogram(), creative_ids=("AD_1",),
+        ad_slot_ids=("B1_TALKER", "B2_DECAL"), include_unplaced=False,
+    )
+
+
+def _slot_of_variant(space):
+    """`variant_id -> ad_slot_id` for a scripted simulate to score against."""
+    from analytics.optimizer import variant_id_for
+
+    return {variant_id_for(base_planogram(), c.patches): c.detail["ad_slot_id"]
+            for c in space.candidates}
+
+
+def _by_slot(space, table):
+    """Score a candidate from `table[ad_slot_id][seed]`, via its variant id."""
+    slots = _slot_of_variant(space)
+    return lambda variant_id, seed: table[slots[variant_id]][seed]
+
+
+def test_seed_spread_reports_how_many_seeds_and_how_wide_the_range_is():
+    # The width and the seed count are the two numbers that make one spread
+    # comparable to another. A range over three seeds and a range over twenty
+    # are not the same measurement, and `low`/`high` alone cannot say which
+    # was taken.
+    space = ad_placement_candidates(base_planogram(), creative_ids=("AD_1",),
+                                    ad_slot_ids=("B1_TALKER",), include_unplaced=False)
+    table = {42: 0.10, 43: 0.30, 44: 0.20}
+    ranking = rank_candidates(base_planogram(), space, sku_purchase_share_objective(FOCAL_SKU),
+                              simulate=_scripted_simulate(lambda variant_id, seed: table[seed]),
+                              seed=42, spread_seeds=(43, 44), spread_top_n=1)
+
+    spread = ranking.entries[0].seed_spread
+    assert spread.n_seeds == 3
+    assert spread.width == pytest.approx(0.20)
+
+
+def test_the_seed_spread_docstring_says_more_seeds_does_not_narrow_it():
+    # The natural reading of "unresolved at five seeds" is "run more seeds and
+    # it will resolve". It is exactly backwards -- min-max is a range
+    # statistic and grows with the number of draws -- and the docstring is
+    # where a reader of RESULTS.md will go looking.
+    doc = SeedSpread.__doc__.lower()
+    assert "min" in doc and "max" in doc
+    assert "widen" in doc or "wider" in doc or "grows" in doc
+    assert "n_synth" in doc
+
+
+def test_adding_seeds_widens_the_range_and_can_unresolve_a_top_pick():
+    # Same simulations, same candidates, same n_synth -- only the number of
+    # seeds the range is taken over changes. Two seeds separate the pair;
+    # five, drawn from the same table, do not. "Resolved" is therefore partly
+    # a statement about how many seeds were run, and the module has to carry
+    # the count (`SeedSpread.n_seeds`) for it to mean anything.
+    space = _two_ad_candidates()
+    table = {
+        "B1_TALKER": {42: 0.50, 43: 0.49, 44: 0.40, 45: 0.55, 46: 0.52},
+        "B2_DECAL": {42: 0.45, 43: 0.44, 44: 0.47, 45: 0.42, 46: 0.46},
+    }
+    simulate = _scripted_simulate(_by_slot(space, table))
+
+    def rank_with(seeds):
+        return rank_candidates(base_planogram(), space,
+                               sku_purchase_share_objective(FOCAL_SKU), simulate=simulate,
+                               seed=42, spread_seeds=seeds, spread_top_n=2)
+
+    two = rank_with((43,))
+    five = rank_with((43, 44, 45, 46))
+
+    assert two.best.seed_spread.n_seeds == 2
+    assert five.best.seed_spread.n_seeds == 5
+    # More seeds, a wider range -- never a narrower one.
+    assert five.best.seed_spread.width > two.best.seed_spread.width
+    # And the extra draws take the answer away rather than settling it.
+    assert two.top_pick_is_resolved is True
+    assert five.top_pick_is_resolved is False
+
+
+def test_adding_shoppers_narrows_the_range_where_adding_seeds_does_not():
+    # The other lever. `n_synth` is a Monte Carlo sample size, so the range
+    # over a FIXED set of seeds shrinks as 1/sqrt(n_synth) -- sixteen times
+    # the shoppers, a quarter of the range. That is what actually buys
+    # resolution, which is why `check_top_pick_stability` climbs run sizes
+    # and not seed counts.
+    space = _two_ad_candidates()
+    noise = {42: 0.00, 43: 0.06, 44: -0.06, 45: 0.03, 46: -0.03}
+    truth = {"B1_TALKER": 0.50, "B2_DECAL": 0.44}
+    slots = _slot_of_variant(space)
+
+    def simulate(resolved, variant_id, *, n_synth, seed):
+        scale = (10_000 / n_synth) ** 0.5
+        value = truth[slots[variant_id]] + noise[seed] * scale
+        return _fake_bundle(purchase_share={FOCAL_SKU: value}, exposed={}, unexposed={},
+                            sim_run_id=f"{variant_id}:{n_synth}:{seed}")
+
+    def rank_at(n_synth):
+        return rank_candidates(base_planogram(), space,
+                               sku_purchase_share_objective(FOCAL_SKU), simulate=simulate,
+                               n_synth=n_synth, seed=42, spread_seeds=(43, 44, 45, 46),
+                               spread_top_n=2)
+
+    widths = {n: rank_at(n).best.seed_spread.width for n in (10_000, 40_000, 160_000)}
+
+    assert widths[10_000] > widths[40_000] > widths[160_000]
+    assert widths[10_000] / widths[160_000] == pytest.approx(4.0)
+    # And that is what turns an unresolved pair into a resolved one.
+    assert rank_at(10_000).top_pick_is_resolved is False
+    assert rank_at(160_000).top_pick_is_resolved is True
+
+
+def test_the_summary_sends_a_reader_to_run_size_rather_than_to_more_seeds():
+    space = _two_ad_candidates()
+    table = {
+        "B1_TALKER": {42: 0.50, 43: 0.40},
+        "B2_DECAL": {42: 0.49, 43: 0.55},
+    }
+    ranking = rank_candidates(base_planogram(), space,
+                              sku_purchase_share_objective(FOCAL_SKU),
+                              simulate=_scripted_simulate(_by_slot(space, table)),
+                              seed=42, spread_seeds=(43,), spread_top_n=2)
+
+    assert ranking.top_pick_is_resolved is False
+    text = summary(ranking)
+    lower = text.lower()
+    assert "not resolved" in lower
+    # The wrong lever is named and disclaimed in the same breath, and the
+    # right one is named together with the call that measures it.
+    assert "more seeds will not settle it" in lower
+    assert "n_synth" in lower
+    assert "check_top_pick_stability" in text
+    # Still no confidence interval, on any branch.
+    assert re.search(r"\bCI\b", text) is None
+
+
+# ---------------------------------------------------------------------------
+# Is the top pick a property of the planogram, or of n_synth?
+# ---------------------------------------------------------------------------
+
+
+def _stability_simulate(value_of):
+    def simulate(resolved, variant_id, *, n_synth, seed):
+        return _fake_bundle(purchase_share={FOCAL_SKU: value_of(variant_id, n_synth)},
+                            exposed={}, unexposed={},
+                            sim_run_id=f"{variant_id}:{n_synth}:{seed}")
+    return simulate
+
+
+def _flat_values(space, values):
+    slots = _slot_of_variant(space)
+    return lambda variant_id, n_synth: values[slots[variant_id]]
+
+
+def test_the_stability_ladder_climbs_run_sizes_and_keeps_one_ranking_per_rung():
+    space = _two_ad_candidates()
+    check = check_top_pick_stability(
+        base_planogram(), space, sku_purchase_share_objective(FOCAL_SKU),
+        n_synth_ladder=(10_000, 50_000),
+        simulate=_stability_simulate(
+            _flat_values(space, {"B1_TALKER": 0.50, "B2_DECAL": 0.40})),
+    )
+
+    assert isinstance(check, Stability)
+    assert check.n_synth_ladder == (10_000, 50_000)
+    assert tuple(r.n_synth for r in check.rankings) == (10_000, 50_000)
+    assert all(r.n_candidates == len(space) for r in check.rankings)
+    assert check.objective_name == f"population purchase share of {FOCAL_SKU}"
+
+
+def test_a_top_pick_that_survives_every_rung_is_reported_stable():
+    space = _two_ad_candidates()
+    check = check_top_pick_stability(
+        base_planogram(), space, sku_purchase_share_objective(FOCAL_SKU),
+        n_synth_ladder=(10_000, 50_000, 250_000),
+        simulate=_stability_simulate(
+            _flat_values(space, {"B1_TALKER": 0.50, "B2_DECAL": 0.40})),
+    )
+
+    assert check.top_pick_ids == ("ad:AD_1@B1_TALKER",) * 3
+    assert check.top_pick_is_stable is True
+    assert check.settled_top_pick == "ad:AD_1@B1_TALKER"
+    assert check.reordered_at == ()
+
+
+def test_a_top_pick_that_only_wins_at_the_small_run_size_is_reported_unstable():
+    # The failure this check exists for: a candidate that leads at
+    # n_synth=10,000 and loses once the panel grows was never the best
+    # placement, it was the luckiest one. A seed spread at 10,000 cannot see
+    # it, because every seed it re-rolls is drawn at 10,000.
+    space = _two_ad_candidates()
+    slots = _slot_of_variant(space)
+
+    def value_of(variant_id, n_synth):
+        if slots[variant_id] == "B1_TALKER":
+            return 0.50 if n_synth < 50_000 else 0.30
+        return 0.40
+
+    check = check_top_pick_stability(
+        base_planogram(), space, sku_purchase_share_objective(FOCAL_SKU),
+        n_synth_ladder=(10_000, 50_000, 250_000),
+        simulate=_stability_simulate(value_of),
+    )
+
+    assert check.top_pick_ids == ("ad:AD_1@B1_TALKER", "ad:AD_1@B2_DECAL", "ad:AD_1@B2_DECAL")
+    assert check.top_pick_is_stable is False
+    assert check.settled_top_pick is None
+    assert check.reordered_at == (50_000, 250_000)
+
+
+def test_a_one_rung_ladder_reports_stability_as_unknown_rather_than_true():
+    # One rung is one measurement; "the top pick survived every rung it was
+    # tried at" is vacuously true and must not be reported as a finding. The
+    # module's word for "not established" is None, as it is for
+    # `Ranking.top_pick_is_resolved`.
+    space = _two_ad_candidates()
+    check = check_top_pick_stability(
+        base_planogram(), space, sku_purchase_share_objective(FOCAL_SKU),
+        n_synth_ladder=(10_000,),
+        simulate=_stability_simulate(
+            _flat_values(space, {"B1_TALKER": 0.50, "B2_DECAL": 0.40})),
+    )
+
+    assert check.top_pick_is_stable is None
+    assert check.settled_top_pick is None
+
+
+def test_the_stability_ladder_must_be_non_empty_and_strictly_increasing():
+    space = _two_ad_candidates()
+    simulate = _stability_simulate(lambda variant_id, n_synth: 0.5)
+
+    for bad in ((), (10_000, 10_000), (50_000, 10_000)):
+        with pytest.raises(ValueError):
+            check_top_pick_stability(
+                base_planogram(), space, sku_purchase_share_objective(FOCAL_SKU),
+                n_synth_ladder=bad, simulate=simulate,
+            )
+
+
+def test_stability_summary_names_the_winner_at_each_rung_and_refuses_a_settled_claim():
+    space = _two_ad_candidates()
+    slots = _slot_of_variant(space)
+
+    def value_of(variant_id, n_synth):
+        if slots[variant_id] == "B1_TALKER":
+            return 0.50 if n_synth < 50_000 else 0.30
+        return 0.40
+
+    check = check_top_pick_stability(
+        base_planogram(), space, sku_purchase_share_objective(FOCAL_SKU),
+        n_synth_ladder=(10_000, 50_000), simulate=_stability_simulate(value_of),
+    )
+
+    text = stability_summary(check)
+    assert "ad:AD_1@B1_TALKER" in text
+    assert "ad:AD_1@B2_DECAL" in text
+    assert "10,000" in text
+    lower = text.lower()
+    assert "not stable" in lower
+    assert re.search(r"\bCI\b", text) is None
+
+
+def test_the_default_stability_ladder_starts_at_the_default_run_size_and_grows():
+    # A ladder whose first rung is not the size the ranking is normally
+    # produced at would answer a different question from "does the number we
+    # actually report survive a bigger panel".
+    from analytics.optimizer import DEFAULT_N_SYNTH
+
+    assert DEFAULT_STABILITY_LADDER[0] == DEFAULT_N_SYNTH
+    assert list(DEFAULT_STABILITY_LADDER) == sorted(set(DEFAULT_STABILITY_LADDER))
+    assert len(DEFAULT_STABILITY_LADDER) >= 2
+
+
+# ---------------------------------------------------------------------------
+# THE MEASUREMENT: does the committed aisle's top pick survive a bigger panel?
+# ---------------------------------------------------------------------------
+
+
+def test_the_committed_aisle_s_top_pick_is_checked_against_a_bigger_panel():
+    """Run the real ladder on the committed planogram and say what happened.
+
+    Both outcomes are reported rather than asserted into one shape: a top pick
+    that survives is a result, and one that does not is a bigger result. What
+    is asserted either way is that the check answers at all, and that
+    `settled_top_pick` agrees with the answer instead of naming a winner the
+    ladder did not produce.
+    """
+    base = base_planogram()
+    space = ad_placement_candidates(base) + sku_level_candidates(base, FOCAL_SKU)
+
+    started = time.perf_counter()
+    check = check_top_pick_stability(
+        base, space, ad_purchase_lift_objective("AD_1"), n_synth_ladder=(10_000, 50_000),
+    )
+    elapsed = time.perf_counter() - started
+
+    assert len(check.rankings) == 2
+    assert check.top_pick_is_stable in (True, False)
+
+    print(f"\n{stability_summary(check)}")
+    for ranking in check.rankings:
+        best = ranking.best
+        value = "undefined" if best.objective is None else ranking.format_value(best.objective)
+        current = ranking.current
+        where = "not in the space" if current is None else (
+            f"ranks {current.rank} of {ranking.n_candidates} at "
+            f"{ranking.format_value(current.objective)}")
+        print(f"  n_synth={ranking.n_synth:>7,}: {best.candidate.candidate_id:<24} "
+              f"{value:>9}   current placement {where}")
+    print(f"  ladder wall clock: {elapsed:.1f} s")
+
+    if check.top_pick_is_stable:
+        assert check.settled_top_pick == check.top_pick_ids[0]
+    else:
+        assert check.settled_top_pick is None
+        assert check.reordered_at != ()
+
+
+# ---------------------------------------------------------------------------
+# "Moving beats where it is now" is a different claim from "rank 1 beats rank 2"
+# ---------------------------------------------------------------------------
+
+
+def test_beats_current_names_only_candidates_that_clear_the_current_placement():
+    # The claim the demo actually makes is about ONE pair -- this placement
+    # against the one we are running -- and not about rank 1 against rank 2.
+    # A candidate qualifies only when its whole seed range sits above the
+    # current placement's whole seed range.
+    space = ad_placement_candidates(base_planogram(), creative_ids=("AD_1",),
+                                    include_unplaced=False)
+    by_slot = {
+        "B1_TALKER": {42: 0.90, 43: 0.88},   # 0.88..0.90, clears the current placement
+        "B2_DECAL": {42: 0.50, 43: 0.44},    # 0.44..0.50, overlaps it
+        "B3_ENDCAP": {42: 0.48, 43: 0.46},   # 0.46..0.48 -- this is the current placement
+    }
+    ranking = rank_candidates(
+        base_planogram(), space, sku_purchase_share_objective(FOCAL_SKU),
+        simulate=_scripted_simulate(_by_slot(space, by_slot)),
+        seed=42, spread_seeds=(43,), spread_top_n=3,
+    )
+
+    assert ranking.current.candidate.candidate_id == "ad:AD_1@B3_ENDCAP"
+    assert ranking.beats_current == ("ad:AD_1@B1_TALKER",)
+
+
+def test_beats_current_is_empty_when_nothing_clears_the_placement_we_run():
+    # Empty is a finding: "moving beats where it is now" is not settled here.
+    # It is a tuple, not None, because the question WAS answered.
+    space = ad_placement_candidates(base_planogram(), creative_ids=("AD_1",),
+                                    include_unplaced=False)
+    by_slot = {
+        "B1_TALKER": {42: 0.52, 43: 0.44},
+        "B2_DECAL": {42: 0.50, 43: 0.45},
+        "B3_ENDCAP": {42: 0.48, 43: 0.46},
+    }
+    ranking = rank_candidates(
+        base_planogram(), space, sku_purchase_share_objective(FOCAL_SKU),
+        simulate=_scripted_simulate(_by_slot(space, by_slot)),
+        seed=42, spread_seeds=(43,), spread_top_n=3,
+    )
+
+    assert ranking.beats_current == ()
+
+
+def test_beats_current_is_unknown_when_the_current_placement_has_no_spread():
+    # `spread_top_n` can leave the current placement outside the spread set --
+    # on the committed aisle at a large n_synth it ranks below the default
+    # five. With no range to clear, the comparison was not made, and reporting
+    # that as "nothing beats it" would be a claim nobody measured.
+    space = ad_placement_candidates(base_planogram(), creative_ids=("AD_1",),
+                                    include_unplaced=False)
+    by_slot = {
+        "B1_TALKER": {42: 0.90, 43: 0.88},
+        "B2_DECAL": {42: 0.80, 43: 0.78},
+        "B3_ENDCAP": {42: 0.48, 43: 0.46},
+    }
+    ranking = rank_candidates(
+        base_planogram(), space, sku_purchase_share_objective(FOCAL_SKU),
+        simulate=_scripted_simulate(_by_slot(space, by_slot)),
+        seed=42, spread_seeds=(43,), spread_top_n=2,
+    )
+
+    assert ranking.current.seed_spread is None
+    assert ranking.beats_current is None
+
+
+def test_beats_current_is_unknown_when_the_space_excludes_the_current_placement():
+    space = _two_ad_candidates()          # B1_TALKER and B2_DECAL only
+    ranking = rank_candidates(
+        base_planogram(), space, sku_purchase_share_objective(FOCAL_SKU),
+        simulate=_scripted_simulate(lambda variant_id, seed: 0.5 + seed / 1000.0),
+        seed=42, spread_seeds=(43,), spread_top_n=2,
+    )
+
+    assert ranking.current is None
+    assert ranking.beats_current is None
+
+
+def test_a_placement_can_beat_the_current_one_while_the_top_two_stay_unresolved():
+    # The measured situation on the committed aisle at n_synth=250,000, and the
+    # reason the two claims are reported separately: the leaders are within
+    # noise of each other, and one of them is still clear of the placement we
+    # run today. Answering only "is rank 1 resolved" throws the second claim
+    # away.
+    space = ad_placement_candidates(base_planogram(), creative_ids=("AD_1",),
+                                    include_unplaced=False)
+    by_slot = {
+        "B1_TALKER": {42: 0.90, 43: 0.86},   # 0.86..0.90  leaders overlap each other
+        "B2_DECAL": {42: 0.89, 43: 0.87},    # 0.87..0.89  but both clear the current
+        "B3_ENDCAP": {42: 0.48, 43: 0.46},   # 0.46..0.48  current placement
+    }
+    ranking = rank_candidates(
+        base_planogram(), space, sku_purchase_share_objective(FOCAL_SKU),
+        simulate=_scripted_simulate(_by_slot(space, by_slot)),
+        seed=42, spread_seeds=(43,), spread_top_n=3,
+    )
+
+    assert ranking.top_pick_is_resolved is False
+    assert ranking.beats_current == ("ad:AD_1@B1_TALKER", "ad:AD_1@B2_DECAL")
+
+    text = summary(ranking)
+    # Both sentences are printed: the one that is settled and the one that is not.
+    assert "not resolved" in text.lower()
+    assert "clear the current placement" in text.lower()
+    assert "ad:AD_1@B1_TALKER" in text and "ad:AD_1@B2_DECAL" in text
+
+
+def test_the_summary_says_so_when_nothing_clears_the_current_placement():
+    space = ad_placement_candidates(base_planogram(), creative_ids=("AD_1",),
+                                    include_unplaced=False)
+    by_slot = {
+        "B1_TALKER": {42: 0.52, 43: 0.44},
+        "B2_DECAL": {42: 0.50, 43: 0.45},
+        "B3_ENDCAP": {42: 0.48, 43: 0.46},
+    }
+    ranking = rank_candidates(
+        base_planogram(), space, sku_purchase_share_objective(FOCAL_SKU),
+        simulate=_scripted_simulate(_by_slot(space, by_slot)),
+        seed=42, spread_seeds=(43,), spread_top_n=3,
+    )
+
+    lower = summary(ranking).lower()
+    assert "no placement clears the current placement" in lower
+    assert re.search(r"\bCI\b", summary(ranking)) is None

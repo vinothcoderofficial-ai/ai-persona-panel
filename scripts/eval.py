@@ -537,6 +537,7 @@ def run_eval(
     seed: int = SEED,
     write_figures: bool = True,
     llm_client: Any = None,
+    llm_headline: bool = False,
 ) -> EvalOutcome:
     """Load, verify, analyse, and write. Returns everything, raises nothing.
 
@@ -581,7 +582,21 @@ def run_eval(
         written, skipped = [], [{"name": "all", "reason": "figures were not requested"}]
     report_input["figures"] = {"written": written, "skipped": skipped}
 
-    headline_text, headline_source = report_mod.headline(report_input, client=llm_client)
+    if llm_headline:
+        headline_text, headline_source = report_mod.headline(report_input, client=llm_client)
+    else:
+        # Deterministic by construction, not by luck. SPEC's acceptance line is
+        # that `make eval` reproduces RESULTS.md byte-identically from committed
+        # data, and the CI evidence job enforces it. Asking a model for the
+        # headline sentence puts a non-reproducible string into a committed file
+        # -- it happened to stay stable only while the grounding check kept
+        # rejecting it, and while there was no API key at all. It also made every
+        # `make eval` a paid network call. Opt in with --llm-headline when you
+        # want one, and expect the report to stop being reproducible.
+        headline_text, headline_source = (
+            report_mod.template_headline(report_input),
+            report_mod.SOURCE_TEMPLATE,
+        )
     markdown = report_mod.render(report_input, headline_text=headline_text)
 
     results_path = Path(results_path)
@@ -1345,6 +1360,11 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     parser.add_argument(
         "--no-figures", action="store_true", help="skip docs/figures/*.png"
     )
+    parser.add_argument(
+        "--llm-headline", action="store_true",
+        help="ask a model for the headline sentence. Off by default: it makes "
+             "RESULTS.md non-reproducible and every run a live call.",
+    )
     args = parser.parse_args(argv)
 
     outcome = run_eval(
@@ -1355,6 +1375,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         n_synth=args.n_synth,
         seed=args.seed,
         write_figures=not args.no_figures,
+        llm_headline=args.llm_headline,
     )
 
     if outcome.exit_code != 0:

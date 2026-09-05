@@ -29,6 +29,41 @@ two committed SimResult vectors and never re-derives exposure, and the real
 panel is split the same way -- did this session touch a creative-carrying ad
 slot at any point.
 
+Within one run, or between two arms
+-----------------------------------
+There are two Brand Lifts in this module and they must not be swapped.
+
+**`synth_lift` is WITHIN one run.** One variant, one simulator call, split
+into the shoppers who fixated an ad slot and the shoppers who did not. Use it
+when you have a single arm and want to know what exposure was worth inside
+it. It is also the only one the REAL panel can answer, because a real panel is
+one store with one planogram standing in it -- which is why `real_lift` is a
+within-run split too, and why the two are directly comparable.
+
+**`between_variant_lift` is BETWEEN two runs.** The advertised brand's share
+of the whole of a treated run against the whole of a control run. Use it when
+you have two arms, which is the study a client actually commissions, and when
+the objection to the within-run split matters: within one run, exposure is a
+SELECTION and not a randomisation. Who walks to the endcap is not random, so
+the two within-run arms differ in composition before the ad does anything.
+`analytics/tests/test_lift.py` has to build a brand-symmetric bay before the
+within-run null is really zero; the between-variant null needs no such thing,
+because the arms are two whole populations and nothing selected them.
+
+The between-variant number needs a control arm, and this project had none
+until `data/variants/D.json`: variants A and C BOTH carry AD_1 -- C only moves
+it from B3_ENDCAP to B1_TALKER -- so A-vs-C compares two PLACEMENTS, not
+exposure against no exposure. D is variant A with every ad slot's
+`creative_id` set to null: same planogram, same SKUs, same facings, same shelf
+levels, no advertising anywhere. A control arm has no exposed shoppers at all,
+so `synth_lift` on it is undefined by construction; that is not a defect, it
+is the definition of a control, and it is exactly why this second function has
+to exist.
+
+Both read their shares through `brand_share`, both divide through `lift`, and
+both are resampled by the same `_binomial_lift_spread`. "The two lifts are the
+same arithmetic over different splits" is therefore a property of the code.
+
 What is undefined, and how it is reported
 -----------------------------------------
 Two things make the ratio undefined, and neither is ever reported as 0.0:
@@ -83,6 +118,13 @@ purchase-event counts. `sim/simulator.py` emits them and they are optional in
 schemas/simresult.schema.json, so a SimResult predating them still reports
 `synth` -- just without an interval.
 
+`bootstrap_between_variant_mc95` is the same kind of thing again, one level
+out: Monte Carlo resolution on the between-variant number, over the two runs'
+whole purchase-event counts rather than the two arms' counts. It is not a
+confidence interval either, it is not named `ci95`, and it is not emitted into
+schemas/metrics.schema.json -- that schema has no key for a between-variant
+number, and the schema is the only cross-track contract.
+
 Pure: no HTTP, no file I/O, no globals, no wall-clock randomness. `seed` is
 required and keyword-only, because `scripts/eval.py` has to regenerate
 RESULTS.md identically from the committed sessions.
@@ -127,6 +169,12 @@ UNEXPOSED_FIELD = "ad_unexposed_purchase_share"
 # schema: a SimResult predating them reports `synth` without `synth_mc95`.
 EXPOSED_COUNT_FIELD = "n_purchases_exposed"
 UNEXPOSED_COUNT_FIELD = "n_purchases_unexposed"
+
+# The whole-run purchase share, which is what the BETWEEN-variant comparison
+# reads: a control arm has no exposed/unexposed split to read, and a treated
+# arm's client-facing number is its whole cell, not the exposed half of it.
+# Required in schemas/simresult.schema.json, so its absence is malformed input.
+PURCHASE_SHARE_FIELD = "purchase_share"
 
 
 @dataclass(frozen=True)
@@ -248,11 +296,17 @@ def lift(exposed_share: float | None, unexposed_share: float | None) -> float | 
 
 
 def synth_lift(sim_result: Mapping, *, brand_of_sku: Mapping[str, str], brand: str) -> float | None:
-    """The synthetic panel's lift, from a SimResult's two arm vectors.
+    """The synthetic panel's WITHIN-RUN lift, from a SimResult's two arm vectors.
 
     Reads `ad_exposed_purchase_share` and `ad_unexposed_purchase_share`
     exactly as `sim/simulator.py` wrote them -- trip-level exposure, SKU
     shares within the arm -- and puts them through `brand_share` and `lift`.
+
+    This is one variant split into the shoppers who saw the ad and the ones who
+    did not. For the two-arm study -- treated variant against a control variant
+    that carries no creative -- use `between_variant_lift`; the module docstring
+    sets out which question each one answers. On a control arm this function is
+    undefined by construction, because a control arm has no exposed shoppers.
 
     Raises ValueError if either field is missing. Both are optional in
     schemas/simresult.schema.json, so a SimResult predating S16 will not have
@@ -268,6 +322,107 @@ def synth_lift(sim_result: Mapping, *, brand_of_sku: Mapping[str, str], brand: s
             )
         arms.append(brand_share(arm, brand_of_sku, brand))
     return lift(arms[0], arms[1])
+
+
+def purchase_event_count(sim_result: Mapping) -> int:
+    """Total purchase EVENTS behind a SimResult's `purchase_share`.
+
+    `sim.simulator._share` normalises every share vector, so the run itself
+    cannot say how many events are underneath one, and `n_runs` is the shopper
+    count rather than the event count -- a shopper buys 0..n_bays items. The
+    two arm counts are the only record of it, and since trip-level exposure
+    partitions the run's purchase events into exactly those two arms, their sum
+    is the run's total. How it splits is the WITHIN-run number's business; only
+    the total matters here.
+
+    For a `sim.simulator.run` result this is an exact event count. For a
+    `sim.simulator.combine` population result it is not: `combine` puts Kish
+    EFFECTIVE sample sizes in those two fields, because the population vector
+    is a share-weighted mixture of per-persona estimates rather than a pooled
+    sample, so the sum is an effective count too. That is the same convention
+    `bootstrap_synth_lift_ci` already runs on for the population row, one step
+    further out; the resulting spread is a resolution estimate either way, and
+    never a confidence interval.
+
+    That sum is CONSERVATIVE, and provably so, which is the only reason it is
+    acceptable here. Kish's `n_eff(x) = (sum w)^2 / sum(w^2 / x_i)` is concave
+    and homogeneous of degree 1 in the per-persona counts, hence superadditive:
+    `n_eff(exposed) + n_eff(unexposed) <= n_eff(exposed + unexposed)`. So this
+    never claims more precision than the mixture has, and the spread built on
+    it is never too narrow. Equality holds exactly for a single-persona result
+    and for any control arm, whose exposed count is 0.
+    `analytics/tests/test_lift.py` pins the inequality on the committed arms.
+
+    Raises ValueError when either count is absent. Both are optional in
+    schemas/simresult.schema.json, so a run predating them genuinely cannot
+    answer this, and reporting 0 would read as "this run bought nothing".
+    """
+    exposed, unexposed = _arm_counts(
+        sim_result,
+        needed_for="the run's purchase-event count is its two arms added back together",
+    )
+    return exposed + unexposed
+
+
+def between_variant_lift(
+    treated: Mapping,
+    control: Mapping,
+    *,
+    brand_of_sku: Mapping[str, str],
+    brand: str,
+) -> float | None:
+    """The BETWEEN-VARIANT Brand Lift: one whole run against another whole run.
+
+        lift = (brand share under the treated variant
+                - under the control variant) / under the control variant
+
+    This is the study a client commissions. `treated` is a run of a variant
+    that carries the creative (`data/variants/A.json`); `control` is a run of a
+    variant that carries none (`data/variants/D.json`). Both are read through
+    `purchase_share` -- the WHOLE run, every shopper in the cell -- and put
+    through the same `brand_share` and `lift` as everything else here.
+
+    How this differs from `synth_lift`, and when each is right
+    ---------------------------------------------------------
+    `synth_lift` reads `ad_exposed_purchase_share` /
+    `ad_unexposed_purchase_share`: ONE run, split by whether each shopper
+    fixated an ad slot on their trip. Right when you have a single arm, and the
+    only form the real panel can take, since a real panel shops one store.
+
+    This function reads `purchase_share` from TWO runs of different variants.
+    Right when you have two arms, and the stronger design: within one run,
+    exposure is a selection -- shoppers who reach the endcap were already
+    different -- while the two variants' populations are identical by
+    construction and differ only in whether a creative is on the wall.
+
+    They are not interchangeable and they do not agree. Reporting the
+    within-run number as a between-arm Brand Lift overstates it by whatever
+    the selection is worth, and on the committed demo aisle that is most of it:
+    the population within-run lift is roughly an ORDER OF MAGNITUDE larger than
+    the A-vs-D lift at the same run size and seed. Shoppers who fixate the
+    B3_ENDCAP creative were already likelier to buy the advertised brand,
+    because reaching that endcap at all is correlated with wanting what is on
+    it. `analytics/tests/test_lift.py` pins the gap on the committed arms.
+
+    Guards
+    ------
+    Two runs of the SAME variant raise: that is not an experiment, and at worst
+    it launders a seed difference into an ad effect. Two runs of DIFFERENT
+    personas raise: mission-under-A against browser-under-D confounds the
+    persona with the ad, and the answer would still be reported as a Brand
+    Lift. Combine personas into a population row with
+    `sim.simulator.combine` and compare that against the control's population
+    row, which is what a client's headline number is.
+
+    Returns None -- never `inf`, never `nan`, never 0.0 -- when either run
+    recorded no purchases at all, or when the control run bought none of the
+    advertised brand. Same two undefined cases as `lift`, for the same reason.
+    """
+    _check_comparable(treated, control)
+    return lift(
+        brand_share(_purchase_share(treated), brand_of_sku, brand),
+        brand_share(_purchase_share(control), brand_of_sku, brand),
+    )
 
 
 def split_panel(
@@ -466,24 +621,12 @@ def bootstrap_synth_lift_ci(
     `np.random.default_rng(seed)`; the two bootstraps run over disjoint data
     with different draw shapes, so sharing a seed couples nothing.
     """
-    if n_boot < 1:
-        raise ValueError(f"n_boot must be at least 1, got {n_boot!r}")
-    if not 0.0 < ci < 1.0:
-        raise ValueError(f"ci must be in (0, 1), got {ci!r}")
+    _check_resample_args(n_boot, ci)
 
-    counts: list[int] = []
-    for field in (EXPOSED_COUNT_FIELD, UNEXPOSED_COUNT_FIELD):
-        value = sim_result.get(field)
-        if value is None:
-            raise ValueError(
-                f"SimResult has no {field!r}; the synthetic interval needs both arms' "
-                "purchase-event counts"
-            )
-        count = int(value)
-        if count < 0:
-            raise ValueError(f"{field} must be at least 0, got {count!r}")
-        counts.append(count)
-    n_exposed, n_unexposed = counts
+    n_exposed, n_unexposed = _arm_counts(
+        sim_result,
+        needed_for="the synthetic interval needs both arms' purchase-event counts",
+    )
 
     shares = []
     for field in (EXPOSED_FIELD, UNEXPOSED_FIELD):
@@ -495,25 +638,76 @@ def bootstrap_synth_lift_ci(
         shares.append(brand_share(arm, brand_of_sku, brand))
     exposed_share, unexposed_share = shares
 
-    if not n_exposed or not n_unexposed:
-        return None
-    if exposed_share is None or unexposed_share is None:
-        return None
+    return _binomial_lift_spread(
+        exposed_share, n_exposed, unexposed_share, n_unexposed,
+        seed=seed, n_boot=n_boot, ci=ci,
+    )
 
-    rng = np.random.default_rng(seed)
-    drawn_exposed = rng.binomial(n_exposed, exposed_share, size=n_boot) / n_exposed
-    drawn_unexposed = rng.binomial(n_unexposed, unexposed_share, size=n_boot) / n_unexposed
 
-    # The same zero-denominator guard as `lift`, expressed as a mask: a draw in
-    # which the unexposed arm bought none of the brand has no ratio.
-    defined = drawn_unexposed > 0.0
-    if int(defined.sum()) < MIN_DEFINED_FRACTION * n_boot:
-        return None
+def bootstrap_between_variant_mc95(
+    treated: Mapping,
+    control: Mapping,
+    *,
+    brand_of_sku: Mapping[str, str],
+    brand: str,
+    seed: int,
+    n_boot: int = DEFAULT_N_BOOT,
+    ci: float = DEFAULT_CI,
+) -> tuple[float, float] | None:
+    """Monte Carlo spread around `between_variant_lift`, over resampled events.
 
-    lifts = (drawn_exposed[defined] - drawn_unexposed[defined]) / drawn_unexposed[defined]
+    **This is not a confidence interval, and it is deliberately not called one.**
+    Neither arm is a sample from a population of shoppers: each is a
+    deterministic function of (planogram, policy, seed, n_runs). What this
+    measures is how far the reported between-variant lift would move if both
+    configurations were re-run at the same `n_runs` -- resolution, not sampling
+    uncertainty. It answers "is this number resolved at n_runs, or is it
+    noise?", the same question `bootstrap_synth_lift_ci` answers for the
+    within-run number and `analytics/optimizer.py:SeedSpread` for a ranking.
+    `ci95` stays the REAL panel's interval and nothing here displaces it.
 
-    tail = (1.0 - ci) / 2.0 * 100.0
-    return float(np.percentile(lifts, tail)), float(np.percentile(lifts, 100.0 - tail))
+    **What is resampled:** each run's purchase EVENTS -- `purchase_event_count`
+    of them -- as a multinomial over that run's own `purchase_share`, of which
+    only the advertised brand's marginal reaches the ratio. That marginal is
+    exactly `Binomial(n, brand share)`, so that is what is drawn; the identity
+    is checked numerically in `analytics/tests/test_lift.py` against a
+    written-out multinomial bootstrap. It goes through the same
+    `_binomial_lift_spread` as the within-run spread, and the tests pin that
+    the two agree bit for bit on the same shares and counts.
+
+    **What it does not capture:**
+
+    * Any correlation between the two runs. A and D are usually run at the same
+      `seed`, which is a partial common-random-numbers design and makes the
+      real run-to-run spread of the DIFFERENCE narrower than this. Treating the
+      arms as independent is therefore the conservative direction: this spread
+      is, if anything, too wide. It is not narrowed to claim otherwise.
+    * Anything about whether the personas, the policies or the saliency model
+      are right. A tight spread says the simulator is self-consistent at this
+      run size, not that it describes real shoppers.
+    * For a population row, the difference between a Kish effective count and a
+      pooled event count -- see `purchase_event_count`.
+
+    Returns None -- never `inf`, never `nan` -- when either run recorded no
+    purchases, when either brand share is undefined, or when fewer than
+    `MIN_DEFINED_FRACTION` of the draws land with a non-zero denominator.
+    Raises ValueError on the same two mismatches `between_variant_lift`
+    refuses, and on a run carrying no purchase-event counts.
+
+    `seed` is required and keyword-only so RESULTS.md regenerates identically,
+    exactly as for the other two bootstraps in this module.
+    """
+    _check_resample_args(n_boot, ci)
+    _check_comparable(treated, control)
+
+    n_treated = purchase_event_count(treated)
+    n_control = purchase_event_count(control)
+
+    return _binomial_lift_spread(
+        brand_share(_purchase_share(treated), brand_of_sku, brand), n_treated,
+        brand_share(_purchase_share(control), brand_of_sku, brand), n_control,
+        seed=seed, n_boot=n_boot, ci=ci,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -612,3 +806,112 @@ def _pool(baskets: Iterable[Sequence[str]]) -> dict[str, float]:
         for sku_id in basket:
             counts[sku_id] = counts.get(sku_id, 0.0) + 1.0
     return counts
+
+
+def _check_resample_args(n_boot: int, ci: float) -> None:
+    """Validated before anything is read, so a caller who got the resampling
+    arguments wrong hears about that rather than about a missing field."""
+    if n_boot < 1:
+        raise ValueError(f"n_boot must be at least 1, got {n_boot!r}")
+    if not 0.0 < ci < 1.0:
+        raise ValueError(f"ci must be in (0, 1), got {ci!r}")
+
+
+def _check_comparable(treated: Mapping, control: Mapping) -> None:
+    """The two guards a between-variant comparison needs -- see
+    `between_variant_lift`. Same variant is not an experiment; different
+    personas confound the persona with the ad."""
+    treated_variant, control_variant = treated["variant_id"], control["variant_id"]
+    if treated_variant == control_variant:
+        raise ValueError(
+            f"treated and control are the same variant {treated_variant!r}; a "
+            "between-variant lift needs a treated arm and a control arm"
+        )
+
+    treated_persona, control_persona = treated["persona_id"], control["persona_id"]
+    if treated_persona != control_persona:
+        raise ValueError(
+            f"cannot compare persona {treated_persona!r} under variant {treated_variant!r} "
+            f"with persona {control_persona!r} under variant {control_variant!r}; that "
+            "confounds the persona with the ad"
+        )
+
+
+def _purchase_share(sim_result: Mapping) -> Mapping[str, float]:
+    """The whole-run share vector, or a ValueError naming what is missing.
+    `purchase_share` is required by schemas/simresult.schema.json, so its
+    absence is malformed input rather than an older run."""
+    share = sim_result.get(PURCHASE_SHARE_FIELD)
+    if share is None:
+        raise ValueError(
+            f"SimResult has no {PURCHASE_SHARE_FIELD!r}; the between-variant lift reads "
+            "each run's whole purchase share"
+        )
+    return share
+
+
+def _arm_counts(sim_result: Mapping, *, needed_for: str) -> tuple[int, int]:
+    """`(n_purchases_exposed, n_purchases_unexposed)`, or a ValueError.
+
+    Both fields are optional in schemas/simresult.schema.json, so a run
+    predating them is a real possibility and a different thing from a run whose
+    arms were empty. It must not be reported as one.
+    """
+    counts: list[int] = []
+    for field in (EXPOSED_COUNT_FIELD, UNEXPOSED_COUNT_FIELD):
+        value = sim_result.get(field)
+        if value is None:
+            raise ValueError(f"SimResult has no {field!r}; {needed_for}")
+        count = int(value)
+        if count < 0:
+            raise ValueError(f"{field} must be at least 0, got {count!r}")
+        counts.append(count)
+    return counts[0], counts[1]
+
+
+def _binomial_lift_spread(
+    treated_share: float | None,
+    n_treated: int,
+    control_share: float | None,
+    n_control: int,
+    *,
+    seed: int,
+    n_boot: int,
+    ci: float,
+) -> tuple[float, float] | None:
+    """The one Monte Carlo resample behind BOTH synthetic spreads.
+
+    Draws each side's brand count as `Binomial(n, share) / n` -- which is the
+    advertised brand's marginal of a multinomial resample of that side's SKU
+    share vector -- and takes percentiles of `(treated - control) / control`.
+
+    `bootstrap_synth_lift_ci` passes the two ARMS of one run;
+    `bootstrap_between_variant_mc95` passes two whole RUNS. CLAUDE.md forbids a
+    second lift formula, and that has to include the resampling, so there is
+    one implementation and the tests pin that the two callers agree bit for bit
+    on identical inputs.
+
+    Returns None when either side has nothing to resample, when either share is
+    undefined, or when fewer than `MIN_DEFINED_FRACTION` of the draws have a
+    non-zero denominator -- the same guards `lift` applies to a point estimate,
+    written as a mask. Assumes `_check_resample_args` has already run.
+    """
+    if not n_treated or not n_control:
+        return None
+    if treated_share is None or control_share is None:
+        return None
+
+    rng = np.random.default_rng(seed)
+    drawn_treated = rng.binomial(n_treated, treated_share, size=n_boot) / n_treated
+    drawn_control = rng.binomial(n_control, control_share, size=n_boot) / n_control
+
+    # The same zero-denominator guard as `lift`, expressed as a mask: a draw in
+    # which the control side bought none of the brand has no ratio.
+    defined = drawn_control > 0.0
+    if int(defined.sum()) < MIN_DEFINED_FRACTION * n_boot:
+        return None
+
+    lifts = (drawn_treated[defined] - drawn_control[defined]) / drawn_control[defined]
+
+    tail = (1.0 - ci) / 2.0 * 100.0
+    return float(np.percentile(lifts, tail)), float(np.percentile(lifts, 100.0 - tail))

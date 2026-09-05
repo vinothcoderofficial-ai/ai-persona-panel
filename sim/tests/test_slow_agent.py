@@ -401,11 +401,36 @@ def test_the_same_seed_and_a_deterministic_fake_produce_identical_traces(planogr
 # The committed trace cache is evidence for the demo. Nothing here may write to it.
 # ---------------------------------------------------------------------------
 
-def test_the_real_trace_cache_is_untouched_and_run_all_demands_an_explicit_cache_dir(
+def test_the_real_trace_cache_holds_only_real_runs_and_run_all_demands_a_cache_dir(
         planogram, personas):
-    assert sorted(p.name for p in DEFAULT_TRACE_DIR.iterdir()) == [".gitkeep"], (
-        "data/cache/traces/ must hold only .gitkeep until a real LLM run fills it"
-    )
+    """Nothing in this file may write to the committed cache, and nothing fake may sit in it.
+
+    This used to assert the directory held only `.gitkeep`, which was true
+    while no model had ever been run. A real run against
+    deepseek-v4-pro:cloud has since filled it, so the check is now on
+    provenance rather than emptiness: every committed trace must name the
+    model that produced it and must have come from slow_agent.
+
+    That is a real guard, not a formality. Before `run_persona` recorded the
+    *resolved* model, a trace produced by a test double was written with
+    `"model": null` -- exactly what a fabricated trace still looks like. These
+    traces are shown on screen as evidence of persona reasoning, so one that
+    cannot name its model does not belong here.
+
+    The structural half is the second assertion: `run_all` refuses to default
+    its cache directory, so a test cannot write to the real one by omission.
+    """
+    for path in sorted(DEFAULT_TRACE_DIR.glob("*.json")):
+        trace = json_module.loads(path.read_text(encoding="utf-8"))
+        assert trace.get("generated_by") == "sim/slow_agent.py", (
+            f"{path.name} was not written by slow_agent"
+        )
+        assert trace.get("model"), (
+            f"{path.name} names no model -- a trace a test double produced looks "
+            "exactly like this, and these are shown on screen as evidence"
+        )
+        assert trace.get("n_shoppers", 0) > 0, f"{path.name} has no shoppers"
+
     with pytest.raises(TypeError):
         run_all(personas.values(), planogram, n_shoppers=1, client=FakeLLM([CHECKOUT]))
 

@@ -1,0 +1,22 @@
+{
+  "variant_id": "D",
+  "base_planogram_id": "demo_aisle",
+  "name": "Control arm - no ad creative anywhere",
+  "patches": [
+    {
+      "op": "set_ad_creative",
+      "ad_slot_id": "B1_TALKER",
+      "creative_id": null
+    },
+    {
+      "op": "set_ad_creative",
+      "ad_slot_id": "B2_DECAL",
+      "creative_id": null
+    },
+    {
+      "op": "set_ad_creative",
+      "ad_slot_id": "B3_ENDCAP",
+      "creative_id": null
+    }
+  ]
+}

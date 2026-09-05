@@ -38,17 +38,21 @@ from analytics.lift import (
     Shopper,
     ad_slots_showing,
     ad_to_purchase_lift,
+    between_variant_lift,
+    bootstrap_between_variant_mc95,
     bootstrap_lift_ci,
     bootstrap_synth_lift_ci,
     brand_share,
     creative_brand,
     lift,
+    purchase_event_count,
     real_lift,
     sku_brands,
     split_panel,
     synth_lift,
 )
-from sim.simulator import build_store, run
+from api.app.resolve import resolve
+from sim.simulator import build_store, combine, run
 
 ROOT = Path(__file__).resolve().parents[2]
 DATA = ROOT / "data"
@@ -965,3 +969,628 @@ def test_end_to_end_the_committed_simulator_now_supplies_its_own_interval(
               f"n_unexposed={synth[persona]['n_purchases_unexposed']}")
         assert all(math.isfinite(v) for v in interval)
         assert interval[0] <= row["synth"] <= interval[1]
+
+
+# ---------------------------------------------------------------------------
+# 5. the BETWEEN-VARIANT brand lift, and the control arm it needs
+#
+# `synth_lift` splits ONE run into ad-exposed and non-exposed trips. On a real
+# store that split is a SELECTION -- who reaches the endcap is not random --
+# which is why the null above needs a purpose-built symmetric bay before it is
+# really zero.
+#
+# The Brand Lift a client commissions is not that. It is BETWEEN ARMS: the
+# advertised brand's purchase share in a cell that saw the ad against a cell
+# that did not. That needs an unexposed arm, and until data/variants/D.json
+# there was none -- A and C BOTH carry AD_1, C only relocates it, so A-vs-C
+# is a placement comparison.
+# ---------------------------------------------------------------------------
+
+VARIANTS_DIR = DATA / "variants"
+
+
+@pytest.fixture(scope="module")
+def variant_schema() -> dict:
+    return load_json(SCHEMAS / "variant.schema.json")
+
+
+def load_variant(variant_id: str) -> dict:
+    return load_json(VARIANTS_DIR / f"{variant_id}.json")
+
+
+def ad_creatives(planogram: dict) -> dict:
+    """`ad_slot_id -> creative_id` for every ad slot, in planogram order."""
+    return {ad["ad_slot_id"]: ad["creative_id"]
+            for bay in planogram["bays"] for ad in bay["ad_slots"]}
+
+
+def run_result(purchase_share: dict, *, variant_id: str,
+               persona_id: str = "switcher", **extra) -> dict:
+    """A SimResult carrying a whole-run `purchase_share`, which is what the
+    between-variant comparison reads. The exposed/unexposed arm vectors are
+    filled with values the between-variant number must NOT touch."""
+    result = sim_result({"A1": 1.0, "A2": 0.0, "B1": 0.0, "B2": 0.0},
+                        {"A1": 0.0, "A2": 0.0, "B1": 1.0, "B2": 0.0})
+    result["variant_id"] = variant_id
+    result["persona_id"] = persona_id
+    result["purchase_share"] = purchase_share
+    result.update(extra)
+    return result
+
+
+def counted_run(purchase_share: dict, n_events: int, *, variant_id: str,
+                persona_id: str = "switcher", exposed_part=None) -> dict:
+    """`run_result` plus two arm counts that add back up to `n_events`."""
+    exposed = n_events // 2 if exposed_part is None else exposed_part
+    return run_result(purchase_share, variant_id=variant_id, persona_id=persona_id,
+                      n_purchases_exposed=exposed,
+                      n_purchases_unexposed=n_events - exposed)
+
+
+# --- the control arm ---------------------------------------------------------
+
+
+def test_variant_d_validates_against_the_variant_schema(variant_schema):
+    Draft7Validator(variant_schema).validate(load_variant("D"))
+
+
+def test_variant_d_is_a_true_control_with_no_creative_anywhere(demo_planogram):
+    """The property the whole Brand Lift rests on: resolved variant D shows no
+    creative at all, so nobody in that arm can be ad-exposed."""
+    resolved = resolve(demo_planogram, load_variant("D"))
+
+    assert all(creative is None for creative in ad_creatives(resolved).values())
+    assert ad_slots_showing(resolved, "AD_1") == ()
+    assert ad_slots_showing(resolved, "AD_2") == ()
+
+
+def test_variant_d_keeps_every_ad_slot_object_rather_than_deleting_it(demo_planogram):
+    """CLAUDE.md's rule for empty shelf positions -- a real slot object with
+    `sku_id: null` -- applied to ad slots. Deleting the slot would change the
+    fixture as well as the creative."""
+    resolved = resolve(demo_planogram, load_variant("D"))
+    assert list(ad_creatives(resolved)) == list(ad_creatives(demo_planogram))
+
+    base_ads = [ad for bay in demo_planogram["bays"] for ad in bay["ad_slots"]]
+    resolved_ads = [ad for bay in resolved["bays"] for ad in bay["ad_slots"]]
+    for before, after in zip(base_ads, resolved_ads):
+        assert ({k: v for k, v in after.items() if k != "creative_id"}
+                == {k: v for k, v in before.items() if k != "creative_id"})
+
+
+def test_variant_a_and_variant_d_differ_only_in_ad_exposure(demo_planogram):
+    """D is a control for the AD, not for the shelf. Blank both resolved
+    planograms' ad creatives and what is left must be deep-equal: same SKUs,
+    same prices, same slots, same facings, same shelf levels."""
+    a = resolve(demo_planogram, load_variant("A"))
+    d = resolve(demo_planogram, load_variant("D"))
+
+    assert ad_creatives(a) != ad_creatives(d)  # they differ in exactly one thing
+
+    for planogram in (a, d):
+        for bay in planogram["bays"]:
+            for ad in bay["ad_slots"]:
+                ad["creative_id"] = None
+    assert a == d
+
+
+def test_a_and_c_are_both_exposed_arms_which_is_why_d_exists(demo_planogram):
+    """The structural fact that made the Brand Lift unrunnable: A and C both
+    carry AD_1. C relocates it, so A-vs-C measures PLACEMENT, not exposure."""
+    a = resolve(demo_planogram, load_variant("A"))
+    c = resolve(demo_planogram, load_variant("C"))
+
+    assert ad_slots_showing(a, "AD_1") == ("B3_ENDCAP",)
+    assert ad_slots_showing(c, "AD_1") == ("B1_TALKER",)
+
+
+# --- the between-variant formula --------------------------------------------
+
+
+def test_between_variant_lift_is_brand_share_and_lift_applied_to_two_runs():
+    """Treated run: Crunch is 0.50 of purchases. Control run: 0.25.
+    (0.50 - 0.25) / 0.25 = +1.0, reached through the same two helpers the
+    within-run number uses."""
+    treated = run_result({"A1": 0.30, "A2": 0.20, "B1": 0.30, "B2": 0.20}, variant_id="A")
+    control = run_result({"A1": 0.15, "A2": 0.10, "B1": 0.45, "B2": 0.30}, variant_id="D")
+
+    value = between_variant_lift(treated, control, brand_of_sku=BRAND_OF_SKU, brand="Crunch")
+    assert value == pytest.approx(1.0)
+    assert value == pytest.approx(lift(
+        brand_share(treated["purchase_share"], BRAND_OF_SKU, "Crunch"),
+        brand_share(control["purchase_share"], BRAND_OF_SKU, "Crunch"),
+    ))
+
+
+def test_between_variant_lift_reads_the_whole_run_where_synth_lift_reads_the_split():
+    """The two numbers must not be confusable. `run_result` deliberately fills
+    the exposed/unexposed arms with a pattern the between-variant number never
+    sees, and the two answers come out different."""
+    treated = run_result({"A1": 0.30, "A2": 0.20, "B1": 0.30, "B2": 0.20}, variant_id="A")
+    control = run_result({"A1": 0.15, "A2": 0.10, "B1": 0.45, "B2": 0.30}, variant_id="D")
+
+    within = synth_lift(treated, brand_of_sku=BRAND_OF_SKU, brand="Crunch")
+    between = between_variant_lift(treated, control, brand_of_sku=BRAND_OF_SKU, brand="Crunch")
+
+    assert within is None  # its unexposed arm bought no Crunch at all
+    assert between == pytest.approx(1.0)
+
+    # And changing only the arm vectors leaves the between-variant number alone.
+    moved = dict(treated, ad_exposed_purchase_share={"A1": 0.0, "A2": 0.0, "B1": 0.5, "B2": 0.5})
+    assert between_variant_lift(moved, control, brand_of_sku=BRAND_OF_SKU,
+                                brand="Crunch") == pytest.approx(between)
+
+
+def test_between_variant_lift_is_none_when_the_control_bought_none_of_the_brand():
+    """A zero denominator is unanswerable, not infinite -- the same stance
+    `lift` already takes for the within-run split."""
+    treated = run_result({"A1": 0.5, "A2": 0.0, "B1": 0.5, "B2": 0.0}, variant_id="A")
+    control = run_result({"A1": 0.0, "A2": 0.0, "B1": 0.6, "B2": 0.4}, variant_id="D")
+
+    assert between_variant_lift(treated, control,
+                                brand_of_sku=BRAND_OF_SKU, brand="Crunch") is None
+
+
+def test_between_variant_lift_is_none_when_either_run_recorded_no_purchases():
+    empty = {"A1": 0.0, "A2": 0.0, "B1": 0.0, "B2": 0.0}
+    populated = {"A1": 0.5, "A2": 0.0, "B1": 0.5, "B2": 0.0}
+    kwargs = dict(brand_of_sku=BRAND_OF_SKU, brand="Crunch")
+
+    assert between_variant_lift(run_result(empty, variant_id="A"),
+                                run_result(populated, variant_id="D"), **kwargs) is None
+    assert between_variant_lift(run_result(populated, variant_id="A"),
+                                run_result(empty, variant_id="D"), **kwargs) is None
+
+    # An arm that bought only the other brand is a real -100 %, not undefined.
+    only_zapp = {"A1": 0.0, "A2": 0.0, "B1": 0.6, "B2": 0.4}
+    assert between_variant_lift(run_result(only_zapp, variant_id="A"),
+                                run_result(populated, variant_id="D"),
+                                **kwargs) == pytest.approx(-1.0)
+
+
+def test_between_variant_lift_refuses_two_runs_of_the_same_variant():
+    """Comparing a variant with itself is not an experiment; at best it reports
+    0 and at worst it launders a seed difference as an ad effect."""
+    treated = run_result({"A1": 0.5, "A2": 0.0, "B1": 0.5, "B2": 0.0}, variant_id="A")
+    with pytest.raises(ValueError, match="same variant"):
+        between_variant_lift(treated, dict(treated), brand_of_sku=BRAND_OF_SKU, brand="Crunch")
+
+
+def test_between_variant_lift_refuses_to_compare_two_different_personas():
+    """Mission-under-A against browser-under-D confounds the persona with the
+    ad, and the result would still be reported as a Brand Lift."""
+    treated = run_result({"A1": 0.5, "A2": 0.0, "B1": 0.5, "B2": 0.0},
+                         variant_id="A", persona_id="mission")
+    control = run_result({"A1": 0.25, "A2": 0.0, "B1": 0.75, "B2": 0.0},
+                         variant_id="D", persona_id="browser")
+    with pytest.raises(ValueError, match="persona"):
+        between_variant_lift(treated, control, brand_of_sku=BRAND_OF_SKU, brand="Crunch")
+
+
+def test_between_variant_lift_never_returns_inf_or_nan():
+    arms = [
+        {"A1": 0.0, "A2": 0.0, "B1": 0.0, "B2": 0.0},
+        {"A1": 0.0, "A2": 0.0, "B1": 0.6, "B2": 0.4},
+        {"A1": 1.0, "A2": 0.0, "B1": 0.0, "B2": 0.0},
+        {"A1": 0.25, "A2": 0.25, "B1": 0.25, "B2": 0.25},
+    ]
+    for treated in arms:
+        for control in arms:
+            value = between_variant_lift(
+                run_result(treated, variant_id="A"), run_result(control, variant_id="D"),
+                brand_of_sku=BRAND_OF_SKU, brand="Crunch",
+            )
+            assert value is None or math.isfinite(value), (treated, control, value)
+
+
+# --- the run's purchase-event count -----------------------------------------
+
+
+def test_purchase_event_count_is_the_two_arms_added_back_together():
+    """`purchase_share` covers the whole run, so the count behind it is both
+    arms. Only the total matters -- how it splits is the within-run number's
+    business."""
+    assert purchase_event_count(counted_run({"A1": 1.0}, 1000, variant_id="A")) == 1000
+    assert purchase_event_count(
+        counted_run({"A1": 1.0}, 1000, variant_id="A", exposed_part=0)) == 1000
+    assert purchase_event_count(
+        counted_run({"A1": 1.0}, 1000, variant_id="A", exposed_part=997)) == 1000
+    assert purchase_event_count(counted_run({"A1": 1.0}, 0, variant_id="D")) == 0
+
+
+def test_purchase_event_count_raises_when_the_counts_are_absent():
+    """Both fields are optional in schemas/simresult.schema.json. A run from
+    before they existed cannot say how many events it saw, and must say so
+    rather than report 0."""
+    with pytest.raises(ValueError, match="n_purchases_exposed"):
+        purchase_event_count(run_result({"A1": 1.0}, variant_id="A"))
+
+
+# --- the between-variant Monte Carlo spread ----------------------------------
+
+TREATED_SHARE = {"A1": 0.30, "A2": 0.20, "B1": 0.30, "B2": 0.20}   # Crunch 0.50
+CONTROL_SHARE = {"A1": 0.15, "A2": 0.10, "B1": 0.45, "B2": 0.30}   # Crunch 0.25
+
+
+def ab_pair(n_treated: int, n_control: int, *, treated=None, control=None):
+    return (
+        counted_run(TREATED_SHARE if treated is None else treated,
+                    n_treated, variant_id="A"),
+        counted_run(CONTROL_SHARE if control is None else control,
+                    n_control, variant_id="D"),
+    )
+
+
+def test_between_variant_mc95_brackets_the_point_estimate():
+    treated, control = ab_pair(400, 600)
+    point = between_variant_lift(treated, control, brand_of_sku=BRAND_OF_SKU, brand="Crunch")
+    spread = bootstrap_between_variant_mc95(
+        treated, control, brand_of_sku=BRAND_OF_SKU, brand="Crunch", seed=3
+    )
+
+    assert point == pytest.approx(1.0)
+    assert spread is not None
+    low, high = spread
+    assert low < point < high
+
+
+def test_between_variant_mc95_is_the_same_resampling_as_the_within_run_spread():
+    """CLAUDE.md forbids a second lift formula, and that has to include the
+    resampling. Given the same two shares and the same two counts, the
+    within-run and between-variant spreads must be BYTE-identical."""
+    within = bootstrap_synth_lift_ci(
+        sim_result(TREATED_SHARE, CONTROL_SHARE,
+                   n_purchases_exposed=400, n_purchases_unexposed=600),
+        brand_of_sku=BRAND_OF_SKU, brand="Crunch", seed=97,
+    )
+    between = bootstrap_between_variant_mc95(
+        *ab_pair(400, 600), brand_of_sku=BRAND_OF_SKU, brand="Crunch", seed=97,
+    )
+
+    assert within is not None
+    assert between == within
+
+
+def test_between_variant_mc95_matches_an_explicit_multinomial_bootstrap():
+    """Same identity the within-run spread relies on: the advertised brand's
+    marginal of a Multinomial(n, per-SKU share) is Binomial(n, brand share).
+    Checked numerically over `purchase_share` rather than the arm vectors."""
+    n_treated, n_control = 400, 600
+    spread = bootstrap_between_variant_mc95(
+        *ab_pair(n_treated, n_control),
+        brand_of_sku=BRAND_OF_SKU, brand="Crunch", seed=17, n_boot=20_000,
+    )
+
+    order = ["A1", "A2", "B1", "B2"]
+    crunch = [BRAND_OF_SKU[s] == "Crunch" for s in order]
+    rng = np.random.default_rng(101)
+    treated = rng.multinomial(n_treated, [TREATED_SHARE[s] for s in order], size=20_000)
+    control = rng.multinomial(n_control, [CONTROL_SHARE[s] for s in order], size=20_000)
+    share_t = treated[:, crunch].sum(axis=1) / n_treated
+    share_c = control[:, crunch].sum(axis=1) / n_control
+    reference = (share_t - share_c) / share_c
+    low, high = np.percentile(reference, [2.5, 97.5])
+
+    assert spread[0] == pytest.approx(float(low), abs=0.03)
+    assert spread[1] == pytest.approx(float(high), abs=0.03)
+
+
+def test_between_variant_mc95_narrows_as_the_runs_grow():
+    """The two share vectors are identical here; only the event counts behind
+    them differ. A method that ignored the counts could not tell them apart."""
+    def width(n: int) -> float:
+        low, high = bootstrap_between_variant_mc95(
+            *ab_pair(n, n), brand_of_sku=BRAND_OF_SKU, brand="Crunch", seed=5, n_boot=4000
+        )
+        return high - low
+
+    small, large = width(100), width(10_000)
+    print(f"\nbetween-variant spread width: n=100 -> {small:.4f}, n=10,000 -> {large:.4f}")
+    assert large < small / 5.0
+
+
+def test_between_variant_mc95_is_reproducible_from_its_seed():
+    kwargs = dict(brand_of_sku=BRAND_OF_SKU, brand="Crunch")
+    pair = ab_pair(400, 600)
+
+    first = bootstrap_between_variant_mc95(*pair, seed=42, **kwargs)
+    second = bootstrap_between_variant_mc95(*pair, seed=42, **kwargs)
+    other = bootstrap_between_variant_mc95(*pair, seed=43, **kwargs)
+
+    assert first == second
+    assert first != other
+
+
+def test_between_variant_mc95_requires_an_explicit_seed():
+    with pytest.raises(TypeError):
+        bootstrap_between_variant_mc95(*ab_pair(400, 600),
+                                       brand_of_sku=BRAND_OF_SKU, brand="Crunch")
+
+
+def test_between_variant_mc95_raises_on_runs_that_carry_no_counts():
+    with pytest.raises(ValueError, match="n_purchases_exposed"):
+        bootstrap_between_variant_mc95(
+            run_result(TREATED_SHARE, variant_id="A"),
+            run_result(CONTROL_SHARE, variant_id="D"),
+            brand_of_sku=BRAND_OF_SKU, brand="Crunch", seed=5,
+        )
+
+
+def test_between_variant_mc95_is_none_when_a_run_recorded_no_purchases():
+    kwargs = dict(brand_of_sku=BRAND_OF_SKU, brand="Crunch", seed=5)
+    empty = {"A1": 0.0, "A2": 0.0, "B1": 0.0, "B2": 0.0}
+
+    assert bootstrap_between_variant_mc95(*ab_pair(0, 600, treated=empty), **kwargs) is None
+    assert bootstrap_between_variant_mc95(*ab_pair(400, 0, control=empty), **kwargs) is None
+
+
+def test_between_variant_mc95_is_none_when_too_few_draws_have_a_denominator():
+    """A thin control that almost never buys the brand: most draws land on a
+    zero denominator, and the percentiles would describe a minority."""
+    barely = {"A1": 0.02, "A2": 0.0, "B1": 0.98, "B2": 0.0}
+    assert bootstrap_between_variant_mc95(
+        *ab_pair(400, 10, control=barely),
+        brand_of_sku=BRAND_OF_SKU, brand="Crunch", seed=5,
+    ) is None
+
+
+def test_between_variant_mc95_never_returns_inf_or_nan():
+    arms = [
+        {"A1": 0.0, "A2": 0.0, "B1": 0.0, "B2": 0.0},
+        {"A1": 0.0, "A2": 0.0, "B1": 0.6, "B2": 0.4},
+        {"A1": 1.0, "A2": 0.0, "B1": 0.0, "B2": 0.0},
+        {"A1": 0.25, "A2": 0.25, "B1": 0.25, "B2": 0.25},
+    ]
+    for treated in arms:
+        for control in arms:
+            for n_treated, n_control in ((0, 0), (1, 1), (50, 50), (5000, 5000)):
+                spread = bootstrap_between_variant_mc95(
+                    *ab_pair(n_treated, n_control, treated=treated, control=control),
+                    brand_of_sku=BRAND_OF_SKU, brand="Crunch", seed=2, n_boot=200,
+                )
+                assert spread is None or all(math.isfinite(v) for v in spread)
+
+
+def test_between_variant_mc95_rejects_a_bad_n_boot_or_ci():
+    kwargs = dict(brand_of_sku=BRAND_OF_SKU, brand="Crunch", seed=1)
+    with pytest.raises(ValueError, match="n_boot"):
+        bootstrap_between_variant_mc95(*ab_pair(400, 600), n_boot=0, **kwargs)
+    with pytest.raises(ValueError, match="ci"):
+        bootstrap_between_variant_mc95(*ab_pair(400, 600), ci=1.0, **kwargs)
+
+
+def test_the_between_variant_number_is_not_emitted_into_the_metrics_block():
+    """schemas/metrics.schema.json has no key for it, and the schema is the only
+    cross-track contract. The between-variant number is returned to its caller;
+    it never quietly appears in the reported block."""
+    block = ad_to_purchase_lift(
+        {"switcher": counted(400, 600)}, brand_of_sku=BRAND_OF_SKU, brand="Crunch", seed=1
+    )
+    assert set(block["switcher"]) == {"synth", "synth_mc95"}
+
+
+# --- acceptance: the estimator against a store with a known answer -----------
+
+
+def symmetric_control_planogram() -> dict:
+    """The brand-symmetric bay with its creative removed -- exactly what
+    data/variants/D.json does to the demo aisle, through the same
+    `set_ad_creative -> null` patch and the same `resolve()`."""
+    return resolve(symmetric_planogram(), {
+        "variant_id": "D_SYM",
+        "base_planogram_id": "symmetric_bay",
+        "name": "Brand-symmetric bay, no creative",
+        "patches": [{"op": "set_ad_creative", "ad_slot_id": "AD_SLOT", "creative_id": None}],
+    })
+
+
+@pytest.fixture(scope="module")
+def symmetric_control_store():
+    return build_store(symmetric_control_planogram())
+
+
+@pytest.fixture(scope="module")
+def symmetric_control_result(symmetric_control_store):
+    """The control arm. `ad_receptivity` reaches the utility ONLY through
+    `brand_seen`, and nothing is advertised here, so this one run serves the
+    whole sweep -- asserted below rather than assumed."""
+    return run(symmetric_control_store, symmetric_policy(0.0), n_runs=N_SYMMETRIC_RUNS,
+               seed=20250905, variant_id="D")
+
+
+def test_the_control_store_has_no_ad_target_at_all(symmetric_store, symmetric_control_store):
+    assert symmetric_store.is_ad.any()
+    assert not symmetric_control_store.is_ad.any()
+    assert "AD_SLOT" in symmetric_control_store.ad_slot_ids  # the slot object survives
+
+
+def test_the_control_arm_records_no_exposed_purchases(symmetric_control_result):
+    """Which is exactly why the within-run split cannot answer this question on
+    a control arm, and why the between-variant function has to exist."""
+    assert symmetric_control_result["n_purchases_exposed"] == 0
+    assert symmetric_control_result["n_purchases_unexposed"] > 0
+    assert synth_lift(symmetric_control_result,
+                      brand_of_sku=SYMMETRIC_BRANDS, brand="Crunch") is None
+
+
+def test_the_control_arm_does_not_move_with_ad_receptivity(symmetric_control_store,
+                                                           symmetric_control_result):
+    """`ad_receptivity` only ever multiplies a term gated on having seen an ad
+    at this bay. With no creative there is nothing to see, so the control run is
+    bit-for-bit identical across the sweep."""
+    for receptivity in (0.5, 1.0):
+        other = run(symmetric_control_store, symmetric_policy(receptivity),
+                    n_runs=N_SYMMETRIC_RUNS, seed=20250905, variant_id="D")
+        assert other["purchase_share"] == symmetric_control_result["purchase_share"]
+
+
+def test_between_variant_null_is_zero_when_nobody_is_receptive(symmetric_store,
+                                                               symmetric_control_result):
+    """The between-variant analogue of the PLAN S18 null. On a bay whose two
+    brands are interchangeable, removing the creative removes attention mass
+    symmetrically, so the true between-variant lift at `ad_receptivity = 0` is
+    exactly zero and only Monte Carlo noise is left."""
+    treated = symmetric_run(symmetric_store, 0.0, seed=20250905)
+    value = between_variant_lift(treated, symmetric_control_result,
+                                 brand_of_sku=SYMMETRIC_BRANDS, brand="Crunch")
+
+    assert value is not None
+    print(f"\nbetween-variant null (receptivity=0): {value:+.5f} "
+          f"(tolerance +/-{NULL_TOLERANCE})")
+    assert abs(value) < NULL_TOLERANCE
+
+
+def test_between_variant_lift_rises_monotonically_with_ad_receptivity(symmetric_store,
+                                                                      symmetric_control_result):
+    """PLAN S18's monotonicity acceptance, applied between arms instead of
+    within one run. The control is held fixed, so the whole movement is the
+    treated arm responding to the ad."""
+    lifts = []
+    for receptivity in RECEPTIVITY_SWEEP:
+        treated = symmetric_run(symmetric_store, receptivity, seed=20250905)
+        lifts.append(between_variant_lift(treated, symmetric_control_result,
+                                          brand_of_sku=SYMMETRIC_BRANDS, brand="Crunch"))
+
+    print("\nbetween-variant receptivity sweep (symmetric bay): "
+          + "  ".join(f"{r}={v:+.4f}" for r, v in zip(RECEPTIVITY_SWEEP, lifts)))
+    assert all(v is not None for v in lifts)
+    assert lifts == sorted(lifts), f"between-variant lift is not monotonic: {lifts}"
+
+
+# --- the committed demo aisle: A against D -----------------------------------
+
+EVAL_RUNS = 10_000
+EVAL_SEED = 20250905
+PERSONA_SHARES = {"mission": 0.35, "browser": 0.25, "loyalist": 0.25, "switcher": 0.15}
+
+
+@pytest.fixture(scope="module")
+def committed_arms(demo_planogram, demo_policies):
+    """`(treated, control)` -- one SimResult per persona plus the share-weighted
+    population row, for variant A and for variant D, at one run size and one
+    seed so every test below reads the same two arms."""
+    arms = {}
+    for variant_id in ("A", "D"):
+        store = build_store(resolve(demo_planogram, load_variant(variant_id)))
+        per_persona = {
+            persona: run(store, policy, n_runs=EVAL_RUNS, seed=EVAL_SEED,
+                         variant_id=variant_id, archetype=persona)
+            for persona, policy in demo_policies.items()
+        }
+        per_persona[POPULATION_KEY] = combine(
+            [per_persona[p] for p in PERSONA_SHARES],
+            [PERSONA_SHARES[p] for p in PERSONA_SHARES],
+        )
+        arms[variant_id] = per_persona
+    return arms["A"], arms["D"]
+
+
+def test_the_committed_control_arm_has_no_exposed_shoppers(demo_planogram, demo_policies):
+    """Variant D on the real aisle: no creative, therefore no ad fixation
+    target, therefore no exposed purchases and no within-run lift."""
+    store = build_store(resolve(demo_planogram, load_variant("D")))
+    assert not store.is_ad.any()
+
+    result = run(store, demo_policies["browser"], n_runs=EVAL_RUNS, seed=EVAL_SEED,
+                 variant_id="D", archetype="browser")
+    assert result["n_purchases_exposed"] == 0
+    assert result["n_purchases_unexposed"] > 0
+    assert all(v == 0.0 for v in result["ad_slot_attention"].values())
+    assert synth_lift(result, brand_of_sku=sku_brands(demo_planogram), brand="Crunch") is None
+
+
+def test_between_variant_brand_lift_on_the_committed_a_and_d_variants(demo_planogram,
+                                                                      committed_arms):
+    """The number this whole exercise exists to produce: Crunch's purchase share
+    under A (ad present) against D (ad absent), per persona and for the
+    population, with the honest Monte Carlo resolution beside it.
+
+    No sign is asserted. At this run size most rows' spreads straddle zero, and
+    a test that demanded a positive lift would be asserting a result the data
+    does not resolve. What IS asserted is that every row is finite, defined, and
+    bracketed by its own spread; the printed `resolved` / `UNRESOLVED` column is
+    the finding.
+    """
+    brand_of_sku = sku_brands(demo_planogram)
+    brand = creative_brand(demo_planogram, "AD_1")
+    treated_arm, control_arm = committed_arms
+
+    assert brand == "Crunch"
+    print(f"\nBetween-variant Brand Lift -- A (AD_1 on "
+          f"{ad_slots_showing(demo_planogram, 'AD_1')[0]}) vs D (no creative), "
+          f"{brand}, n={EVAL_RUNS} shoppers per persona per arm:")
+    for key in list(PERSONA_SHARES) + [POPULATION_KEY]:
+        treated, control = treated_arm[key], control_arm[key]
+        share_a = brand_share(treated["purchase_share"], brand_of_sku, brand)
+        share_d = brand_share(control["purchase_share"], brand_of_sku, brand)
+        value = between_variant_lift(treated, control, brand_of_sku=brand_of_sku, brand=brand)
+        spread = bootstrap_between_variant_mc95(
+            treated, control, brand_of_sku=brand_of_sku, brand=brand, seed=EVAL_SEED
+        )
+        verdict = "resolved" if spread[0] > 0.0 or spread[1] < 0.0 else "UNRESOLVED"
+        print(f"  {key:10s} A={share_a:.5f}  D={share_d:.5f}  lift={value:+.4f}  "
+              f"mc95=[{spread[0]:+.4f}, {spread[1]:+.4f}]  "
+              f"n_A={purchase_event_count(treated)} n_D={purchase_event_count(control)}  "
+              f"{verdict}")
+
+        assert value is not None and math.isfinite(value)
+        assert spread is not None and all(math.isfinite(v) for v in spread)
+        assert spread[0] <= value <= spread[1]
+
+
+def test_the_within_run_split_overstates_the_between_arm_brand_lift(demo_planogram,
+                                                                    committed_arms):
+    """The reason the control arm had to exist.
+
+    Within one run, ad exposure is a SELECTION: a shopper only fixates the
+    B3_ENDCAP creative if they walked to that endcap, and walking there is
+    already correlated with wanting what is on it. So the within-run exposed
+    arm was likelier to buy the advertised brand before the ad did anything,
+    and `synth_lift` charges the ad for all of it.
+
+    A-vs-D has no such selection -- the two arms are the same population, and
+    the only difference is a creative on the wall. On the committed aisle the
+    within-run number comes out roughly an order of magnitude larger.
+    """
+    brand_of_sku = sku_brands(demo_planogram)
+    brand = creative_brand(demo_planogram, "AD_1")
+    treated_arm, control_arm = committed_arms
+
+    treated = treated_arm[POPULATION_KEY]
+    within = synth_lift(treated, brand_of_sku=brand_of_sku, brand=brand)
+    between = between_variant_lift(treated, control_arm[POPULATION_KEY],
+                                   brand_of_sku=brand_of_sku, brand=brand)
+
+    print(f"\npopulation: within-run split={within:+.4f}  A-vs-D={between:+.4f}  "
+          f"selection accounts for {within - between:+.4f}")
+    assert within is not None and between is not None
+    assert within > between + 0.03
+
+
+def test_a_population_rows_event_count_never_overstates_its_precision(committed_arms):
+    """`purchase_event_count` on a `combine` result adds two Kish effective
+    counts, which is not the Kish count of the pooled run. It is provably
+    conservative -- Kish's n_eff is concave and homogeneous of degree 1, hence
+    superadditive -- and this pins that on the committed arms rather than
+    leaving it as a claim in a docstring. Exact for the control arm, whose
+    exposed count is 0.
+    """
+    def kish_over_totals(per_persona: dict) -> int:
+        live = [(PERSONA_SHARES[p], purchase_event_count(per_persona[p]))
+                for p in PERSONA_SHARES if purchase_event_count(per_persona[p]) > 0]
+        weight = sum(share for share, _ in live)
+        return round(weight * weight / sum(share * share / n for share, n in live))
+
+    treated_arm, control_arm = committed_arms
+
+    for label, per_persona in (("A", treated_arm), ("D", control_arm)):
+        reported = purchase_event_count(per_persona[POPULATION_KEY])
+        pooled = kish_over_totals(per_persona)
+        print(f"\n{label}: population count reported={reported} "
+              f"Kish over per-persona totals={pooled}")
+        assert reported <= pooled
+
+    # The control arm has no exposed events at all, so its sum of one live Kish
+    # count is exactly the Kish count of the whole run.
+    assert purchase_event_count(control_arm[POPULATION_KEY]) == kish_over_totals(control_arm)
+    assert control_arm[POPULATION_KEY]["n_purchases_exposed"] == 0

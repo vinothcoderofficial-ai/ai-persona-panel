@@ -76,6 +76,46 @@ recommendation, and `summary()` says so in words. Presenting rank 1 and rank 2
 as a settled result when the spreads overlap would be exactly the false
 precision the interval decision above is trying to avoid.
 
+Two claims, and only one of them is usually available
+------------------------------------------------------
+"Rank 1 beats rank 2" and "this placement beats the one we are running" are
+different claims with different evidence, and the second is the one a
+recommendation rests on. A space whose leaders sit within noise of each other
+can still contain a move that clears today's planogram outright.
+`Ranking.beats_current` answers the second question by name, against the
+current placement's own seed range, and `summary()` prints both answers --
+including when the second one is "nothing clears it", which is a finding.
+
+On the committed aisle the two come apart exactly this way: at
+n_synth=250,000 no pair of leaders is separated, and `sku:SKU_008@top` at
++9.3% is nonetheless clear of the current placement's +7.8% at every seed.
+
+Seeds are the wrong lever, and n_synth is the right one
+-------------------------------------------------------
+The obvious response to "not resolved over five seeds" is to run more seeds.
+It is backwards. `low` and `high` are a min and a max, so the range can only
+GROW as draws are added: two seeds separate almost any pair of candidates and
+twenty separate almost none, from the same simulator and the same planogram.
+Extra seeds buy a better estimate of the run-to-run variability, not less of
+it, which is why `SeedSpread.n_seeds` is part of the measurement and why a
+spread quoted without it says nothing.
+
+What narrows the spread is `n_synth`. The simulator draws that many
+independent shoppers, so the standard deviation of the objective across seeds
+falls as 1/sqrt(n_synth) -- four times the shoppers, half the spread. It is an
+expensive lever: the run time is linear in `n_synth` while the noise falls
+with its square root, so halving the noise costs four times the compute.
+
+Neither lever helps with the failure underneath both of them: a top pick that
+is an artefact of the run size. Every seed a spread re-rolls is drawn at the
+same `n_synth`, so a candidate that leads only because the panel is too small
+to tell it from its neighbours leads at those seeds too, and its spread looks
+no worse than anybody else's. `check_top_pick_stability` is the check for
+that -- it re-ranks the same space at a ladder of run sizes and reports
+whether one candidate won them all. `Stability.top_pick_is_stable` and
+`Ranking.top_pick_is_resolved` are different questions and are answered
+separately; see `Stability`.
+
 Determinism
 -----------
 Same planogram, same candidates, same seeds -> identical ranking, ties
@@ -123,6 +163,30 @@ DEFAULT_SEED = 42
 # affordable to report run-to-run spread on the rows anybody will read.
 DEFAULT_SPREAD_SEEDS: tuple[int, ...] = (43, 44, 45, 46)
 DEFAULT_SPREAD_TOP_N = 5
+
+# The run sizes `check_top_pick_stability` re-ranks at. The first rung is
+# DEFAULT_N_SYNTH so the check answers "does the number we actually print
+# survive a bigger panel", and not some other question about some other size.
+#
+# The rungs above it are set by what Monte Carlo error costs to remove. The
+# objective is a ratio whose numerator comes from the ad-EXPOSED arm, and on
+# the committed aisle that arm holds roughly one purchase event in forty; the
+# seed-to-seed standard deviation of the lift is about 3 points at 10,000
+# shoppers and falls as 1/sqrt(n_synth), so 50,000 buys about 1.4 and 250,000
+# about 0.6. Rungs closer together than a factor of five cannot show a
+# reordering that is not itself noise.
+#
+# The top rung is 250,000 because that is the smallest size measured at which
+# ANY candidate on the committed aisle clears the current placement's seed
+# spread: `sku:SKU_008@top` at +9.3% against +7.8%, winning at all five seeds.
+# At 10,000 through 100,000 nothing does. That one rung is what turns
+# `beats_current` from an empty tuple into a claim.
+#
+# **This is deliberately not the default of `rank_candidates` and must not
+# become one.** A 250,000-shopper rung costs about twenty-five times a
+# 10,000-shopper one; the ladder is a check you run once against a
+# recommendation, not the way you produce one.
+DEFAULT_STABILITY_LADDER: tuple[int, ...] = (DEFAULT_N_SYNTH, 50_000, 250_000)
 
 
 # ---------------------------------------------------------------------------
@@ -482,12 +546,44 @@ class SeedSpread:
     a reader can see exactly which draws produced the range. `low` and `high`
     are their min and max -- not percentiles, because three to five draws have
     no percentiles worth the name.
+
+    **Adding seeds will not narrow this, and that is not a defect.** `low` and
+    `high` are a min and a max, so the range is a statistic that can only grow
+    as draws are added; its expected width grows roughly like
+    sqrt(2*log(n_seeds)). Two seeds will "resolve" almost any pair of
+    candidates and twenty will resolve almost none, both from the same
+    simulator. `n_seeds` is therefore part of the measurement, and a spread
+    quoted without it says nothing. What extra seeds buy is a better estimate
+    of the same underlying variability -- not less of it.
+
+    The lever that does narrow it is `n_synth`. `sim/simulator.py` draws that
+    many independent shoppers, so the standard deviation of the objective
+    across seeds falls as 1/sqrt(n_synth): four times the shoppers, half the
+    spread. `check_top_pick_stability` climbs run sizes for exactly that
+    reason, and `Ranking.top_pick_is_resolved` should always be read next to
+    the `n_synth` and the `n_seeds` it was computed at.
     """
 
     seeds: tuple[int, ...]
     values: tuple[float, ...]
     low: float
     high: float
+
+    @property
+    def n_seeds(self) -> int:
+        """How many seeds the range was taken over.
+
+        Part of the measurement, not bookkeeping: a range over three seeds and
+        a range over twenty are different statistics of the same variability,
+        and only the second is hard to overlap by luck.
+        """
+        return len(self.seeds)
+
+    @property
+    def width(self) -> float:
+        """`high - low`, comparable to another spread only at the same
+        `n_seeds` and the same `n_synth`."""
+        return self.high - self.low
 
     def overlaps(self, other: "SeedSpread") -> bool:
         """Do the two ranges intersect? If so the ranking between the two
@@ -585,6 +681,40 @@ class Ranking:
         if best is None or best.seed_spread is None:
             return None
         return not best.unresolved_against
+
+    @property
+    def beats_current(self) -> Optional[tuple[str, ...]]:
+        """Candidates whose whole seed range sits above the current placement's.
+
+        This is a DIFFERENT question from `top_pick_is_resolved`, and it is the
+        one a recommendation actually rests on. "Rank 1 beats rank 2" needs the
+        two leaders separated from each other; "moving beats where it is now"
+        needs one candidate separated from ONE named row, and a space whose
+        leaders are all within noise of each other can still contain a move
+        that clearly beats today's planogram. Reporting only the first claim
+        throws the second away.
+
+        A candidate qualifies on the same criterion `top_pick_is_resolved`
+        uses -- `SeedSpread.overlaps` -- plus a direction: its `low` must be
+        above the current placement's `high`, not merely disjoint from it. Ids
+        come back sorted, and the rows that ARE the current placement are never
+        in the list; they reproduce the same planogram and score identically to
+        it by construction.
+
+        None when the question was not answered: no candidate reproduces the
+        input planogram, or the current placement fell outside `spread_top_n`
+        and so has no range to clear. An empty tuple is the other answer --
+        every candidate was compared and none cleared it.
+        """
+        current = self.current
+        if current is None or current.seed_spread is None:
+            return None
+        bar = current.seed_spread
+        return tuple(sorted(
+            entry.candidate.candidate_id for entry in self.entries
+            if not entry.is_current and entry.seed_spread is not None
+            and entry.seed_spread.low > bar.high
+        ))
 
 
 def variant_id_for(base: Mapping[str, Any], patches: Sequence[Mapping[str, Any]]) -> str:
@@ -731,6 +861,12 @@ def summary(ranking: Ranking) -> str:
             "The order is not resolved against "
             f"{', '.join(best.unresolved_against)}: the seed spreads overlap."
         )
+        lines.append(
+            "More seeds will not settle it: the spread is a min-max range over "
+            f"{best.seed_spread.n_seeds} seeds and can only widen as seeds are added. "
+            "Only a larger n_synth narrows it -- check_top_pick_stability() re-ranks the "
+            "same space at a ladder of run sizes and reports whether this top pick survives one."
+        )
 
     current = ranking.current
     if current is None:
@@ -743,12 +879,201 @@ def summary(ranking: Ranking) -> str:
             f"{_ordinal(current.rank)} of {n} at {current_value}."
         )
 
+    beats = ranking.beats_current
+    if beats:
+        lines.append(
+            f"{len(beats)} placement(s) clear the current placement's seed spread entirely: "
+            f"{', '.join(beats)}. That pair is settled at this n_synth even where the order "
+            "among the leaders is not."
+        )
+    elif beats == ():
+        lines.append(
+            "No placement clears the current placement's seed spread, so \"moving beats where "
+            f"it is now\" is not settled at {ranking.n_synth} shoppers."
+        )
+
     if ranking.skipped:
         lines.append(
             f"{len(ranking.skipped)} configuration(s) not scored: "
             + "; ".join(f"{s.candidate_id} ({s.reason})" for s in ranking.skipped)
         )
 
+    return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
+# Is the top pick a property of the planogram, or of n_synth?
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class Stability:
+    """One ranking per run size, and whether the same candidate won each time.
+
+    `SeedSpread` re-rolls the dice at a FIXED panel size and asks whether the
+    answer moves. This asks the other question -- whether the answer moves when
+    the panel GROWS -- and a spread cannot answer it, because every seed a
+    spread re-rolls is drawn at the same `n_synth`. A candidate that leads only
+    because 10,000 shoppers are too few to tell it apart from its neighbours
+    will lead at most of those seeds too, and its spread will look no worse
+    than anybody else's.
+
+    `rankings` are in ladder order, one per rung, produced by `rank_candidates`
+    with everything except `n_synth` held fixed, so any difference between two
+    rungs is the run size and nothing else.
+
+    A stable top pick is NOT the same claim as a resolved one.
+    `Ranking.top_pick_is_resolved` asks whether the lead is bigger than the
+    run-to-run noise; this asks whether the winner is the same candidate at
+    all. A ranking can be stable and unresolved (the same candidate wins every
+    rung, by a margin smaller than the noise) and it can be resolved and
+    unstable (a comfortable lead at one size, a different comfortable lead at
+    another). Both are reported, neither is inferred from the other.
+    """
+
+    objective_name: str
+    rankings: tuple[Ranking, ...]
+    n_synth_ladder: tuple[int, ...]
+    seed: int
+
+    @property
+    def top_pick_ids(self) -> tuple[Optional[str], ...]:
+        """The winning `candidate_id` at each rung, in ladder order.
+
+        None at a rung whose space was empty -- never a candidate id borrowed
+        from a neighbouring rung.
+        """
+        return tuple(None if ranking.best is None else ranking.best.candidate.candidate_id
+                     for ranking in self.rankings)
+
+    @property
+    def top_pick_is_stable(self) -> Optional[bool]:
+        """Did one candidate win every rung?
+
+        None -- not True -- for a ladder of fewer than two rungs. "It won every
+        rung it was tried at" is vacuous when there was one, and this module's
+        word for a question it has not answered is None, as it is for
+        `Ranking.top_pick_is_resolved`.
+        """
+        if len(self.rankings) < 2:
+            return None
+        ids = self.top_pick_ids
+        return all(candidate_id is not None and candidate_id == ids[0] for candidate_id in ids)
+
+    @property
+    def settled_top_pick(self) -> Optional[str]:
+        """The candidate that won every rung, or None when none did.
+
+        None is also the answer for a one-rung ladder: there is a winner there,
+        but nothing was settled about it.
+        """
+        return self.top_pick_ids[0] if self.top_pick_is_stable else None
+
+    @property
+    def reordered_at(self) -> tuple[int, ...]:
+        """The rungs whose winner differs from the first rung's.
+
+        Empty when the top pick held, which is why it is safe to print
+        unconditionally: it names the run sizes at which the recommendation
+        changed, and those are the evidence.
+        """
+        ids = self.top_pick_ids
+        return tuple(n_synth for n_synth, candidate_id
+                     in zip(self.n_synth_ladder[1:], ids[1:]) if candidate_id != ids[0])
+
+
+def check_top_pick_stability(
+    base: Mapping[str, Any],
+    candidates: "CandidateSet | Iterable[Candidate]",
+    objective: Objective,
+    *,
+    n_synth_ladder: Sequence[int] = DEFAULT_STABILITY_LADDER,
+    seed: int = DEFAULT_SEED,
+    spread_seeds: Sequence[int] = (),
+    spread_top_n: int = DEFAULT_SPREAD_TOP_N,
+    simulate: Callable[..., Any] = simcache.population,
+) -> Stability:
+    """Rank the same space at each rung of `n_synth_ladder` and compare winners.
+
+    This is the check that catches the one failure `SeedSpread` structurally
+    cannot: a recommendation that is an artefact of the run size. Everything
+    but `n_synth` is held fixed -- same base, same candidates, same objective,
+    same primary seed -- so a winner that changes between rungs changed because
+    the panel grew.
+
+    **Cost.** One rung costs one full ranking, and a ranking is linear in
+    `n_synth`, so the default ladder costs about 1 + 5 + 25 = 31 times a single
+    default ranking. That is minutes, not milliseconds, which is why this is a
+    separate call and not something `rank_candidates` does for you.
+
+    `spread_seeds` defaults to `()` -- no seed spreads at all. The ladder is
+    about run size; paying for K seeds at every rung multiplies an already
+    expensive check by K, and the spread at the bottom rung is what a plain
+    `rank_candidates` already reports. Pass seeds explicitly if you want both.
+
+    Raises ValueError on an empty ladder or one that is not strictly
+    increasing. A repeated rung would compare a ranking with itself and report
+    stability that was never tested, and a ladder that goes down reads, in
+    `reordered_at`, as though the bigger panel came first.
+    """
+    ladder = tuple(int(n) for n in n_synth_ladder)
+    if not ladder:
+        raise ValueError("n_synth_ladder must name at least one run size")
+    if any(later <= earlier for earlier, later in zip(ladder, ladder[1:])):
+        raise ValueError(f"n_synth_ladder must be strictly increasing, got {ladder!r}")
+
+    space = candidates if isinstance(candidates, CandidateSet) else CandidateSet(tuple(candidates))
+    rankings = tuple(
+        rank_candidates(base, space, objective, n_synth=n_synth, seed=seed,
+                        spread_seeds=spread_seeds, spread_top_n=spread_top_n,
+                        simulate=simulate)
+        for n_synth in ladder
+    )
+
+    return Stability(objective_name=objective.name, rankings=rankings,
+                     n_synth_ladder=ladder, seed=int(seed))
+
+
+def stability_summary(stability: Stability) -> str:
+    """The ladder in words, for RESULTS.md and the demo.
+
+    Prints every rung's winner whichever way the check came out, because the
+    row that disagrees is the finding and summarising it away would leave the
+    reader with exactly the impression the check exists to prevent.
+    """
+    lines = [
+        f"Top pick on {stability.objective_name} across "
+        f"{len(stability.n_synth_ladder)} run size(s), seed {stability.seed}:"
+    ]
+    for ranking, candidate_id in zip(stability.rankings, stability.top_pick_ids):
+        best = ranking.best
+        if best is None:
+            lines.append(f"  n_synth={ranking.n_synth:,}: no candidates scored")
+            continue
+        value = "undefined" if best.objective is None else ranking.format_value(best.objective)
+        lines.append(f"  n_synth={ranking.n_synth:,}: {candidate_id} at {value}")
+
+    stable = stability.top_pick_is_stable
+    if stable is None:
+        lines.append(
+            "One rung only: whether the top pick survives a bigger synthetic panel is "
+            "not established. Add rungs to n_synth_ladder to find out."
+        )
+    elif stable:
+        lines.append(
+            f"The top pick is stable in n_synth: {stability.settled_top_pick} won every rung "
+            f"from {stability.n_synth_ladder[0]:,} to {stability.n_synth_ladder[-1]:,} shoppers. "
+            "That says the winner is the same candidate at every run size; it does NOT say the "
+            "lead is bigger than the run-to-run noise -- Ranking.top_pick_is_resolved answers "
+            "that, separately."
+        )
+    else:
+        changed = ", ".join(f"{n:,}" for n in stability.reordered_at)
+        lines.append(
+            f"The top pick is not stable in n_synth: it changed at {changed} shoppers. "
+            f"The {stability.n_synth_ladder[0]:,}-shopper winner was not measuring the best "
+            "placement, so there is no settled recommendation to quote from this space."
+        )
     return "\n".join(lines)
 
 

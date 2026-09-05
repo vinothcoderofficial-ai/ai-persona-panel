@@ -42,7 +42,7 @@ from pathlib import Path
 import pytest
 from jsonschema import Draft7Validator
 
-from analytics.report import NOT_COLLECTED
+from analytics.report import NOT_COLLECTED, SOURCE_TEMPLATE
 from api.app import prediction
 from api.app.resolve import resolve
 
@@ -69,7 +69,19 @@ def _load_eval_module():
 
 evalmod = _load_eval_module()
 
+# The variants this fixture panel puts REAL sessions on. Deliberately not
+# every committed variant: `data/variants/D.json` is the ad-lift control arm
+# and carries no panel, which is a state `eval.py` has to handle.
 VARIANTS = ("A", "B", "C")
+
+# Every variant committed in data/variants/. `eval.py` simulates and reports
+# all of them whether or not they have a real panel, so the assertions about
+# which variants it covers read the directory instead of pinning a snapshot of
+# it -- adding a variant is a data change, not an eval regression.
+COMMITTED_VARIANTS = tuple(
+    sorted(path.stem for path in (ROOT / "data" / "variants").glob("*.json"))
+)
+
 BASE_TIME = datetime(2026, 9, 14, 10, 0, 0, tzinfo=timezone.utc)
 
 # How long POST /sessions takes to simulate and write the lock, on an honest
@@ -580,8 +592,12 @@ def test_the_metrics_document_validates_against_its_schema(tmp_path):
     assert outcome.metrics["n_real_accepted"] == 16
     assert outcome.metrics["n_real_rejected"] == 2
     assert outcome.metrics["fit_variant"] == "A"
-    assert outcome.metrics["holdout_variants"] == ["B", "C"]
-    assert sorted(outcome.metrics["per_variant"]) == ["A", "B", "C"]
+    assert outcome.metrics["holdout_variants"] == [
+        variant_id for variant_id in COMMITTED_VARIANTS if variant_id != "A"
+    ]
+    # `per_variant` is the real-vs-synthetic comparison, so it covers only the
+    # variants this panel actually has sessions on.
+    assert sorted(outcome.metrics["per_variant"]) == sorted(VARIANTS)
 
 
 def test_calibration_is_fitted_on_a_and_the_holdouts_are_reported_separately(tmp_path):
@@ -713,8 +729,8 @@ def test_the_empty_panel_still_reports_the_synthetic_panel(tmp_path):
 
     assert "## Synthetic panel on its own" in markdown
     rows = {row["variant_id"]: row for row in outcome.report_input["per_variant"]}
-    assert sorted(rows) == ["A", "B", "C"]
-    for variant_id in VARIANTS:
+    assert sorted(rows) == list(COMMITTED_VARIANTS)
+    for variant_id in COMMITTED_VARIANTS:
         assert rows[variant_id]["synth_focal_attention"] is not None
         assert rows[variant_id]["attention_spearman"] is None
     assert rows["A"]["focal_slot"] == "B1S5P1"
@@ -778,3 +794,69 @@ def test_every_committed_variant_is_reported(tmp_path, variant_id):
         figures_dir=tmp_path / "figures",
     )
     assert any(row["variant_id"] == variant_id for row in outcome.report_input["per_variant"])
+
+
+# ---------------------------------------------------------------------------
+# Determinism: eval must not contact a model unless asked
+# ---------------------------------------------------------------------------
+#
+# SPEC's acceptance line is "make eval reproduces RESULTS.md byte-identically
+# from committed data", and the CI evidence job enforces it. `analytics/report.py`
+# asks a model for the headline sentence and falls back to a template. While
+# there was no API key that fallback was certain, so the report was
+# deterministic by accident. Once `.env` loading gave the process a real key,
+# every `make eval` began making a live, paid call whose sentence lands in a
+# committed file -- reproducible only for as long as the grounding check kept
+# rejecting it.
+
+
+class _RecordingClient:
+    """Stands in for sim.llm_client; records whether it was reached at all.
+
+    Raises OSError rather than AssertionError: `report.headline()` catches
+    OSError and falls back to the template, which is the behaviour under test.
+    An AssertionError would escape and fail the test for the wrong reason --
+    it did, the first time this was written.
+    """
+
+    def __init__(self):
+        self.calls = 0
+
+    def post(self, url, **kwargs):
+        self.calls += 1
+        raise OSError("no network in tests")
+
+
+def test_eval_does_not_contact_a_model_by_default(tmp_path):
+    panel = _empty_panel(tmp_path)
+    client = _RecordingClient()
+
+    outcome = _run(tmp_path, panel, llm_client=client)
+
+    assert client.calls == 0, "eval made a live call without being asked"
+    assert outcome.exit_code == 0
+
+
+def test_the_default_headline_source_is_the_template(tmp_path):
+    panel = _empty_panel(tmp_path)
+    outcome = _run(tmp_path, panel, llm_client=_RecordingClient())
+    assert outcome.headline_source == SOURCE_TEMPLATE
+
+
+def test_the_default_report_is_byte_identical_across_runs(tmp_path):
+    """The property the CI evidence job depends on."""
+    panel = _empty_panel(tmp_path)
+    _run(tmp_path, panel, llm_client=_RecordingClient())
+    first = (tmp_path / "RESULTS.md").read_bytes()
+    _run(tmp_path, panel, llm_client=_RecordingClient())
+    assert (tmp_path / "RESULTS.md").read_bytes() == first
+
+
+def test_asking_for_an_llm_headline_does_reach_the_model(tmp_path):
+    """Opt-in must actually opt in, or the flag is decoration."""
+    panel = _empty_panel(tmp_path)
+    client = _RecordingClient()
+
+    _run(tmp_path, panel, llm_client=client, llm_headline=True)
+
+    assert client.calls >= 1
