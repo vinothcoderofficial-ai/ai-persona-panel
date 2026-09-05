@@ -18,7 +18,7 @@ real panel and a synthetic one. **At the time of writing only one of those two p
 | Synthetic panel (10,000 shoppers × 4 personas × 3 variants) | **Computed.** Regenerate with `make eval`; every number in `RESULTS.md`'s synthetic sections comes from it. |
 | Real panel (`data/sessions/anon/`) | **Empty.** No human has shopped a recorded session. PLAN S9 (webcam pilot on 5 laptops) and S21 (collect ≥ 60 sessions) are outstanding. |
 | Prediction locks (`predictions/`) | **Empty**, because a lock is written per real session and there are none. The lock machinery is built, tested and enforced at both ends (§6). |
-| Persona decision traces (`data/cache/traces/`) | **Empty.** The S13 agent loop is built and tested; there is no `LLM_API_KEY` in this repo, and `sim/slow_agent.py` will not write a trace produced by a test double, because those traces are read on screen as if a model wrote them. |
+| Persona decision traces (`data/cache/traces/`) | **Real.** 80 trips from `deepseek-v4-pro:cloud`, 4 personas x 20 shoppers, 973 turns, 1 rejection. `sim/slow_agent.py` still refuses to write a trace a test double produced, and a guard test asserts every committed trace names its model. |
 | Persona post-shop survey answers (S22) | **Not produced**, for the same reason: `sim/persona_survey.py` is built and tested, `docs/integration.md` describes the design, and no CPS data has been obtained or used. |
 | Every real-vs-synthetic metric | **Not computed.** `scripts/eval.py` prints `not yet collected` for each one and refuses to draw a figure whose bars would all be zero. |
 
@@ -323,8 +323,8 @@ reason is at most 20 words. A failure is re-asked with the reason fed back, capp
 `max_reasks`. The slot list is reshuffled from a seeded RNG **every turn**, because language
 models favour whatever is listed first and without it a trace is a ranking of the planogram
 file's own ordering; the test asserts the order actually varies. Nothing here feeds the metrics —
-the output is evidence a human reads. `data/cache/traces/` is empty until a key exists; run
-`python -m sim.slow_agent --all --n 20`.
+the output is evidence a human reads. `data/cache/traces/` holds 80 real trips; regenerate with
+`python -m sim.slow_agent --all --n 20` once a provider is configured (`LLM_PROVIDER=ollama` needs no Anthropic key).
 
 **The fast path** (`sim/simulator.py`) is what scales the same policies to a population. It is
 vectorised over shoppers — it loops over stations and over the two purchase candidates, never

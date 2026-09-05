@@ -20,9 +20,10 @@ NIQ Innovation Council hackathon · team Media Mavericks.
 > `0.00`, and not an omitted row you could mistake for a zero. The synthetic half of the study is
 > computed and reproducible. The comparison the project exists to make **has not been made.**
 >
-> The same applies to the persona decision traces: `sim/slow_agent.py` is built and tested, but
-> there is no LLM key in this repository and it refuses to write traces produced by a test double,
-> so `data/cache/traces/` is empty.
+> The persona decision traces are now real: 80 trips from `deepseek-v4-pro:cloud` sit in
+> `data/cache/traces/`, and the four archetypes are distinguishable from their own reasoning.
+> `sim/slow_agent.py` still refuses to write a trace produced by a test double, and a guard test
+> checks every committed trace names the model that produced it.
 >
 > [What is built and what is not](#what-is-built-and-what-is-not) · [Limitations](docs/METHODOLOGY.md#12-limitations)
 
@@ -268,6 +269,9 @@ whose bars would all be zero, because an axis of zero-height bars reads as a mea
 - Fusion, metrics, noise ceiling, calibration, Ad-to-Purchase Lift, known effect, `eval.py` and
   the template report with an LLM-written headline only (S16–S19).
 - The Brand Lift / CPS integration artifact and the persona post-shop survey (S22).
+- The S13 persona decision traces: 80 real trips from `deepseek-v4-pro:cloud` in
+  `data/cache/traces/`. Regenerate with `python -m sim.slow_agent --all --n 20`; set
+  `LLM_PROVIDER=ollama` and no Anthropic key is needed.
 - The placement optimizer and the slot-value pricing on top of it (S24, S25). The optimizer
   scores all 13 placements on this aisle in ~6 s, and `check_top_pick_stability()` re-ranks them
   across run sizes — which is how we know the default ranking reorders. The pricing
@@ -280,7 +284,6 @@ whose bars would all be zero, because an axis of zero-height bars reads as a mea
 | | Why |
 |---|---|
 | **The real panel** (S9 pilot, S21 collection) | Needs people and laptops — this is the only thing left that code cannot supply. `data/sessions/anon/` is empty and `predictions/` holds no locks. The **tooling is built**: `scripts/collect_link.py` hands out balanced, seed-reproducible links and `scripts/anonymise_sessions.py` exports the database into the corpus `make eval` reads, verified end to end (link → session → lock → events → anonymise → `eval.py` exit 0). What is missing is shoppers. |
-| **Persona decision traces** (S13 output) | No model has been run yet. The loop is built and tested against an injected fake, and it will not write a trace a test double produced, because those traces appear on screen. **No Anthropic key is needed:** set `LLM_PROVIDER=ollama` and `LLM_MODEL` to a model your daemon already has and a local daemon serves it with no key and no account. Then run `python -m sim.slow_agent --all --n 20`. |
 | **Video → planogram** (S20) | Dropped under PLAN §5's own four-hour CUDA timebox. No aisle clip was recorded and the available GPU (GeForce MX250) is far below what fp16 Grounding DINO needs. `vision/` is a package stub; `web/src/vision/` is empty. |
 | **The GLB store shell** (S6) | Cut under PLAN §9's drop order ("GLB shell → back to procedural"). `data/models/` is empty. **This means the portal's "sample 3D model from github or huggingface" requirement is not met.** |
 
@@ -325,7 +328,7 @@ PLAN §12's table, with an honest status against each row.
 | Browser-based virtual retail store | S4, S6 | **Partial** | The store works: 3 bays, 5 shelves, 30 slots, fixed shelf stations, hover/pickup/cart/checkout, every slot hit-tested at every station. The GLB shell was cut, so the portal's **sample-3D-model requirement is not met** — the store is procedural. |
 | Webcam gaze and engagement | S10, S11 | **Built, unexercised** | Consent → intake → camera check → 9-point calibration → 4-point validation, WebGazer with video and prediction points off, the I-DT fixation filter, and the cursor-only fallback above 12 % validation error. The S9 pilot on five laptops was never run and no webcam session has ever been recorded. |
 | Dwell, interactions, navigation, purchases | S4, S11, S16 | **Built, unexercised** | The event model, the logger, the WebSocket ingest and the fusion formula all exist and are tested end to end against replayed fixtures. Zero real sessions have passed through them. |
-| AI personas autonomously navigating and buying | **S13** + S2 | **Partial** | S2's simulator is Met — 40,000 shopper-trips in ~175–205 ms, deterministic per seed. S13's agent loop is built, validated (target must exist at the current station; ≤ 20-word reason; slot order reshuffled every turn) and tested against an injected fake — but it has **never been run against a real language model**, so there are no traces. This is the criterion's headline and it is half-delivered. |
+| AI personas autonomously navigating and buying | **S13** + S2 | **Met** | S2's simulator runs 40,000 shopper-trips in ~175–205 ms, deterministic per seed. S13's agent loop has now been run against a real model: 80 trips, 973 turns, 1 rejection, committed in `data/cache/traces/`. The four archetypes are distinguishable from their own reasoning — `mission` never changes station, `browser` uses every `look` action in the corpus, and `loyalist` names its brand in 245 of 245 reasons. `loyalist` completes only 6 of 20 trips: it buys its brand at every station and the 70 s budget beats it, which is reported rather than tuned away. |
 | Identical experiments, both panels | Shared resolved variant JSON; S14 lock | **Built, unexercised** | Both panels read the same server-resolved planogram, and `POST /sessions` writes the lock before the session row exists while the events endpoint and the ingest socket both refuse a session without one. With no sessions there are no locks, so the ordering has been verified by tests, never by evidence. |
 | Defined accuracy metrics, benchmarked | S16, S17, S19 | **Built, unexercised** | Spearman, KL, purchase-share MAE, Ad Slot Index, decision agreement, the 200-split noise ceiling, and the known-effect check are implemented and unit-tested; the calibration recovery test recovers a known persona mix to 0.05. Every one of them needs a real panel, and the only *measured* result is the synthetic side of the known effect. |
 | Automated actionable insights | S18 lift, S19 report, **S24 optimizer** | **Partial** | `make eval` regenerates `RESULTS.md` and the figures from committed evidence, refuses to write a report if the integrity checks fail, and lets a language model write only the headline sentence. Ad-to-Purchase Lift is computed for the synthetic panel. S24, the optimizer that turns this from an A/B tool into a recommendation engine, **is built** — and it is honest about the fact that its default ranking does not hold. The leader changes with run size (`AD_1@B1_TALKER` at 10k, a `SKU_008` move at 50k); only one claim settles, at 250k, and it is a **SKU move rather than an ad move**. More seeds cannot fix this and larger runs can: `check_top_pick_stability()` is the check that shows it (METHODOLOGY §12.13). |
