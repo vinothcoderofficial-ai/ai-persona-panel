@@ -22,8 +22,8 @@ The synthetic panel ran 10000 shoppers per variant; the real panel is not yet co
 
 Each session's synthetic prediction was locked and hashed on `POST /sessions`, before any event could be accepted. `scripts/eval.py` re-verifies that from the committed files and fails the build if it does not hold.
 
-- Prediction locks found: 0
-- `sha256` recomputed and matched: 0
+- Prediction locks found: 1
+- `sha256` recomputed and matched: 1
 - Locks verified to predate their session's first event: 0
 
 ## Real vs synthetic, per variant

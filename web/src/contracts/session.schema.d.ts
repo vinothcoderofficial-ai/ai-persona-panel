@@ -10,6 +10,10 @@ export interface Session {
   variant_id: string;
   consent: boolean;
   started_at: string;
+  /**
+   * Server wall clock at the moment this session's first event was accepted. Written once, by the server, and never by a client. This is what a prediction lock's created_at is compared against in scripts/eval.py: both are stamped by the same process on the same clock, so the ordering guarantee is measured where it actually holds. Reconstructing it as started_at + t_ms instead compares a browser clock with a server one and understates every event by the POST /sessions round trip - which failed a session whose ordering was correct. Absent until an event arrives.
+   */
+  first_event_at?: string | null;
   ended_at?: string | null;
   screen_w: number;
   screen_h: number;

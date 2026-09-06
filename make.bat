@@ -1,5 +1,5 @@
 @echo off
-REM Windows helper. Usage: make.bat setup ^| seed ^| validate ^| api ^| web ^| test ^| eval ^| readme-gif
+REM Windows helper. Usage: make.bat setup ^| seed ^| validate ^| api ^| web ^| test ^| eval ^| collect ^| readme-gif
 if "%1"=="setup" (
     python -m pip install -r requirements.txt
     npm install
@@ -19,6 +19,14 @@ if "%1"=="api" ( uvicorn api.app.main:app --reload --port 8000 & goto :eof )
 if "%1"=="web" ( npm run dev & goto :eof )
 if "%1"=="test" ( pytest & npm test & goto :eof )
 if "%1"=="eval" ( python scripts\eval.py & goto :eof )
+REM The collection loop in one command: export the live database into the
+REM committed corpus, then regenerate RESULTS.md from it. Deliberately a
+REM terminal command and not a button - it writes committed evidence.
+if "%1"=="collect" (
+    python scripts\anonymise_sessions.py
+    python scripts\eval.py
+    goto :eof
+)
 if "%1"=="readme-gif" ( python scripts\make_readme_gif.py & goto :eof )
 echo Unknown target: %1
-echo Targets: setup seed validate gen-types api web test eval readme-gif
+echo Targets: setup seed validate gen-types api web test eval collect readme-gif

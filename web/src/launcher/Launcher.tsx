@@ -1,4 +1,5 @@
 import type { CSSProperties, ReactNode } from "react";
+import { CollectionStatus } from "@/launcher/CollectionStatus";
 import { readLastSession, type LastSession } from "@/session/lastSession";
 
 /**
@@ -202,6 +203,10 @@ export function Launcher({ readStoredSession = readLastSession }: LauncherProps)
           spectator&apos;s.
         </div>
       </header>
+
+      {/* The real panel, before anything else: it is the number RESULTS.md is
+          waiting on, and it was previously readable only from SQLite. */}
+      <CollectionStatus />
 
       {stored === null ? (
         <div data-testid="launcher-no-last-session" style={{ ...panel, marginBottom: 16 }}>

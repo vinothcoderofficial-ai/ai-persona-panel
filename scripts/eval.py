@@ -357,19 +357,46 @@ def parse_iso(value: str) -> datetime:
     return moment.astimezone(timezone.utc)
 
 
-def first_event_arrival(session: Mapping, events: Sequence[Mapping]) -> Optional[datetime]:
-    """Wall clock of the session's earliest event, or None if it has none.
+def first_event_arrival(
+    session: Mapping, events: Sequence[Mapping]
+) -> tuple[Optional[datetime], str]:
+    """Wall clock of the session's earliest event, and how it was obtained.
 
-    Events carry `t_ms`, an offset from the start of the session, so the
-    arrival is reconstructed from `started_at`. The *smallest* `t_ms` is used
-    rather than the first element: a file's event order is not part of the
-    contract, and the check must be against the earliest behaviour recorded,
-    not the earliest one listed.
+    Two sources, in this order, and the difference between them matters enough
+    that the caller is told which was used.
+
+    **`session["first_event_at"]` (`"server"`).** The moment the server
+    accepted the first event, stamped by the same process on the same clock
+    that stamps a lock's `created_at`. This is the honest comparison, because
+    the ordering guarantee is a fact about the server: it refuses events for a
+    session with no lock, so the two moments are two points in one sequence.
+
+    **`started_at + min(t_ms)` (`"reconstructed"`).** The fallback, for sessions
+    collected before the server stamped anything, and it is **biased early**.
+    `started_at` is stamped in the browser immediately before `POST /sessions`;
+    `t_ms` counts from `EventLogger`'s construction, which happens after that
+    call returns. So the sum understates every event by the whole round trip -
+    1.2 s on the first real session collected, which was enough to place its
+    "first event" a second before a lock that had in fact been written first.
+    The session was refused, and every session would have been, so the panel
+    could not be collected at all until `first_event_at` existed.
+
+    The *smallest* `t_ms` is used rather than the first element: a file's event
+    order is not part of the contract, and the check must be against the
+    earliest behaviour recorded, not the earliest one listed.
     """
     if not events:
-        return None
+        return None, "none"
+
+    stamped = session.get("first_event_at")
+    if stamped:
+        return parse_iso(stamped), "server"
+
     earliest_ms = min(int(event["t_ms"]) for event in events)
-    return parse_iso(session["started_at"]) + timedelta(milliseconds=earliest_ms)
+    return (
+        parse_iso(session["started_at"]) + timedelta(milliseconds=earliest_ms),
+        "reconstructed",
+    )
 
 
 def check_session_integrity(loaded: LoadedSession, lock: Optional[Mapping]) -> list:
@@ -420,13 +447,22 @@ def _check_ordering(loaded: LoadedSession, lock: Mapping) -> list:
     session_id = loaded.session_id
     created_at = parse_iso(lock["created_at"])
 
-    arrival = first_event_arrival(loaded.session, loaded.events)
+    arrival, source = first_event_arrival(loaded.session, loaded.events)
     if arrival is not None and created_at >= arrival:
+        how = (
+            "stamped by the server when it accepted that event"
+            if source == "server"
+            else (
+                f"reconstructed as started_at {loaded.session['started_at']} plus the "
+                "event's t_ms, which is biased early by the POST /sessions round trip "
+                "because t_ms counts from after that call returned; a session collected "
+                "against a server that stamps first_event_at is checked exactly instead"
+            )
+        )
         failures.append(
             f"{session_id}: prediction lock created_at {lock['created_at']} does not "
             f"precede the session's first event, which arrived at "
-            f"{arrival.isoformat()} (started_at {loaded.session['started_at']} plus the "
-            "event's t_ms). The prediction was not pre-registered."
+            f"{arrival.isoformat()} ({how}). The prediction was not pre-registered."
         )
 
     ended_at = loaded.session.get("ended_at")

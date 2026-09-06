@@ -3,42 +3,140 @@
   "$id": "session.schema.json",
   "title": "Session",
   "type": "object",
-  "required": ["session_id", "variant_id", "consent", "started_at", "screen_w", "screen_h", "mode"],
+  "required": [
+    "session_id",
+    "variant_id",
+    "consent",
+    "started_at",
+    "screen_w",
+    "screen_h",
+    "mode"
+  ],
   "additionalProperties": false,
   "properties": {
-    "session_id": { "type": "string" },
-    "variant_id": { "type": "string" },
-    "consent": { "type": "boolean" },
-    "started_at": { "type": "string", "format": "date-time" },
-    "ended_at": { "type": ["string", "null"], "format": "date-time" },
-    "screen_w": { "type": "integer" },
-    "screen_h": { "type": "integer" },
-    "mode": { "type": "string", "enum": ["webcam", "cursor_only"] },
-    "calibration_error_px": { "type": ["number", "null"] },
+    "session_id": {
+      "type": "string"
+    },
+    "variant_id": {
+      "type": "string"
+    },
+    "consent": {
+      "type": "boolean"
+    },
+    "started_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "first_event_at": {
+      "description": "Server wall clock at the moment this session's first event was accepted. Written once, by the server, and never by a client. This is what a prediction lock's created_at is compared against in scripts/eval.py: both are stamped by the same process on the same clock, so the ordering guarantee is measured where it actually holds. Reconstructing it as started_at + t_ms instead compares a browser clock with a server one and understates every event by the POST /sessions round trip - which failed a session whose ordering was correct. Absent until an event arrives.",
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "ended_at": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "screen_w": {
+      "type": "integer"
+    },
+    "screen_h": {
+      "type": "integer"
+    },
+    "mode": {
+      "type": "string",
+      "enum": [
+        "webcam",
+        "cursor_only"
+      ]
+    },
+    "calibration_error_px": {
+      "type": [
+        "number",
+        "null"
+      ]
+    },
     "intake": {
       "type": "object",
-      "required": ["has_list", "same_brand", "hurry"],
+      "required": [
+        "has_list",
+        "same_brand",
+        "hurry"
+      ],
       "additionalProperties": false,
       "properties": {
-        "has_list": { "type": "boolean" },
-        "same_brand": { "type": "boolean" },
-        "hurry": { "type": "boolean" }
+        "has_list": {
+          "type": "boolean"
+        },
+        "same_brand": {
+          "type": "boolean"
+        },
+        "hurry": {
+          "type": "boolean"
+        }
       }
     },
-    "archetype_label": { "type": ["string", "null"], "enum": ["mission", "browser", "loyalist", "switcher", null] },
-    "prediction_id": { "type": ["string", "null"] },
-    "accepted": { "type": ["boolean", "null"] },
+    "archetype_label": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "mission",
+        "browser",
+        "loyalist",
+        "switcher",
+        null
+      ]
+    },
+    "prediction_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "accepted": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
     "reject_reason": {
-      "type": ["string", "null"],
-      "enum": ["too_short", "one_station", "no_interaction", "low_coverage", "no_consent", null]
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "too_short",
+        "one_station",
+        "no_interaction",
+        "low_coverage",
+        "no_consent",
+        null
+      ]
     },
     "quality": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "fixation_coverage": { "type": "number", "minimum": 0, "maximum": 1 },
-        "stations_visited": { "type": "integer", "minimum": 0 },
-        "duration_s": { "type": "number", "minimum": 0 }
+        "fixation_coverage": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "stations_visited": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "duration_s": {
+          "type": "number",
+          "minimum": 0
+        }
       }
     }
   }

@@ -1,4 +1,4 @@
-.PHONY: setup seed validate dev api web test test-py test-web gen-types eval readme-gif clean
+.PHONY: setup seed validate dev api web test test-py test-web gen-types eval collect readme-gif clean
 
 setup:
 	python -m pip install -r requirements.txt
@@ -35,6 +35,14 @@ test-web:
 	npm test
 
 eval:
+	python scripts/eval.py
+
+# The collection loop in one command: export what the live database holds into
+# the committed corpus, then regenerate RESULTS.md from it. Deliberately not a
+# button on a screen - it writes committed evidence, and that should be a
+# deliberate act at a terminal. `#/home` reports whether it is needed.
+collect:
+	python scripts/anonymise_sessions.py
 	python scripts/eval.py
 
 # Deliberately separate from `eval`: analytics/report.py would write this

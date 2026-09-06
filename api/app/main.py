@@ -13,6 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from api.app.db import init_db, seed_all
 from api.app.routers import (
     ai,
+    collection,
     experiments,
     optimize,
     planograms,
@@ -58,3 +59,6 @@ app.include_router(ai.router)
 # ranked every placement since S24 with no route and no screen, so the
 # recommendation-engine claim was not one a viewer could check.
 app.include_router(optimize.router)
+# S31: what the real panel actually contains. Read-only - exporting writes
+# committed evidence and stays at a command line.
+app.include_router(collection.router)

@@ -168,6 +168,7 @@ the store will render.
 | `make api` / `make web` | FastAPI on `:8000` / Vite on `:5173` |
 | `make test` | `pytest` + `vitest` — **685 Python tests and 315 web tests across 30 files, all green** at the time of writing |
 | `make eval` | Regenerate `RESULTS.md` and `docs/figures/*.png` from committed evidence |
+| `make collect` | Export the live database into `data/sessions/anon/`, then regenerate `RESULTS.md` from it — the whole collection loop. `#/home` says whether it is needed. |
 
 There is no `make demo` (PLAN §13 cut Docker Compose and `make demo`). `make readme-gif` **is**
 built and regenerates the figure at the top of this file from real simulator runs. CI is `.github/workflows/ci.yml`: pytest with schema
@@ -190,6 +191,8 @@ Parameters may be written on either side of the `#`; on a collision the hash win
 | `…/#/spectator` | The same, following the last session started in this browser. It says on screen that it is doing so. |
 | `…/#/spectator?session=demo&fake=1` | The server's synthetic demo stream, for when no session is running. It draws itself with a yellow border and a banner so a fake frame can never be mistaken for a real one. |
 | `…/#/ai` | The language model: which one is configured and whether a call is even possible, the exact prompt that turned each archetype into a numeric policy, a button that asks it again, and the twenty shopping trips it reasoned through per persona — every turn with the reason it gave. Asking again writes to `data/cache/policies/preview/` and never touches the committed policy. |
+| `…/#/optimize` | Where *should* the creative go? Every placement scored against the synthetic panel and ranked, with the one running today marked. Says when the order is not settled rather than printing a clean winner. |
+| `…/#/panel` | One persona's committed shopping trip replayed over the same shelf a person shops — the bay it is at, the product it is looking at, the reason it gave, the cart filling. |
 | `…/#/whatif` | Move a SKU or a creative, re-run the population, read the lift. |
 | `…/#/dashboard?session=<id>&variant=<id>` | Real vs synthetic attention bars, Spearman, purchase-share MAE for one session. Exports a session report — see below. |
 | `…/#/dashboard?experiment=<id>` | An experiment that has already been run. |

@@ -52,6 +52,7 @@ make api        uvicorn on :8000
 make web        vite on :5173
 make test       pytest + vitest
 make eval       regenerate RESULTS.md from committed sessions
+make collect    export the live DB into data/sessions/anon, then run eval
 ```
 
 ## Definition of done for any module

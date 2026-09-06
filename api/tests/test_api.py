@@ -268,3 +268,104 @@ def test_post_planogram_round_trip(client):
 
     resp = client.get("/planograms")
     assert {"demo_aisle", "second_aisle"} <= set(resp.json())
+
+
+# ---------------------------------------------------------------------------
+# first_event_at: the ordering guarantee, measured on one clock (S31)
+# ---------------------------------------------------------------------------
+
+def _open_session(client, session_id: str = "11111111-1111-4111-8111-111111111111"):
+    body = {
+        "session_id": session_id,
+        "variant_id": "A",
+        "consent": True,
+        "started_at": "2026-09-06T04:27:22.785Z",
+        "screen_w": 1536,
+        "screen_h": 864,
+        "mode": "cursor_only",
+    }
+    response = client.post("/sessions", json=body)
+    assert response.status_code == 201, response.text
+    return response.json()
+
+
+def _event(t_ms: int, type_: str = "station_enter"):
+    return {"t_ms": t_ms, "type": type_, "station_id": "B1", "payload": {}}
+
+
+def test_a_new_session_has_no_first_event_time(client):
+    """Absent until an event arrives - never a fabricated timestamp for a
+    session nobody has shopped yet."""
+    session = _open_session(client)
+
+    assert session.get("first_event_at") in (None, ...) or "first_event_at" not in session
+
+
+def test_the_first_event_stamps_the_session(client):
+    session_id = "22222222-2222-4222-8222-222222222222"
+    _open_session(client, session_id)
+
+    client.post(f"/sessions/{session_id}/events", json=[_event(204)])
+
+    stored = client.get(f"/sessions/{session_id}").json()
+    assert stored["first_event_at"] is not None
+
+
+def test_the_stamp_is_the_first_event_and_never_moves(client):
+    """Written once. A later batch that overwrote it would report the ordering
+    guarantee against the wrong moment - and always a safer-looking one."""
+    session_id = "33333333-3333-4333-8333-333333333333"
+    _open_session(client, session_id)
+
+    client.post(f"/sessions/{session_id}/events", json=[_event(204)])
+    first = client.get(f"/sessions/{session_id}").json()["first_event_at"]
+
+    client.post(f"/sessions/{session_id}/events", json=[_event(9000, "checkout")])
+    second = client.get(f"/sessions/{session_id}").json()["first_event_at"]
+
+    assert first == second
+
+
+def test_the_stamp_is_after_the_prediction_lock(client):
+    """The whole point, and the thing scripts/eval.py checks.
+
+    Both timestamps are written by this process on this clock, so the
+    comparison is between two moments in one ordering rather than between a
+    browser's clock and a server's. Reconstructing the event time as
+    `started_at + t_ms` instead understates it by the POST /sessions round
+    trip, and failed a real session whose ordering was correct.
+    """
+    from datetime import datetime
+
+    session_id = "44444444-4444-4444-8444-444444444444"
+    _open_session(client, session_id)
+    client.post(f"/sessions/{session_id}/events", json=[_event(0)])
+
+    lock = client.get(f"/sessions/{session_id}/prediction").json()
+    stamp = client.get(f"/sessions/{session_id}").json()["first_event_at"]
+
+    def parse(value: str) -> datetime:
+        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+
+    assert parse(lock["created_at"]) < parse(stamp)
+
+
+def test_a_rejected_batch_does_not_stamp_the_session(client):
+    """An invalid batch is not a first event. Stamping on the attempt would
+    record a session as having been shopped when nothing was accepted."""
+    session_id = "55555555-5555-4555-8555-555555555555"
+    _open_session(client, session_id)
+
+    bad = client.post(f"/sessions/{session_id}/events", json=[{"type": "nope"}])
+    assert bad.status_code == 422
+
+    assert client.get(f"/sessions/{session_id}").json().get("first_event_at") is None
+
+
+def test_an_empty_batch_does_not_stamp_the_session(client):
+    session_id = "66666666-6666-4666-8666-666666666666"
+    _open_session(client, session_id)
+
+    client.post(f"/sessions/{session_id}/events", json=[])
+
+    assert client.get(f"/sessions/{session_id}").json().get("first_event_at") is None

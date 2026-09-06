@@ -21,6 +21,7 @@ module docstring of `api/app/prediction.py` for what it can and cannot compare
 `created_at` against.
 """
 import json
+from datetime import datetime, timezone
 from typing import Any, Dict, List
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -161,7 +162,77 @@ def post_events(
     for event in body:
         session.add(EventRecord(session_id=session_id, data=json.dumps(event)))
     session.commit()
+    # After the commit, and only for a batch that had something in it: an
+    # empty or refused batch is not a first event, and stamping one would
+    # record a session as shopped when nothing was accepted.
+    if body:
+        stamp_first_event(session, session_id)
     return {"accepted": len(body)}
+
+
+# ---------------------------------------------------------------------------
+# first_event_at - the ordering guarantee, measured on one clock
+# ---------------------------------------------------------------------------
+
+def stamp_first_event(db: Session, session_id: str) -> None:
+    """Record, once, when this server first accepted an event for a session.
+
+    CLAUDE.md's non-negotiable ordering is that a prediction lock is written on
+    POST /sessions before any event is accepted, and `scripts/eval.py` fails the
+    build if it does not hold. Checking it needs two comparable moments, and
+    until this existed there was only one: the lock's server-stamped
+    `created_at`, compared against the first event's arrival *reconstructed* as
+    `started_at + t_ms`.
+
+    That reconstruction is wrong, and wrong in the direction that fails honest
+    sessions. `started_at` is stamped in the browser immediately before
+    `POST /sessions`; `t_ms` counts from `EventLogger`'s construction, which is
+    after that call returns. So `started_at + t_ms` understates every event by
+    the whole round trip - about 1.2 s on the first real session collected,
+    which put its "first event" a second *before* a lock that had in fact been
+    written first. eval refused the session, and would have refused every
+    session, so the real panel could not be collected at all.
+
+    This is the same moment measured where it actually happens: one process,
+    one clock, `created_at` then `first_event_at`. Written once and never moved
+    - a later batch that overwrote it would report the guarantee against a
+    safer-looking moment than the one that mattered.
+
+    Called only after a batch has been validated and committed, so a refused
+    batch never marks a session as having been shopped.
+    """
+    record = db.get(SessionRecord, session_id)
+    if record is None:
+        return
+    document = json.loads(record.data)
+    if document.get("first_event_at") is not None:
+        return
+    document["first_event_at"] = (
+        datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+    )
+    record.data = json.dumps(document)
+    db.add(record)
+    db.commit()
+
+
+@router.get("/sessions/{session_id}")
+def read_session(session_id: str, session: Session = Depends(get_session)):
+    """The stored session document, as the server holds it.
+
+    Named `read_session` and not `get_session`: this module imports a
+    dependency of that name from `api/app/db.py`, and a handler shadowing it
+    turns every later `Depends(get_session)` in the file into a dependency on
+    this route - which is a `str` where a `Session` is expected. The whole
+    finish endpoint broke that way, one test run after this route was added.
+
+    Added because the ordering guarantee is only checkable if `first_event_at`
+    can be read back, and because the collection panel needs to report what the
+    live panel actually contains rather than what an operator remembers.
+    """
+    record = session.get(SessionRecord, session_id)
+    if record is None:
+        raise HTTPException(status_code=404, detail=f"unknown session_id {session_id!r}")
+    return json.loads(record.data)
 
 
 @router.get("/sessions/{session_id}/prediction")

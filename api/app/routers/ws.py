@@ -56,6 +56,7 @@ from api.app.db import (
     get_validator,
 )
 from api.app.resolve import PatchError, resolve
+from api.app.routers.sessions import stamp_first_event
 
 router = APIRouter(tags=["ws"])
 log = logging.getLogger(__name__)
@@ -259,6 +260,11 @@ def _flush(db: Session, session_id: str, pending: List[Dict[str, Any]]) -> None:
     for event in pending:
         db.add(EventRecord(session_id=session_id, data=json.dumps(event)))
     db.commit()
+    # The same stamp POST /sessions/{id}/events writes, from the one
+    # implementation. Most real sessions arrive down this socket rather than
+    # over HTTP, so a stamp that lived only in the router would be missing from
+    # exactly the sessions the panel is made of.
+    stamp_first_event(db, session_id)
     pending.clear()
 
 
