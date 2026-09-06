@@ -56,7 +56,7 @@ owns what and which process it runs in, [`docs/working-diagram.mermaid`](docs/wo
 flowchart TD
     subgraph IN["1 · Store ingestion"]
         MAN["Seed planogram (data/planograms/demo_aisle.json)"]
-        DET["Phone video → Grounding DINO<br/>DROPPED (PLAN S20, CUDA timebox)"]
+        DET["Aisle clip → shelf edges + colour runs<br/>vision/pipeline.py (CPU, no detector)"]
         MAN --> PG["Planogram JSON<br/>bays · shelves · slots · ad slots"]
         DET -. not built .-> PG
     end
@@ -317,6 +317,18 @@ whose bars would all be zero, because an axis of zero-height bars reads as a mea
 - The S13 persona decision traces: 80 real trips from `deepseek-v4-pro:cloud` in
   `data/cache/traces/`. Regenerate with `python -m sim.slow_agent --all --n 20`; set
   `LLM_PROVIDER=ollama` and no Anthropic key is needed.
+- **The AI made visible and triggerable** (`#/ai`, S26): which model is configured and whether a
+  call is even possible, the exact prompt that turned each archetype into a numeric policy, a
+  button that asks the model again, and the persona traces turn by turn with the reason the model
+  gave for each move. A re-ask writes to a preview directory and never touches the committed
+  policy the simulator runs.
+- **A synthetic shopper, shopping** (`#/panel`, S27): one persona's committed trip replayed over
+  the same shelf a person shops, with the cart filling and every shelf position named as a product.
+- **The placement optimizer on a screen** (`#/optimize`, S29), and **the shelf-from-video screen**
+  (`#/vision`, S30).
+- **The collection panel** (S31): what the real panel actually holds — accepted, rejected and why,
+  unfinished, and whether what was collected has reached the committed corpus. `make collect` runs
+  the export and the eval together.
 - The placement optimizer and the slot-value pricing on top of it (S24, S25). The optimizer
   scores all 13 placements on this aisle in ~6 s, and `check_top_pick_stability()` re-ranks them
   across run sizes — which is how we know the default ranking reorders. The pricing
@@ -328,8 +340,9 @@ whose bars would all be zero, because an axis of zero-height bars reads as a mea
 
 | | Why |
 |---|---|
-| **The real panel** (S9 pilot, S21 collection) | Needs people and laptops — this is the only thing left that code cannot supply. `data/sessions/anon/` is empty and `predictions/` holds no locks. The **tooling is built**: `scripts/collect_link.py` hands out balanced, seed-reproducible links and `scripts/anonymise_sessions.py` exports the database into the corpus `make eval` reads, verified end to end (link → session → lock → events → anonymise → `eval.py` exit 0). What is missing is shoppers. |
-| **Video → planogram** (S20) | Dropped under PLAN §5's own four-hour CUDA timebox. No aisle clip was recorded and the available GPU (GeForce MX250) is far below what fp16 Grounding DINO needs. `vision/` is a package stub; `web/src/vision/` is empty. |
+| **The real panel** (S9 pilot, S21 collection) | Needs people and laptops — this is the only thing left that code cannot supply. `data/sessions/anon/` is empty; `predictions/` holds one lock, from the single session collected so far, which was rejected as `too_short` (29 s against a 45 s minimum). The **tooling is built**: `scripts/collect_link.py` hands out balanced, seed-reproducible links, `make collect` exports the database into the corpus `make eval` reads, and `#/home` reports what the panel holds and whether an export is outstanding. One real bug stood in the way and is fixed (S31): `eval.py` reconstructed each session's first-event time as `started_at + t_ms`, which understates it by the `POST /sessions` round trip, so **every** honestly-ordered session would have failed the pre-registration check. The server now stamps `first_event_at` itself, and the two moments being compared come from one clock. What is missing is shoppers. |
+| **Product identities from video** (part of S20) | The pipeline **is built** (see above) and reads shelf geometry and colour on a CPU. What it cannot read is what a detection model would: brand, product name, price, promotion, and promotional signs. Those are written into the emitted planogram as `unknown` / `unidentified product N` / `0` / `false` and no ad slots are emitted, rather than being guessed. Grounding DINO on a GPU remains the upgrade path (`requirements-vision.txt`); the available GPU (GeForce MX250) is far below what fp16 needs. |
+| **A video of a real aisle** | None was recorded, so the only clip the pipeline has ever been run on is `scripts/make_vision_fixture.py`'s rendering of the seed planogram — even lighting, no perspective, no occlusion, no motion blur. It reads that clip exactly right (5 shelves, 8 facings, matching bay 1), and that is a statement about the stages composing rather than about accuracy on real footage. No `data/planograms/video_aisle.json` is committed, because a planogram derived from a picture this repository drew is not evidence about a shop. |
 | **The GLB store shell** (S6) | Cut under PLAN §9's drop order ("GLB shell → back to procedural"). The shelving, bays, boards, facings and ad fixtures are still procedural three.js geometry built from the planogram JSON, and there is no modelled shop interior. What *is* built is narrower and should not be mistaken for it: one CC0 glTF sample model from the Khronos GitHub repository — `data/models/WaterBottle.glb`, provenance and SHA-256 in `data/models/README.md` — is committed and rendered in the store, on a display plinth in the aisle gap beside bay 1. That is one prop, not a shell. It satisfies the portal's "sample 3D model from github or huggingface" requirement and nothing else: it is scenery, it is not a SKU, it is not in the planogram, and no number in `RESULTS.md` moved when it was added. |
 
 The persona policies in `data/cache/policies/` were **written by hand** in S2. The LLM policy
@@ -379,7 +392,7 @@ PLAN §12's table, with an honest status against each row.
 | Automated actionable insights | S18 lift, S19 report, **S24 optimizer** | **Partial** | `make eval` regenerates `RESULTS.md` and the figures from committed evidence, refuses to write a report if the integrity checks fail, and lets a language model write only the headline sentence. Ad-to-Purchase Lift is computed for the synthetic panel. S24, the optimizer that turns this from an A/B tool into a recommendation engine, **is built** — and it is honest about the fact that its default ranking does not hold. The leader changes with run size (`AD_1@B1_TALKER` at 10k, a `SKU_008` move at 50k); only one claim settles, at 250k, and it is a **SKU move rather than an ad move**. More seeds cannot fix this and larger runs can: `check_top_pick_stability()` is the check that shows it (METHODOLOGY §12.13). |
 | Reduce time and cost | SPEC §8 table | **Partial** | PLAN required SPEC §8's table recomputed on Day 8. Done, cell by cell, and it splits in two. The **95 % CI row is arithmetic and checks out exactly** — a normal-approximation interval on p = 0.30 gives ±12.70 pp at n = 50, ±14.20 pp at n = 40 and ±0.90 pp at n = 10,000, matching the ±13 / ±14 / ±0.9 printed there; n = 10,000 is this repo's actual `N_SYNTH`. The **compute row is measured and better than claimed**: a full 10,000-shopper population per persona in ~175–205 ms and a what-if answer at p95 under 11 ms warm, so "minutes for a what-if" overstates the cost by orders of magnitude. The **cost and calendar-time cells cannot be recomputed here** — $100K+ physical stores and $10–30K surveys are external market figures cited from the proposal, and no study of any kind has been commissioned by this project. SPEC.md is left unedited as the historical brief; this row is the recompute. |
 | Roadmap for Brand Lift / CPS | **S22** — [`docs/integration.md`](docs/integration.md) + `sim/persona_survey.py` | **Partial** | Delivered as a written artifact plus code, not a slide: the survey instrument, the per-persona and population roll-up, and the design for seeding persona shares from CPS demographics. But **no CPS data has been obtained or used**, no Brand Lift study has been run, and no survey answer has been produced — that needs an LLM key, and the survey module refuses to write a cache without one, exactly as `slow_agent.py` does. |
-| Foundation for AR / spatial / AI shopping | Planogram JSON renderer-agnostic; S20 video ingest | **Partial** | The planogram is a plain JSON document with metric bay dimensions and per-slot geometry; the React renderer is one consumer of it and the API never assumes a renderer. The S20 video-ingest path that would let a phone clip become a store was dropped. |
+| Foundation for AR / spatial / AI shopping | Planogram JSON renderer-agnostic; S20 video ingest | **Yes** | The planogram is a plain JSON document with metric bay dimensions and per-slot geometry; the React renderer is one consumer of it and the API never assumes a renderer. The video-ingest path is built: `vision/pipeline.py` reads a clip into that same document on a CPU, `POST /vision/planogram` and `#/vision` put it behind an upload. It reads geometry and colour, not product identities, and says so in every field it could not observe. |
 
 Additional SPEC M8 commitments, outside PLAN §12's table: `.github/workflows/ci.yml` — **built**
 (three jobs, one of them the RESULTS.md byte-check). `make demo` — **cut** by PLAN §13.
@@ -398,7 +411,7 @@ an empty panel, which is a weaker test than the one SPEC intended.
 | `api/app/` | FastAPI: routers, `resolve.py`, `live.py`, `prediction.py`, `simcache.py` |
 | `sim/` | Saliency, persona policies, vectorised simulator, LLM persona agents |
 | `analytics/` | Fusion, metrics, noise ceiling, calibration, lift, known effect, report |
-| `vision/` | Video → planogram. **Stub only — S20 was dropped.** |
+| `vision/` | Video → planogram: frame sampling, shelf-edge detection, colour-run facing segmentation, IoU agreement across frames, and schema-valid assembly. Classical CV on a CPU — it reads geometry and colour, not products. |
 | `web/src/` | `store/` `capture/` `spectator/` `whatif/` `dashboard/` `contracts/` `api/` |
 | `predictions/` | One lock file per session — evidence, committed. Empty until sessions exist. |
 | `docs/` | `PLAN.md`, `SPEC.md`, `METHODOLOGY.md`, `integration.md`, `prompts.md`, `video/` |
