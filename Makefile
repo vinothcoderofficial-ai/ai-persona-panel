@@ -1,4 +1,4 @@
-.PHONY: setup seed validate dev api web test test-py test-web gen-types eval collect readme-gif clean
+.PHONY: setup seed validate dev api web test test-py test-web gen-types eval collect readme-gif sample-video clean
 
 setup:
 	python -m pip install -r requirements.txt
@@ -49,6 +49,15 @@ collect:
 # figure's name into RESULTS.md, and CI fails if RESULTS.md moves a byte.
 readme-gif:
 	python scripts/make_readme_gif.py
+
+# A minute of aisle to point #/vision at, because there is no shelf footage in
+# this repository and none can be invented. It is a rendering of the seed
+# planogram, not a photograph of a shelf, and the difference is real: even
+# lighting, no perspective, no occlusion, no shopper's arm. The output is
+# gitignored - it regenerates in seconds, and committing a video to prove a
+# pipeline works on the repository's own drawing is the wrong evidence to keep.
+sample-video:
+	python scripts/make_vision_fixture.py --seconds 60 --out data/vision/demo_aisle_60s.mp4
 
 clean:
 	rm -f shoppertwin.db

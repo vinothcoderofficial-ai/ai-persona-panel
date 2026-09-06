@@ -14,12 +14,17 @@ downstream can tell it from a real shelf.
 """
 from __future__ import annotations
 
+import threading
+from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import TimeoutError as FuturesTimeout
 from pathlib import Path
 
 import cv2
 import numpy as np
 import pytest
 from fastapi.testclient import TestClient
+
+from api.app.routers import vision as vision_router
 
 WIDTH = 640
 HEIGHT = 480
@@ -158,3 +163,56 @@ def test_reading_the_same_clip_twice_gives_the_same_planogram(
     second = _post(client, aisle_clip).json()["planogram"]
 
     assert first == second
+
+
+def test_reading_a_long_clip_does_not_freeze_the_rest_of_the_api(
+    client: TestClient, aisle_clip: bytes, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A minute of video takes ~13 seconds to read. The server must stay up.
+
+    The four-second fixture hid this: eight sampled frames come back fast
+    enough that nobody notices what the handler is doing. A sixty-second clip
+    samples the full 120-frame cap, and OpenCV decoding plus per-band colour
+    segmentation is CPU-bound, synchronous work. Run directly inside an
+    `async def`, it holds the event loop for its whole duration, which means
+    that for those thirteen seconds this API serves nobody: not a shopper
+    loading the store, not a live session flushing gaze over the websocket,
+    not the spectator view. One person trying the vision demo would stall a
+    measurement session in the next room, and the gaze data lost while the
+    loop is blocked is not recoverable.
+
+    The pipeline is deliberately left slow here and blocked on an event
+    instead, so this asserts the handler's concurrency and not the speed of
+    the CV code - which is allowed to get slower.
+    """
+    started = threading.Event()
+    release = threading.Event()
+    real_run = vision_router.run
+
+    def slow_run(path):
+        started.set()
+        release.wait(timeout=20)
+        return real_run(path)
+
+    monkeypatch.setattr(vision_router, "run", slow_run)
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        upload = pool.submit(_post, client, aisle_clip)
+        assert started.wait(timeout=10), "the upload never reached the pipeline"
+
+        # Mid-read, a shopper asks for the store. This is the request that a
+        # blocked event loop never gets to.
+        store = pool.submit(client.get, "/planograms")
+        try:
+            response = store.result(timeout=5)
+        except FuturesTimeout:
+            release.set()
+            upload.result(timeout=30)
+            pytest.fail(
+                "GET /planograms was not served while a clip was being read: "
+                "the pipeline is holding the event loop"
+            )
+
+        release.set()
+        assert response.status_code == 200
+        assert upload.result(timeout=30).status_code == 200

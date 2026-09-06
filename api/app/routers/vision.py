@@ -23,6 +23,14 @@ and none of them invented here:
 
 The upload is written to a temporary file because OpenCV decodes from a path
 rather than from bytes, and it is removed on the way out whatever happened.
+
+The read itself runs on a worker thread. Decoding a minute of video and
+segmenting 120 frames is about thirteen seconds of CPU-bound work, and called
+straight from this coroutine it would hold the event loop for all of it - so a
+single person trying the vision demo would stall every other request on the
+server, including a live session flushing gaze over the websocket in the next
+room. Those samples are not recoverable, which makes this a data-loss bug
+rather than a slow page.
 """
 from __future__ import annotations
 
@@ -31,6 +39,7 @@ from pathlib import Path
 from typing import Any, Dict
 
 from fastapi import APIRouter, File, HTTPException, UploadFile
+from starlette.concurrency import run_in_threadpool
 
 from vision.frames import VideoUnreadable
 from vision.pipeline import run
@@ -72,7 +81,9 @@ async def post_vision_planogram(video: UploadFile = File(...)) -> Dict[str, Any]
         handle.close()
 
         try:
-            result = run(handle.name)
+            # Off the event loop: see the module docstring. `run` is read from
+            # the module at call time, so a test may still substitute it.
+            result = await run_in_threadpool(run, handle.name)
         except VideoUnreadable as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         except ValueError as exc:

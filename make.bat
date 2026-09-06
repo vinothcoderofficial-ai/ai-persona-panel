@@ -28,5 +28,11 @@ if "%1"=="collect" (
     goto :eof
 )
 if "%1"=="readme-gif" ( python scripts\make_readme_gif.py & goto :eof )
+REM A minute of aisle to point #/vision at. A rendering of the seed
+REM planogram, not footage of a shelf; the output is gitignored.
+if "%1"=="sample-video" (
+    python scripts\make_vision_fixture.py --seconds 60 --out data\vision\demo_aisle_60s.mp4
+    goto :eof
+)
 echo Unknown target: %1
-echo Targets: setup seed validate gen-types api web test eval collect readme-gif
+echo Targets: setup seed validate gen-types api web test eval collect readme-gif sample-video

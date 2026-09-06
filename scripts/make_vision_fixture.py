@@ -37,6 +37,8 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from vision.frames import DEFAULT_FPS, DEFAULT_MAX_FRAMES
+
 PLANOGRAM = ROOT / "data" / "planograms" / "demo_aisle.json"
 DEFAULT_OUT = ROOT / "data" / "vision" / "demo_aisle.mp4"
 
@@ -124,6 +126,18 @@ def main(argv=None) -> int:
         writer.release()
 
     print(f"wrote {out} ({frames} frames, {WIDTH}x{HEIGHT}, {FPS} fps)")
+
+    # How much of it the pipeline will actually look at. Worth saying, because
+    # "I made it longer" is the obvious thing to try when a reading looks thin,
+    # and past the cap it changes nothing: a 60-second clip and a five-minute
+    # one are sampled identically. Derived from the pipeline's own constants
+    # rather than restated, so this cannot drift away from the truth.
+    step = max(1, int(round(FPS / max(DEFAULT_FPS, 1e-6))))
+    sampled = min(DEFAULT_MAX_FRAMES, len(range(0, frames, step)))
+    print(
+        f"The pipeline will sample {sampled} of them at {DEFAULT_FPS:g} fps "
+        f"(cap {DEFAULT_MAX_FRAMES}), taking a few seconds per hundred frames."
+    )
     print("This is a rendering of the seed planogram, not footage of a real shelf.")
     print(f"Try it:  python -m vision.pipeline --video {out}")
     return 0
