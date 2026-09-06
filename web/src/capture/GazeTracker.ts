@@ -57,6 +57,33 @@ export interface GazeTrackerOptions {
 
 const DEFAULT_VIDEO_ELEMENT_ID = "webgazerVideoFeed";
 
+/**
+ * Where the browser fetches WebGazer's MediaPipe FaceMesh runtime from.
+ *
+ * WebGazer 3.5.x runs FaceMesh through MediaPipe's local WASM build, and
+ * MediaPipe fetches ~17 MB of WASM, model and packed-asset files from this
+ * app's own web root at `params.faceMeshSolutionPath`. When they are not there
+ * the failure is silent and misleading: MediaPipe's script injector resolves
+ * its load promise on the `error` event as well as on `load`, so the 404 is
+ * swallowed and the next call lands on a placeholder object - "z2 is not a
+ * function" - `start()` rejects, and the session quietly becomes cursor_only.
+ * `scripts/copy_mediapipe_assets.py` is what puts them there, on `make setup`.
+ *
+ * Stated here rather than left to WebGazer's default `'./mediapipe/face_mesh'`,
+ * which is *document-relative*: MediaPipe resolves it against the current page
+ * URL. This app's routes are hash-based (`#/whatif`, `#/spectator`), so the
+ * document path is `/` and the default happens to work - but Vite serves
+ * `index.html` for any path, and a single URL with a segment in it would
+ * resolve the assets one directory deeper and bring the outage back with the
+ * same unreadable error. `web/public/` is served at `/` in both dev and build
+ * (no `base` is configured in `web/vite.config.ts`), so a root-relative path
+ * means the same thing from every URL the app can be on.
+ *
+ * `web/tests/mediapipeAssets.test.ts` pins this constant to the directory the
+ * copy script fills, so the two cannot drift apart.
+ */
+export const FACE_MESH_SOLUTION_PATH = "/mediapipe/face_mesh";
+
 async function loadWebGazer(): Promise<WebGazerLike> {
   const module = await import("webgazer");
   return module.default as WebGazerLike;
@@ -174,6 +201,14 @@ export class GazeTracker {
     // stop() during the load: the camera was never opened, so there is nothing
     // to release and nothing to start.
     if (this.stopRequested) return;
+
+    // Said before begin() for the same reason the switches below are: MediaPipe
+    // builds its detector on the first frame, and begin() is what starts
+    // producing frames. `params` is WebGazer's own live settings object - the
+    // module reads it at use, so writing it here is what the next read sees.
+    if (webgazer.params !== undefined) {
+      webgazer.params.faceMeshSolutionPath = FACE_MESH_SOLUTION_PATH;
+    }
 
     // Every one of these defaults to true in WebGazer, so all of them are
     // turned off before begin() is allowed to open the camera.

@@ -1,8 +1,9 @@
-.PHONY: setup seed validate dev api web test test-py test-web gen-types eval clean
+.PHONY: setup seed validate dev api web test test-py test-web gen-types eval readme-gif clean
 
 setup:
 	python -m pip install -r requirements.txt
 	npm install
+	python scripts/copy_mediapipe_assets.py
 	python scripts/make_seed_data.py
 	python scripts/validate_data.py
 
@@ -35,6 +36,11 @@ test-web:
 
 eval:
 	python scripts/eval.py
+
+# Deliberately separate from `eval`: analytics/report.py would write this
+# figure's name into RESULTS.md, and CI fails if RESULTS.md moves a byte.
+readme-gif:
+	python scripts/make_readme_gif.py
 
 clean:
 	rm -f shoppertwin.db

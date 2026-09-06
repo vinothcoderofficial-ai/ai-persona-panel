@@ -3,10 +3,12 @@ import type { Session } from "@/contracts/session.schema";
 import { archetypeFromIntake, type ArchetypeLabel, type Intake } from "@/capture/archetype";
 import type { ValidationOutcome } from "@/capture/calibrationMath";
 import { Calibration } from "@/capture/Calibration";
+import { CalibrationReport } from "@/capture/CalibrationReport";
 import { CameraCheck } from "@/capture/CameraCheck";
 import { Consent, ConsentDeclined } from "@/capture/Consent";
 import { GazeTracker } from "@/capture/GazeTracker";
 import { IntakeSurvey } from "@/capture/IntakeSurvey";
+import { CHECK_SECONDS, TrackerCheck } from "@/capture/TrackerCheck";
 import { Validation } from "@/capture/Validation";
 import * as style from "@/capture/styles";
 
@@ -49,6 +51,10 @@ type Step =
   | "camera"
   | "calibrate"
   | "validate"
+  // Optional, entered from "done" and always returning to it: the shopper
+  // asking to watch the tracker work before any session exists. See
+  // TrackerCheck.tsx for why this is the one screen allowed to draw a dot.
+  | "check"
   | "done";
 
 function messageOf(error: unknown): string {
@@ -150,11 +156,14 @@ export function CaptureFlow({ onComplete, createTracker }: CaptureFlowProps): JS
       // above still releases it.
       if (validated.mode !== "webcam") stopTracker();
       setOutcome(validated);
-      setFallbackReason(
-        validated.mode === "cursor_only"
-          ? "The calibration was not accurate enough to trust, so this session follows the mouse."
-          : null,
-      );
+      // No reason line here, in either direction. A validation that ran has a
+      // number behind its verdict, and CalibrationReport states that number,
+      // the threshold it was compared with and what follows - which is strictly
+      // more than the sentence that used to sit here ("not accurate enough to
+      // trust") told anybody. `fallbackReason` is left for the failures that
+      // produced no measurement at all and therefore need explaining in words:
+      // a refused camera, a tracker that would not start.
+      setFallbackReason(null);
       setStep("done");
     },
     [stopTracker],
@@ -181,6 +190,77 @@ export function CaptureFlow({ onComplete, createTracker }: CaptureFlowProps): JS
       calibration_error_px: outcome.calibration_error_px,
       ...(handover === null ? {} : { tracker: handover }),
     });
+  }
+
+  /**
+   * The verdict screen, and the last thing between consent and the store.
+   *
+   * It is a function rather than a `case` body because the optional tracker
+   * check falls back to it: if the tracker went away while that screen was up,
+   * there is nothing left to demonstrate and the shopper should simply be back
+   * here, not looking at an empty screen.
+   */
+  function doneScreen(): JSX.Element {
+    // Offered only while this flow still owns a running camera - so: a webcam
+    // verdict, before the handover in start(). A cursor_only session gave the
+    // camera back at validation and has nothing to show.
+    const canCheckTracker =
+      outcome?.mode === "webcam" && trackerReady && tracker.current !== null;
+
+    return (
+      <div style={style.screen}>
+        <div style={style.panel}>
+          <h1 style={style.heading}>You are set</h1>
+          {/* The measurement first, then what it means for the next ten
+              minutes. The other way round leaves the shopper reading a rule
+              about a dot before they have been told whether the thing that
+              draws it is even switched on. */}
+          {outcome !== null && (
+            <CalibrationReport outcome={outcome} screenWidthPx={screenWidth()} />
+          )}
+          <p style={style.paragraph} data-testid="done-mode">
+            {outcome?.mode === "webcam"
+              ? "You will not see a dot while you shop - that is deliberate, watching it would change where you look."
+              : "Nothing else about the study changes - shop exactly as you would have."}
+          </p>
+          {fallbackReason !== null && (
+            <p style={style.note} data-testid="done-reason">
+              {fallbackReason}
+            </p>
+          )}
+          <p style={style.paragraph}>
+            Shop the shelf the way you normally would. Pick things up, look
+            around, and check out when you are done.
+          </p>
+          <div style={style.buttonRow}>
+            <button
+              type="button"
+              data-testid="done-start"
+              style={style.primaryButton}
+              onClick={start}
+            >
+              Start shopping
+            </button>
+            {canCheckTracker && (
+              <button
+                type="button"
+                data-testid="done-check"
+                style={style.secondaryButton}
+                onClick={() => setStep("check")}
+              >
+                Show me the tracker working first
+              </button>
+            )}
+          </div>
+          {canCheckTracker && (
+            <p style={style.note}>
+              That last one takes {CHECK_SECONDS} seconds, records nothing, and
+              is the only place you will ever see the dot.
+            </p>
+          )}
+        </div>
+      </div>
+    );
   }
 
   switch (step) {
@@ -239,37 +319,16 @@ export function CaptureFlow({ onComplete, createTracker }: CaptureFlowProps): JS
       );
     }
 
+    case "check": {
+      const active = tracker.current;
+      // Only reachable from the button above, which only exists while a tracker
+      // is running - but a tracker can die at any time, and an empty demo is
+      // worse than none.
+      if (active === null || !trackerReady) return doneScreen();
+      return <TrackerCheck tracker={active} onDone={() => setStep("done")} />;
+    }
+
     case "done":
-      return (
-        <div style={style.screen}>
-          <div style={style.panel}>
-            <h1 style={style.heading}>You are set</h1>
-            <p style={style.paragraph} data-testid="done-mode">
-              {outcome?.mode === "webcam"
-                ? "Eye tracking is on. You will not see a dot - that is deliberate, watching it would change where you look."
-                : "This session follows your mouse instead of your eyes."}
-            </p>
-            {fallbackReason !== null && (
-              <p style={style.note} data-testid="done-reason">
-                {fallbackReason}
-              </p>
-            )}
-            <p style={style.paragraph}>
-              Shop the shelf the way you normally would. Pick things up, look
-              around, and check out when you are done.
-            </p>
-            <div style={style.buttonRow}>
-              <button
-                type="button"
-                data-testid="done-start"
-                style={style.primaryButton}
-                onClick={start}
-              >
-                Start shopping
-              </button>
-            </div>
-          </div>
-        </div>
-      );
+      return doneScreen();
   }
 }

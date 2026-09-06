@@ -162,6 +162,19 @@ function Store({ variantId, fields }: { variantId: string; fields: SessionFields
         <div style={{ marginTop: 10, opacity: 0.6 }}>
           Start the API with <code>make api</code>, then reload.
         </div>
+        {/* The one place a link belongs on the store route. CLAUDE.md keeps
+            navigation chrome off the shopper's screen because a person is being
+            measured against it and a menu is one more thing to look at that is
+            not a product - but this screen is the store failing to open, so
+            there is no measurement to disturb and no shelf to compete with.
+            Whoever is looking at it is an operator with a dead API and no way
+            on, and `#/home` is the page that lists every screen and every
+            variant link. */}
+        <div style={{ marginTop: 18 }}>
+          <a data-testid="store-home-link" style={homeLinkStyle} href="#/home">
+            ← All screens
+          </a>
+        </div>
       </div>
     );
   }
@@ -380,6 +393,27 @@ const messageStyle: CSSProperties = {
   color: "#e8eaed",
   fontFamily: "system-ui, -apple-system, Segoe UI, sans-serif",
   fontSize: 14,
+};
+
+/**
+ * The way out of the store's load-failure screen, and of nowhere else.
+ *
+ * It carries its own colours for the same reason `followingStyle` below does:
+ * `src/launcher/Launcher.tsx` owns the launcher's palette and this shell is not
+ * going to import it to draw one link. The accent is the blue the launcher, the
+ * spectator and the dashboard all use for something live, which is what makes
+ * the four windows look like one product on a recording.
+ */
+const homeLinkStyle: CSSProperties = {
+  display: "inline-block",
+  padding: "7px 14px",
+  borderRadius: 7,
+  border: "1px solid #4f8cff",
+  background: "#22304a",
+  color: "#e8eaed",
+  fontSize: 13,
+  fontWeight: 600,
+  textDecoration: "none",
 };
 
 /**

@@ -1,8 +1,9 @@
 @echo off
-REM Windows helper. Usage: make.bat setup ^| seed ^| validate ^| api ^| web ^| test ^| eval
+REM Windows helper. Usage: make.bat setup ^| seed ^| validate ^| api ^| web ^| test ^| eval ^| readme-gif
 if "%1"=="setup" (
     python -m pip install -r requirements.txt
     npm install
+    python scripts\copy_mediapipe_assets.py
     python scripts\make_seed_data.py
     python scripts\validate_data.py
     goto :eof
@@ -18,5 +19,6 @@ if "%1"=="api" ( uvicorn api.app.main:app --reload --port 8000 & goto :eof )
 if "%1"=="web" ( npm run dev & goto :eof )
 if "%1"=="test" ( pytest & npm test & goto :eof )
 if "%1"=="eval" ( python scripts\eval.py & goto :eof )
+if "%1"=="readme-gif" ( python scripts\make_readme_gif.py & goto :eof )
 echo Unknown target: %1
-echo Targets: setup seed validate gen-types api web test eval
+echo Targets: setup seed validate gen-types api web test eval readme-gif

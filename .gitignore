@@ -13,6 +13,10 @@ dist/
 Thumbs.db
 docs/figures/*.png
 web/public/textures/*.png
+# 17 MB of WebGazer's MediaPipe runtime, copied out of node_modules by
+# scripts/copy_mediapipe_assets.py on `make setup`. Generated, like the
+# textures above, and regenerated from a package.json pin.
+web/public/mediapipe/
 data/vision/*.mp4
 data/vision/overlay_frames/
 predictions/dev/

@@ -37,8 +37,14 @@ PERSONA_IDS = ("mission", "browser", "loyalist", "switcher")
 N_RUNS = 10_000
 SEED = 42
 
+# `mode` is the session's capture mode, and it is part of the response because
+# it selects the fusion weights for BOTH panels: the same events fused under
+# "cursor_only" and under "webcam" are two different attention vectors. A
+# consumer that cannot read it cannot tell whether it is describing gaze or a
+# mouse pointer, which is exactly the claim this project must never make by
+# accident. Adding it here is deliberate -- this set is asserted exactly.
 RESPONSE_KEYS = {
-    "experiment_id", "variant_id", "session_id", "n_synth", "seed", "slot_ids",
+    "experiment_id", "variant_id", "session_id", "mode", "n_synth", "seed", "slot_ids",
     "real_attention", "synth_attention", "attention_spearman", "purchase_share_mae",
     "real_purchase_share", "synth_purchase_share",
 }
@@ -168,6 +174,35 @@ def test_experiment_round_trip_shape(client):
     assert -1.0 <= body["attention_spearman"] <= 1.0
     assert body["purchase_share_mae"] >= 0.0
     assert body["real_purchase_share"] == {"SKU_001": 1.0}
+    assert body["mode"] == "cursor_only"
+
+
+@pytest.mark.parametrize("mode", ["cursor_only", "webcam"])
+def test_response_reports_the_session_capture_mode_it_fused_under(client, mode):
+    """The mode the router already reads is now also the mode it reports.
+
+    `_build_experiment` selects the fusion weights for both panels from the
+    session's own `mode`, so two experiments over identical events can hold
+    different attention vectors purely because they were captured differently.
+    Every consumer -- the dashboard, the exported session report -- has to be
+    able to say which of the two it is looking at, and before this it could
+    not: the value was read, used, and thrown away.
+    """
+    session_id = create_session(client, mode=mode)
+    post_events(client, session_id, [
+        {"t_ms": 1000, "type": "cursor_dwell", "station_id": "B1",
+         "payload": {"slot_id": "B1S1P1", "dur_ms": 900}},
+    ])
+
+    resp = client.post("/experiments", json={"variant_id": "A", "session_id": session_id})
+    assert resp.status_code == 201, resp.text
+    assert resp.json()["mode"] == mode
+
+    # It is persisted, not merely computed on the way out: a report generated
+    # months later from GET /experiments/{id} must still know what it fused.
+    stored = client.get(f"/experiments/{resp.json()['experiment_id']}")
+    assert stored.status_code == 200
+    assert stored.json()["mode"] == mode
 
 
 def test_get_experiment_returns_same_document_as_post(client):

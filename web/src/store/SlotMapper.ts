@@ -52,8 +52,29 @@ export interface Hit {
  */
 const EDGE_EPS_PX = 0.5;
 
-/** Exact hits on a product beat an ad, which beats the enclosing shelf. */
-const KIND_PRECEDENCE: RectKind[] = ["slot", "ad_slot", "shelf"];
+/**
+ * Precedence is by *containment*, and depth settles everything inside a tier.
+ *
+ * A shelf band encloses the products standing on it and the ad fixtures hung
+ * across it, so it is the fallback and never the answer while anything more
+ * specific claims the point. That much was always right.
+ *
+ * A product and an ad fixture, though, are siblings. Neither contains the
+ * other: they are two things bolted to the same bay face at different depths,
+ * and `geometry.ts` mounts every ad at `AD_Z`, deliberately proud of the shelf
+ * lip so the fixture cannot z-fight the boards. The renderer therefore draws an
+ * ad *over* any facing it overlaps - which at station B3 is the bottom 45% of
+ * `B3S1P1` and `B3S1P2`, hidden behind the endcap header.
+ *
+ * Ranking `slot` above `ad_slot` outright handed those pixels to the packs
+ * nobody could see, so a shopper looking straight at the booked creative was
+ * recorded as looking at SKU_017. The placement rule and the attribution rule
+ * were each right alone and had never been checked against each other. Putting
+ * the two kinds in one tier makes the nearer one win, which is the same
+ * front-to-back order the renderer paints in: what the shopper sees is what
+ * gets attributed. See `web/tests/endcapAttribution.test.ts`.
+ */
+const KIND_TIERS: RectKind[][] = [["slot", "ad_slot"], ["shelf"]];
 
 const DEPTH_EPS = 1e-9;
 
@@ -187,9 +208,10 @@ function toHit(rect: ScreenRect): Hit {
 /**
  * Screen point -> what the shopper was looking at.
  *
- * First pass: rectangles the point is properly inside, product before ad before
- * shelf. Second pass: the same order with every rectangle widened by `padPx`,
- * so padding never steals a hit from an exact match.
+ * First pass: rectangles the point is properly inside, fixtures before the
+ * shelf band that encloses them and the nearer fixture before the further one.
+ * Second pass: the same order with every rectangle widened by `padPx`, so
+ * padding never steals a hit from an exact match.
  */
 export function hitTest(
   rects: ScreenRect[],
@@ -198,13 +220,13 @@ export function hitTest(
   padPx = 25,
 ): Hit | null {
   for (const floor of [EDGE_EPS_PX, -padPx]) {
-    for (const kind of KIND_PRECEDENCE) {
+    for (const tier of KIND_TIERS) {
       let best: ScreenRect | null = null;
       let bestDepth = Infinity;
       let bestMargin = -Infinity;
 
       for (const rect of rects) {
-        if (rect.kind !== kind) continue;
+        if (!tier.includes(rect.kind)) continue;
         const m = margin(rect, x, y);
         if (m <= floor) continue;
         const nearer = rect.depth < bestDepth - DEPTH_EPS;

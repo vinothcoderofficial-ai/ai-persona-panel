@@ -13,10 +13,7 @@ import {
   slotCenter,
   slotSize,
 } from "@/store/geometry";
-
-const CARCASS_COLOR = "#b3b8c0";
-const BOARD_COLOR = "#eceef2";
-const EMPTY_SLOT_COLOR = "#565b63";
+import { BOARD_COLOR, CARCASS_COLOR, EMPTY_SPACE_COLOR } from "@/store/palette";
 
 export interface BayProps {
   planogram: Planogram;
@@ -67,13 +64,15 @@ export function Bay({
               const sku = slot.sku_id === null ? undefined : skus.get(slot.sku_id);
 
               // An empty slot is real shelf space: a visible gap, and never a
-              // hover or click target.
+              // hover or click target. Same colour as an unbooked ad fixture,
+              // because they are the same statement about the planogram — see
+              // `palette.ts`.
               if (!sku) {
                 return (
                   <mesh key={slot.slot_id} position={[center.x, center.y, center.z]}>
                     <planeGeometry args={[size.w, size.h]} />
                     <meshStandardMaterial
-                      color={EMPTY_SLOT_COLOR}
+                      color={EMPTY_SPACE_COLOR}
                       polygonOffset
                       polygonOffsetFactor={-1}
                       polygonOffsetUnits={-1}

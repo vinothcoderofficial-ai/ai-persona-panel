@@ -27,6 +27,34 @@ export const SYNTH = "#f59e0b";
 export const GREY = "#7a828f";
 export const ALERT = "#ff6b5e";
 
+/**
+ * The exported session report's palette -- and the one deliberate place this
+ * app inverts itself.
+ *
+ * Every screen above is dark, because it is looked at in a dim room and filmed.
+ * The report is not looked at: it is printed. Its stated delivery mechanism is
+ * the browser's own print-to-PDF, and a `#12151b` page either arrives as a
+ * toner-soaked black rectangle or -- far likelier, because browsers drop
+ * backgrounds when printing by default -- as `#e8eaed` text on white paper,
+ * which is illegible. Neither outcome is a document a participant can keep.
+ *
+ * So the report is authored light, on paper, and carries the app's identity in
+ * the one place identity actually matters here: real is still blue and
+ * synthetic is still amber, so a reader who saw the dashboard recognises the
+ * document. The screen values cannot be reused verbatim -- `REAL` scores 3.1:1
+ * against white and `SYNTH` 2.2:1, both below WCAG AA for text -- so these are
+ * the same two hues darkened to 7.1:1 and 6.3:1 respectively. Same meaning,
+ * legible on paper.
+ */
+export const PAPER = "#ffffff";
+export const PAPER_INK = "#14171c";
+export const PAPER_MUTED = "#5a626e";
+export const PAPER_RULE = "#d8dce3";
+/** `REAL`, darkened for white paper. */
+export const REAL_PRINT = "#1b52b8";
+/** `SYNTH`, darkened for white paper. */
+export const SYNTH_PRINT = "#8a5300";
+
 export const root: CSSProperties = {
   position: "fixed",
   inset: 0,

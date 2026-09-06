@@ -113,10 +113,18 @@ Three architecture facts that are load-bearing and easy to get wrong:
 
 ## Demo GIF
 
-**Not recorded.** SPEC M8 asks for a 15-second GIF of the what-if panel here and there is no
-`make readme-gif` target; recording it is a manual step described in
-[`docs/video/shotlist.md`](docs/video/shotlist.md) (shot 5). Rather than link an image that does
-not exist, here is what the shot shows and how to reproduce it live in about a minute:
+![SKU_008 moved through all five bay-1 shelf levels, per-persona fixation probability recomputed at each one](docs/figures/whatif_eye_level.gif)
+
+`make readme-gif` regenerates it. It is **not a screen recording** — it is drawn from five real
+simulator runs, one per shelf level, at 10,000 shoppers per persona and seed 42, and each frame
+carries the `sim_run_id` of the run that produced it. No frame is interpolated between states,
+because a tweened frame would show a number no run ever produced. The figure shows the synthetic
+panel only, and says so: there is no real panel to draw.
+
+It is deliberately not wired into `make eval`. `analytics/report.py` would write the filename into
+`RESULTS.md`, and CI fails if `RESULTS.md` moves by a byte.
+
+To drive the same thing live, which is shot 5 of [`docs/video/shotlist.md`](docs/video/shotlist.md):
 
 ```
 make api            # terminal 1
@@ -161,8 +169,8 @@ the store will render.
 | `make test` | `pytest` + `vitest` — **685 Python tests and 315 web tests across 30 files, all green** at the time of writing |
 | `make eval` | Regenerate `RESULTS.md` and `docs/figures/*.png` from committed evidence |
 
-There is no `make demo` and no `make readme-gif` (PLAN §13 cut Docker Compose and `make demo`;
-the GIF target was never built). CI is `.github/workflows/ci.yml`: pytest with schema
+There is no `make demo` (PLAN §13 cut Docker Compose and `make demo`). `make readme-gif` **is**
+built and regenerates the figure at the top of this file from real simulator runs. CI is `.github/workflows/ci.yml`: pytest with schema
 validation, vitest with `tsc`, and a third job that re-runs `scripts/eval.py` and fails if
 `RESULTS.md` moves by a single byte — SPEC's own acceptance line, so a stale report cannot sit in
 the repo describing numbers the code no longer produces. `LLM_OFFLINE=1` is set for the whole
@@ -182,9 +190,33 @@ Parameters may be written on either side of the `#`; on a collision the hash win
 | `…/#/spectator` | The same, following the last session started in this browser. It says on screen that it is doing so. |
 | `…/#/spectator?session=demo&fake=1` | The server's synthetic demo stream, for when no session is running. It draws itself with a yellow border and a banner so a fake frame can never be mistaken for a real one. |
 | `…/#/whatif` | Move a SKU or a creative, re-run the population, read the lift. |
-| `…/#/dashboard?session=<id>&variant=<id>` | Real vs synthetic attention bars, Spearman, purchase-share MAE for one session. |
+| `…/#/dashboard?session=<id>&variant=<id>` | Real vs synthetic attention bars, Spearman, purchase-share MAE for one session. Exports a session report — see below. |
 | `…/#/dashboard?experiment=<id>` | An experiment that has already been run. |
 | `…/#/dashboard` | Follows the last session started in this browser, and says so. |
+
+### The session report
+
+`#/dashboard` exports a finished session as a self-contained HTML document — print it to PDF from
+the browser — and as JSON. It leads with the **pre-registration**, not the correlation: the SHA-256
+of the locked prediction, the time it was locked, and the statement that the prediction was hashed
+on `POST /sessions` before the session could record an event. That ordering is what the report is
+evidence *for*; the correlation is just a number until you know the prediction preceded it.
+
+It is built to be hard to over-read:
+
+- **The capture mode is stated at the top.** A `cursor_only` session's report says in plain words
+  that it measured cursor dwell and not gaze, and that nothing in it supports a claim about where
+  the shopper looked. This exists because a session that silently degrades to the mouse produces
+  numbers that look exactly like gaze numbers.
+- **A session that recorded no events reports the real side as absent** and withholds both headline
+  metrics, rather than printing the endpoint's guarded zero. The real column is dropped from the
+  per-slot table entirely; the synthetic side, which really was computed, still shows.
+- **A section named "what these numbers cannot support"** — one session is not a panel, there is no
+  noise ceiling to read the Spearman against, and one variant is not a holdout.
+- The report is set light-on-white, the one place this app inverts itself, because its delivery
+  mechanism is print. The real/synthetic blue and amber are darkened to hold contrast on paper.
+
+Generated in the browser from data the dashboard already has: no report endpoint, no schema change.
 
 Copy `.env.example` to `.env` and add an LLM key before generating persona policies or traces.
 `LLM_OFFLINE=1` serves everything from `data/cache/` with no network.
@@ -344,8 +376,10 @@ PLAN §12's table, with an honest status against each row.
 | Roadmap for Brand Lift / CPS | **S22** — [`docs/integration.md`](docs/integration.md) + `sim/persona_survey.py` | **Partial** | Delivered as a written artifact plus code, not a slide: the survey instrument, the per-persona and population roll-up, and the design for seeding persona shares from CPS demographics. But **no CPS data has been obtained or used**, no Brand Lift study has been run, and no survey answer has been produced — that needs an LLM key, and the survey module refuses to write a cache without one, exactly as `slow_agent.py` does. |
 | Foundation for AR / spatial / AI shopping | Planogram JSON renderer-agnostic; S20 video ingest | **Partial** | The planogram is a plain JSON document with metric bay dimensions and per-slot geometry; the React renderer is one consumer of it and the API never assumes a renderer. The S20 video-ingest path that would let a phone clip become a store was dropped. |
 
-Additional SPEC M8 commitments, outside PLAN §12's table: `.github/workflows/ci.yml` — **not
-built**. `make demo` — **cut** by PLAN §13. `make readme-gif` — **not built**. `RESULTS.md`
+Additional SPEC M8 commitments, outside PLAN §12's table: `.github/workflows/ci.yml` — **built**
+(three jobs, one of them the RESULTS.md byte-check). `make demo` — **cut** by PLAN §13.
+`make readme-gif` — **built**, and drawn from five real simulator runs rather than screen-captured.
+`RESULTS.md`
 byte-identical from committed data — **holds** (the experiment id is content-addressed), but on
 an empty panel, which is a weaker test than the one SPEC intended.
 

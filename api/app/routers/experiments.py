@@ -164,6 +164,15 @@ def _build_experiment(variant_id: str, session_id: str, db_session: Session) -> 
     return {
         "variant_id": variant_id,
         "session_id": session_id,
+        # The mode is reported, not just consumed. It selected the fusion
+        # weights a few lines above -- for BOTH panels -- so the same events
+        # under "cursor_only" and under "webcam" are two different attention
+        # vectors, and every number below it is conditional on which one this
+        # was. Leaving it out meant a consumer could render an attention
+        # Spearman with nothing on screen saying whether it describes gaze or
+        # a mouse pointer; `web/src/dashboard/report.ts` puts it at the top of
+        # the exported session report for exactly that reason.
+        "mode": mode,
         "n_synth": N_RUNS,
         "seed": SEED,
         "slot_ids": slot_ids,

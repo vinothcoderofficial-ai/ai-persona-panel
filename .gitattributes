@@ -1,0 +1,63 @@
+# Line endings are decided here, not by whatever `core.autocrlf` each of us
+# happens to have set.
+#
+# The symptom that earned this file: `make seed` on Windows rewrote all
+# thirteen `data/*.json` through `Path.write_text`, which translates "\n" to
+# `os.linesep`. On a clone whose git was not normalising, every one of them
+# then showed as modified in `git status` with an empty `git diff` -- so
+# anybody looking for a real seed-data change had to first prove that thirteen
+# files of noise were noise. That matters more here than in most repositories:
+# `data/` is the shelf both panels are claimed to have shopped, and
+# `predictions/` is evidence. "Modified, but only whitespace" is not a state
+# either of those should ever be in.
+#
+# `scripts/make_seed_data.py` now writes LF itself, which fixes the generator.
+# This fixes it for every file, every editor and every clone.
+#
+# Adding this changed nothing that was already committed: every tracked text
+# file in the index was verified LF first, so no file starts showing as
+# modified because of it.
+
+# Detect text, store it LF, and check it out LF. A generated file and the
+# committed one are then byte-for-byte equal on all three platforms.
+* text=auto eol=lf
+
+# Spelled out for the files that carry the contract, the seed data, the
+# evidence and the code, so none of them can be reinterpreted by an editor
+# setting or a stray tool.
+*.json     text eol=lf
+*.md       text eol=lf
+*.py       text eol=lf
+*.ts       text eol=lf
+*.tsx      text eol=lf
+*.html     text eol=lf
+*.css      text eol=lf
+*.yml      text eol=lf
+*.yaml     text eol=lf
+*.ini      text eol=lf
+*.txt      text eol=lf
+*.mermaid  text eol=lf
+Makefile   text eol=lf
+
+# The one exception, and the reason `* text=auto eol=lf` is not enough on its
+# own: cmd.exe is the only interpreter in this repository that cares. Batch
+# files get CRLF in the working tree; git still stores them LF.
+*.bat      text eol=crlf
+
+# Binary. Never converted, never diffed as text. `data/models/WaterBottle.glb`
+# is the only one of these that is actually committed -- it is the Khronos CC0
+# sample model, and its own directory records the hash it must keep -- but the
+# generated textures under `web/public/textures/` and the vision clips under
+# `data/vision/` are `.gitignore`d rather than impossible, so they are listed
+# too in case one is ever committed deliberately.
+*.glb      binary
+*.png      binary
+*.jpg      binary
+*.jpeg     binary
+*.gif      binary
+*.ico      binary
+*.mp4      binary
+*.db       binary
+*.woff     binary
+*.woff2    binary
+*.ttf      binary

@@ -17,6 +17,7 @@ import { FixationFilter, fixationPayload, type Fixation } from "@/capture/Fixati
 import type { GazeTracker } from "@/capture/GazeTracker";
 import { evaluate, summarise } from "@/capture/SessionGate";
 import type { EventSink } from "@/capture/SessionSocket";
+import { readLastSession, type LastSession } from "@/session/lastSession";
 import { AisleDisplay } from "@/store/AisleDisplay";
 import { Bay } from "@/store/Bay";
 import { StationController } from "@/store/StationController";
@@ -63,6 +64,37 @@ export interface PlanogramSceneProps {
    * has no fixations at all, so judging it on coverage would reject every one.
    */
   mode: Session["mode"];
+  /**
+   * Which arm of the experiment this store is running, for the HUD.
+   *
+   * Optional, and normally left off: the resolved planogram carries no variant
+   * id at all (`resolve()` keeps the *base* planogram_id, so a variant with no
+   * patches resolves deep-equal to the base), so when this is absent the arm is
+   * recovered from the note `rememberSession` left for this session id - see
+   * `armOfSession` below. Passing it explicitly wins, which is the seam for
+   * main.tsx to hand down the `variant_id` it already has.
+   */
+  variantId?: string;
+}
+
+/**
+ * The arm this session is on, or null - never a guess.
+ *
+ * `main.tsx` records `session.variant_id` - the arm the *server* echoed back
+ * from `POST /sessions`, after the prediction was locked against it - together
+ * with the session id it belongs to, and it does that before the store mounts.
+ * Matching the two ids is what makes the note evidence rather than a hint: a
+ * note from another tab's session, or a stale one from last week's run, names
+ * a different id and is refused.
+ *
+ * Refused, not fallen back on. `lastSession.ts` holds itself to "it may not
+ * invent" for the same reason this does: a HUD confidently captioning a
+ * shopper with the wrong arm is worse than one that admits it does not know,
+ * because the wrong caption is the thing an operator would trust and stop
+ * checking.
+ */
+export function armOfSession(sessionId: string, note: LastSession | null): string | null {
+  return note !== null && note.session_id === sessionId ? note.variant_id : null;
 }
 
 function clamp(value: number, low: number, high: number): number {
@@ -172,6 +204,7 @@ export function PlanogramScene({
   tracker,
   consent,
   mode,
+  variantId,
 }: PlanogramSceneProps) {
   const [stationIndex, setStationIndex] = useState(0);
   const [rects, setRects] = useState<ScreenRect[]>([]);
@@ -197,6 +230,16 @@ export function PlanogramScene({
   const [sceneError, setSceneError] = useState<string | null>(null);
   const onSceneError = useCallback((error: unknown) => setSceneError(errorMessage(error)), []);
   const nextLineKey = useRef(1);
+
+  // Read once, at mount. main.tsx writes the note before it renders this
+  // component at all - the session and its prediction lock exist on the server
+  // from the moment `createSession` returns, and the note is written on the
+  // next line - so there is nothing later to wait for, and re-reading a
+  // localStorage another tab can write would let a second store change the arm
+  // printed over a run in progress.
+  const [arm] = useState<string | null>(
+    () => variantId ?? armOfSession(logger.sessionId, readLastSession()),
+  );
 
   const cursorRef = useRef<CursorTracker | null>(null);
   if (cursorRef.current === null) cursorRef.current = new CursorTracker();
@@ -555,6 +598,27 @@ export function PlanogramScene({
         <div style={{ opacity: 0.7 }}>
           Station {stationIndex + 1} of {planogram.bays.length} — bay {stationId}
         </div>
+        {/*
+          Which arm, and which tracker. Neither could be read off this screen
+          before: `?variant=D` and `?variant=A` opened identically, and a
+          calibration that failed validation degraded the session to
+          `cursor_only` — the documented, correct response, not a fault — with
+          nothing anywhere saying so. An operator running people back to back
+          could only find out afterwards, by which time the session is evidence.
+
+          Static text, deliberately. CLAUDE.md keeps the shopper's own gaze dot
+          off this screen because people stare at their dot and corrupt the
+          measurement; two labels that cannot change while the session runs
+          report nothing about how the shopper is doing and give them nothing
+          to chase. Dim and small for the same reason — this is for the person
+          setting the run up, not for the person being measured.
+        */}
+        <div style={sessionLineStyle} data-testid="hud-session">
+          <span style={chipStyle}>Variant {arm ?? "unknown"}</span>
+          <span style={chipStyle}>
+            {mode === "webcam" ? "Webcam gaze" : "Cursor only"}
+          </span>
+        </div>
         <div style={{ opacity: 0.55, marginTop: 4 }}>
           Left and right arrow keys move between bays.
         </div>
@@ -678,6 +742,22 @@ const hudStyle: CSSProperties = {
   borderRadius: 8,
   background: "rgba(12,14,18,0.72)",
   pointerEvents: "none",
+};
+
+const sessionLineStyle: CSSProperties = {
+  display: "flex",
+  gap: 6,
+  marginTop: 6,
+};
+
+/** Quiet enough to be furniture: an operator's label, not a shopper's target. */
+const chipStyle: CSSProperties = {
+  padding: "1px 7px",
+  borderRadius: 999,
+  fontSize: 11,
+  letterSpacing: 0.3,
+  color: "rgba(232,234,237,0.75)",
+  background: "rgba(232,234,237,0.10)",
 };
 
 const arrowStyle: CSSProperties = {

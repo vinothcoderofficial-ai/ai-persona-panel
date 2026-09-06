@@ -286,7 +286,12 @@ export function WhatIfPanel(props: WhatIfPanelProps) {
     <div style={root} data-testid="whatif-panel" data-stale={String(stale)}>
       <header style={headerStyle}>
         <div>
-          <div style={panelHeading}>ShopperTwin what-if</div>
+          <div style={headingRowStyle}>
+            <div style={panelHeading}>ShopperTwin what-if</div>
+            <a data-testid="whatif-home-link" style={homeLinkStyle} href="#/home">
+              ← All screens
+            </a>
+          </div>
           <div style={{ ...mono, fontSize: 13, color: GREY }}>
             base {planogram?.planogram_id ?? "—"} · via variant {variantId} (no patches)
           </div>
@@ -370,6 +375,42 @@ const headerStyle: CSSProperties = {
   alignItems: "flex-start",
   justifyContent: "space-between",
   marginBottom: 14,
+};
+
+const headingRowStyle: CSSProperties = {
+  display: "flex",
+  flexWrap: "wrap",
+  gap: 12,
+  alignItems: "baseline",
+};
+
+/**
+ * The way back to `#/home`.
+ *
+ * CLAUDE.md keeps navigation chrome off the store and off the spectator screen,
+ * because a person is being measured against one and the other is filmed beside
+ * them. This page is neither: it creates no session, it measures nobody, and it
+ * is the operator's own planning screen. Without a link here the launcher - the
+ * only page that says what the four screens are and what the four variants
+ * mean - was reachable only by already knowing its URL, which is exactly the
+ * knowledge a launcher exists to remove.
+ *
+ * Deliberately quiet. The page is on the demo shot list for its figures, so
+ * this borrows the panel border rather than any colour `whatif/styles.ts`
+ * exports: every one of those already means something about a run (a rise, a
+ * fall, the new run, the old one), and a navigation link must not look like a
+ * result.
+ */
+const homeLinkStyle: CSSProperties = {
+  padding: "4px 12px",
+  borderRadius: 999,
+  border: `1px solid ${PANEL_BORDER}`,
+  color: INK,
+  fontSize: 12,
+  fontWeight: 600,
+  letterSpacing: "0.06em",
+  textDecoration: "none",
+  whiteSpace: "nowrap",
 };
 
 const elapsedStyle: CSSProperties = {

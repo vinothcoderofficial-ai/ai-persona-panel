@@ -12,6 +12,17 @@ import {
 } from "recharts";
 import { toChartRows } from "@/dashboard/chartRows";
 import {
+  NOT_APPLICABLE,
+  formatMetric,
+  type ExperimentResult,
+} from "@/dashboard/experimentResult";
+import {
+  buildReportHtml,
+  buildReportJson,
+  fetchPredictionLock,
+  reportFilename,
+} from "@/dashboard/report";
+import {
   GREY,
   INK,
   PANEL_BG,
@@ -28,31 +39,18 @@ import {
   root,
 } from "@/dashboard/styles";
 
+/**
+ * Re-exported from `@/dashboard/experimentResult`, which is where the response
+ * shape and the "a figure that is not a number is never printed as one" rule
+ * now live: the exported session report applies the identical rule, and the
+ * printed document and the screen must not be able to disagree about what a
+ * figure is.
+ */
+export { NOT_APPLICABLE, formatMetric };
+export type { ExperimentResult };
+
 /** The API serves SPEC's root paths; the vite dev proxy strips this prefix. */
 const API_BASE = "/api";
-
-/**
- * POST /experiments' response shape (S5 task brief, decision 4). This
- * deliberately does NOT satisfy schemas/metrics.schema.json -- that schema is
- * the full cross-variant evaluation (noise ceiling, decision agreement,
- * holdout variants) that is S17-S19's job, so there is no generated contract
- * type for it yet. This interface is this page's own honest description of
- * what the endpoint actually returns today.
- */
-interface ExperimentResult {
-  experiment_id: string;
-  variant_id: string;
-  session_id: string;
-  n_synth: number;
-  seed: number;
-  slot_ids: string[];
-  real_attention: Record<string, number>;
-  synth_attention: Record<string, number>;
-  attention_spearman: number;
-  purchase_share_mae: number;
-  real_purchase_share: Record<string, number>;
-  synth_purchase_share: Record<string, number>;
-}
 
 type LoadState =
   | { status: "loading" }
@@ -112,35 +110,6 @@ async function fetchExperiment({
   );
 }
 
-/** The words shown wherever a headline metric could not be computed. */
-export const NOT_APPLICABLE = "not applicable";
-
-/**
- * A headline metric as fixed-precision text, or `NOT_APPLICABLE` when there
- * is no real number behind it.
- *
- * `ExperimentResult.attention_spearman` and `.purchase_share_mae` are typed
- * above as required numbers, and in practice they always are one:
- * `analytics/metrics.py` guards both against `NaN` and returns 0.0 rather
- * than an undefined ratio (see that module's docstrings), so nothing in this
- * endpoint's own maths ever produces a missing value. But `ExperimentResult`
- * is -- per its docstring -- this page's own honest description of the
- * endpoint, not a generated, checked contract: `(await res.json()) as
- * ExperimentResult` is a type assertion, not a validation, and an
- * `ExperimentRecord` persisted before one of these fields existed would come
- * back over the wire without it. Calling `.toFixed()` on that `undefined`
- * would crash the page.
- *
- * So this applies the same rule `web/src/whatif/lift.ts:formatLift` uses for
- * the what-if panel's own figures: only a finite number is a figure, and
- * anything else -- missing, `null`, `NaN` -- is "not applicable", never a
- * fabricated 0. A computed 0 (e.g. no rank correlation at all) is a real
- * result and is shown as one, not caught by the same net.
- */
-export function formatMetric(value: number, digits: number): string {
-  return Number.isFinite(value) ? value.toFixed(digits) : NOT_APPLICABLE;
-}
-
 function HeadlineFigure({
   testId,
   label,
@@ -163,6 +132,119 @@ function HeadlineFigure({
       >
         {formatMetric(value, digits)}
       </div>
+    </div>
+  );
+}
+
+/**
+ * Hand the browser a file it did not fetch.
+ *
+ * The report is generated here, in the page, out of data the page already has
+ * -- there is no report endpoint and there is no server round trip -- so the
+ * only way it reaches the operator is as an object URL the browser is told to
+ * save. The URL is revoked on the next macrotask rather than on the next
+ * statement: `click()` only *queues* the download, and revoking synchronously
+ * has been observed to cancel it. Leaving it un-revoked would pin the whole
+ * document in memory for the life of the tab.
+ */
+function download(filename: string, mime: string, contents: string): void {
+  const url = URL.createObjectURL(new Blob([contents], { type: mime }));
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
+/**
+ * The two exports, side by side, above the numbers they describe.
+ *
+ * Both are built from the same `ReportInput` by `@/dashboard/report`, so the
+ * printed evidence and the machine-readable evidence cannot disagree. The lock
+ * is fetched at the moment of export rather than held in page state: it is the
+ * one thing in the document that is not already on screen, it never changes
+ * once written, and a lock that could not be read produces a report that says
+ * so rather than an export that fails.
+ */
+function ExportRow({ result }: { result: ExperimentResult }) {
+  async function exportReport(format: "html" | "json"): Promise<void> {
+    const lock = await fetchPredictionLock(result.session_id);
+    const input = { result, lock, generatedAt: new Date().toISOString() };
+    if (format === "html") {
+      download(
+        reportFilename(result, "html"),
+        "text/html;charset=utf-8",
+        buildReportHtml(input),
+      );
+    } else {
+      // Indented, and with the trailing newline every text file should have:
+      // this one is meant to be opened and read as much as parsed.
+      download(
+        reportFilename(result, "json"),
+        "application/json;charset=utf-8",
+        JSON.stringify(buildReportJson(input), null, 2) + "\n",
+      );
+    }
+  }
+
+  return (
+    <section style={panel}>
+      <div style={panelHeading}>Session report</div>
+      <div style={exportRowStyle}>
+        <button
+          type="button"
+          data-testid="experiment-export-html"
+          style={exportButtonStyle}
+          onClick={() => {
+            void exportReport("html");
+          }}
+        >
+          Export report (HTML)
+        </button>
+        <button
+          type="button"
+          data-testid="experiment-export-json"
+          style={exportButtonStyle}
+          onClick={() => {
+            void exportReport("json");
+          }}
+        >
+          Export data (JSON)
+        </button>
+      </div>
+      <div style={{ ...note, marginTop: 10 }}>
+        A single self-contained file: the locked prediction hash and the time it was
+        locked, the capture mode these figures were fused under, the per-slot comparison,
+        and what the comparison cannot support. Print it to PDF from the browser.
+      </div>
+    </section>
+  );
+}
+
+/**
+ * The page's name, and the way back to `#/home`.
+ *
+ * CLAUDE.md keeps navigation chrome off the store and off the spectator screen,
+ * because a person is being measured against one and the other is filmed beside
+ * them. The dashboard is neither: it is read after a session has finished, by
+ * the operator, and it is where a demo ends up. Without a link here the
+ * launcher - the only page that says what the four screens are - was reachable
+ * only by already knowing its URL.
+ *
+ * Rendered in all three of this component's states, not only the one that
+ * loaded. The dashboard is the screen most often arrived at with the wrong URL:
+ * it needs `?experiment=` or `?session=&variant=` and says so, and the launcher
+ * is what turns the session the store just opened into one of those links. A
+ * way out that appears only once the page has succeeded is a way out that is
+ * never there when it is wanted.
+ */
+function TitleRow() {
+  return (
+    <div style={titleRowStyle}>
+      <div style={panelHeading}>ShopperTwin dashboard</div>
+      <a data-testid="experiment-home-link" style={homeLinkStyle} href="#/home">
+        ← All screens
+      </a>
     </div>
   );
 }
@@ -201,6 +283,9 @@ export default function Experiment() {
   if (state.status === "loading") {
     return (
       <div style={root}>
+        <header style={headerStyle}>
+          <TitleRow />
+        </header>
         <div style={panel} data-testid="experiment-loading">
           Loading experiment…
         </div>
@@ -211,6 +296,14 @@ export default function Experiment() {
   if (state.status === "error") {
     return (
       <div style={root}>
+        {/* The header comes with the error on purpose. The commonest failure
+            here is `fetchExperiment`'s own refusal - "Experiment needs either
+            ?experiment=<id> or ?session=<id>&variant=<id>" - and the launcher
+            is the page that writes those URLs from the session the store just
+            opened. A dead end is the one thing this screen must not be. */}
+        <header style={headerStyle}>
+          <TitleRow />
+        </header>
         <div role="alert" style={alertPanel} data-testid="experiment-error">
           Could not load experiment: {state.message}
         </div>
@@ -224,7 +317,7 @@ export default function Experiment() {
   return (
     <div style={root} data-testid="experiment-dashboard">
       <header style={headerStyle}>
-        <div style={panelHeading}>ShopperTwin dashboard</div>
+        <TitleRow />
         <h1 style={headingStyle}>
           Experiment{" "}
           <span style={mono} data-testid="experiment-id">
@@ -264,12 +357,24 @@ export default function Experiment() {
             >
               {result.session_id}
             </dd>
+            <dt style={detailLabelStyle}>Capture mode</dt>
+            <dd
+              style={{ ...mono, ...detailValueStyle }}
+              data-testid="experiment-mode"
+            >
+              {/* Not decoration. This value selected the fusion weights for BOTH
+                  panels, so every figure on this page is conditional on it -- and
+                  a `cursor_only` session measured a mouse pointer, not gaze. */}
+              {result.mode ?? <span style={absent}>{NOT_APPLICABLE}</span>}
+            </dd>
             <dt style={detailLabelStyle}>Synthetic shoppers per persona</dt>
             <dd style={detailValueStyle}>{result.n_synth}</dd>
             <dt style={detailLabelStyle}>Seed</dt>
             <dd style={detailValueStyle}>{result.seed}</dd>
           </dl>
         </section>
+
+        <ExportRow result={result} />
 
         <section style={panel}>
           <div style={panelHeading}>Attention by slot</div>
@@ -316,6 +421,32 @@ const headerStyle: CSSProperties = {
   marginBottom: 14,
 };
 
+const titleRowStyle: CSSProperties = {
+  display: "flex",
+  flexWrap: "wrap",
+  gap: 12,
+  alignItems: "baseline",
+};
+
+/**
+ * Quiet on purpose. This screen reads out how close synthetic came to real, and
+ * `dashboard/styles.ts` spends its colours saying which of the two a figure is
+ * - real in blue, synthetic in amber, grey for a figure that does not exist. A
+ * navigation link takes none of them: it borrows the panel border, so it cannot
+ * be mistaken on camera for something that was measured.
+ */
+const homeLinkStyle: CSSProperties = {
+  padding: "4px 12px",
+  borderRadius: 999,
+  border: `1px solid ${PANEL_BORDER}`,
+  color: INK,
+  fontSize: 12,
+  fontWeight: 600,
+  letterSpacing: "0.06em",
+  textDecoration: "none",
+  whiteSpace: "nowrap",
+};
+
 const headingStyle: CSSProperties = {
   margin: "4px 0 0",
   fontSize: 22,
@@ -348,6 +479,31 @@ const absentFigure: CSSProperties = {
   ...absent,
   fontSize: 22,
   lineHeight: 1.4,
+};
+
+const exportRowStyle: CSSProperties = {
+  display: "flex",
+  flexWrap: "wrap",
+  gap: 10,
+};
+
+/**
+ * Borrowed from `homeLinkStyle` for the same reason: `dashboard/styles.ts`
+ * spends its colours saying whether a figure is real, synthetic or absent, and
+ * a control that produces a document is none of those. It must not be mistaken
+ * on camera for something that was measured.
+ */
+const exportButtonStyle: CSSProperties = {
+  padding: "7px 14px",
+  borderRadius: 8,
+  border: `1px solid ${PANEL_BORDER}`,
+  background: "transparent",
+  color: INK,
+  fontFamily: "inherit",
+  fontSize: 13,
+  fontWeight: 600,
+  letterSpacing: "0.04em",
+  cursor: "pointer",
 };
 
 const detailGridStyle: CSSProperties = {

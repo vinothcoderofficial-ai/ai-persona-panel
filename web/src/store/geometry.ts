@@ -142,6 +142,30 @@ export function isFlatAd(ad: AdSlot): boolean {
  * Ad placement follows the attachment first: attached to a shelf it hangs under
  * that board, attached to the bay it is a floor decal on the ground or a header
  * across the top.
+ *
+ * The header overlaps the top-shelf facings, and cannot be moved off them
+ * ------------------------------------------------------------------------
+ * A header hangs from the top of the *carcass*: `B3` is 1.80 m tall, so it runs
+ * 1.60–1.80 m at `AD_Z`, 5 cm proud of the shelf lip. The top shelf sits at
+ * 1.70 m carrying 0.22 m packs, so the facings run 1.70–1.92 m — 12 cm above
+ * the carcass, as the aisle-display note below already records. The two overlap
+ * through 10 cm, and the header is the nearer, so it is drawn over the bottom
+ * 45% of `B3S1P1` and `B3S1P2`.
+ *
+ * That looks like a placement bug and it is not one, so do not "fix" it by
+ * moving the header: there is nowhere to move it to. Projecting the station
+ * camera (fov 50 at `[bx, 1.5, 2.2]` looking at `[bx, 1.1, 0]`) gives a top of
+ * frame at the `AD_Z` plane of y = 2.011 m, at *every* aspect ratio — the
+ * vertical field of view is fixed, so a wider window widens the frame and never
+ * raises it. That leaves 9.1 cm of clear frame above the merchandise for a
+ * 20 cm fixture. Hang the header above the packs and half of it is off the top
+ * of the screen; drop it below them and it lands on `B?S2`'s packs instead,
+ * which run 1.45–1.67 m and would be covered by 19 cm rather than 10 cm. Where
+ * it is now is the least-occluding position that is fully in frame.
+ *
+ * What *was* a bug is that `SlotMapper` attributed the covered band to the
+ * packs rather than to the fixture drawn on top of them. That is fixed there,
+ * in `KIND_TIERS`, and pinned by `web/tests/endcapAttribution.test.ts`.
  */
 export function adSlotCenter(planogram: Planogram, bayIndex: number, ad: AdSlot): Vec3 {
   const bay = planogram.bays[bayIndex];
@@ -163,6 +187,69 @@ export function adSlotSize(planogram: Planogram, bayIndex: number, ad: AdSlot): 
   if (shelf) return { w: ad.width_m, h: AD_TALKER_HEIGHT_M };
   if (isFlatAd(ad)) return { w: ad.width_m, h: FLOOR_DECAL_DEPTH_M };
   return { w: ad.width_m, h: AD_HEADER_HEIGHT_M };
+}
+
+/**
+ * The lip around an empty fixture, as a fraction of its *smaller* dimension.
+ *
+ * A fraction of the larger one, or a flat width, closes over the shelf talker:
+ * it is only 10 cm tall, and a 2 cm lip top and bottom would leave 6 cm of
+ * interior, while 3 cm would leave 4 cm and 5 cm would leave nothing at all. A
+ * solid bar is the blank-panel bug in a new colour, so the lip is sized off
+ * whichever dimension can least afford it and capped besides.
+ */
+export const EMPTY_AD_LIP_FRACTION = 0.12;
+export const EMPTY_AD_LIP_MAX_M = 0.02;
+/**
+ * How far the lip stands proud of the panel it frames. Four millimetres is not
+ * resolvable from a station 2 m away — it is there so the two surfaces cannot
+ * z-fight, and the frame is read from its colour, not its relief.
+ */
+export const EMPTY_AD_LIP_RELIEF_M = 0.004;
+
+/** A rectangle in a fixture's own plane, measured from the fixture's centre. */
+export interface FixtureQuad {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+/** The back panel of an empty fixture and the four bars that frame it. */
+export interface EmptyAdFixture {
+  panel: FixtureQuad;
+  /** Top rail, bottom rail, left stile, right stile — they tile the border. */
+  lip: FixtureQuad[];
+}
+
+export function emptyAdLipWidth(size: Size2): number {
+  return Math.min(EMPTY_AD_LIP_MAX_M, Math.min(size.w, size.h) * EMPTY_AD_LIP_FRACTION);
+}
+
+/**
+ * An unbooked ad fixture, drawn as an empty poster holder rather than a blank
+ * plane. See `AdSlot.tsx` for why it is drawn this way and
+ * `web/tests/adFixtureEmpty.test.tsx` for the two properties it has to keep.
+ *
+ * The panel is the full footprint, so an empty fixture hides exactly what a
+ * booked one would: whether `AD_1` is on the endcap must change the creative
+ * and nothing else about how much merchandise the shopper can see, or variants
+ * A, C and D stop differing by only the thing they are meant to differ by.
+ *
+ * The rails span the full width and the stiles only the interior height, which
+ * is what makes the four bars meet at the corners without doubling up on them.
+ */
+export function emptyAdFixtureParts(size: Size2): EmptyAdFixture {
+  const lip = emptyAdLipWidth(size);
+  return {
+    panel: { x: 0, y: 0, w: size.w, h: size.h },
+    lip: [
+      { x: 0, y: (size.h - lip) / 2, w: size.w, h: lip },
+      { x: 0, y: -(size.h - lip) / 2, w: size.w, h: lip },
+      { x: -(size.w - lip) / 2, y: 0, w: lip, h: size.h - 2 * lip },
+      { x: (size.w - lip) / 2, y: 0, w: lip, h: size.h - 2 * lip },
+    ],
+  };
 }
 
 /**

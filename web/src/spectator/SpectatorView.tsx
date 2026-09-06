@@ -365,7 +365,21 @@ export function SpectatorView(props: SpectatorViewProps) {
           No session to watch. Open this page as{" "}
           <code style={mono}>#/spectator?session=&lt;session_id&gt;</code>, or{" "}
           <code style={mono}>#/spectator?session=demo&amp;fake=1</code> for the server&apos;s
-          synthetic demo stream.
+          synthetic demo stream.{" "}
+          {/* The one link on this page, and only in this state. Nothing is
+              being watched here, so nothing is being measured and nothing is
+              worth filming - the rule that keeps chrome off this screen is
+              about the live canvas below, where a second monitor sits beside a
+              person being measured. This panel is instead the exact moment
+              somebody has opened the second monitor and cannot produce a uuid,
+              which is the problem `#/home` was built to solve: it lists every
+              screen and writes the last session's id into this page's own link
+              for them. */}
+          The operator launcher at{" "}
+          <a data-testid="spectator-home-link" style={homeLinkStyle} href="#/home">
+            #/home
+          </a>{" "}
+          lists every screen, and fills that session id in for you.
         </div>
       )}
 
@@ -502,6 +516,22 @@ const alertPanelStyle: CSSProperties = {
   background: "#2a1512",
   color: INK,
   fontSize: 14,
+};
+
+/**
+ * The `#/home` link, used only inside the no-session panel above.
+ *
+ * It sits in a sentence rather than in a corner, and is drawn as one: an
+ * underlined monospace fragment naming the route it goes to, not a button. This
+ * screen is filmed, and a control that looks like a control has to be
+ * unavailable the moment there is anything to watch - which is exactly what
+ * `!hasSession` guarantees.
+ */
+const homeLinkStyle: CSSProperties = {
+  ...mono,
+  color: INK,
+  textDecoration: "underline",
+  whiteSpace: "nowrap",
 };
 
 /**
