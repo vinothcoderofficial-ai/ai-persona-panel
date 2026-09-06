@@ -48,7 +48,15 @@ def _planogram_categories(planogram: dict) -> set[str]:
     return {sku["category"] for sku in planogram["skus"]}
 
 
-def _render_prompt(persona: dict, planogram: dict, baseline_conv: float) -> str:
+def render_prompt(persona: dict, planogram: dict, baseline_conv: float = DEFAULT_BASELINE_CONV) -> str:
+    """The exact instruction `get_policy` sends for this persona and store.
+
+    Public because the AI panel (S26) shows what the model was asked, beside
+    what it answered. A policy with no visible prompt is a number with no
+    provenance - and a second, screen-side rendering of the same template would
+    be a duplicate of the thing it claims to be showing, which is how the two
+    drift apart.
+    """
     template = PROMPT_TEMPLATE_PATH.read_text(encoding="utf-8")
     categories = ", ".join(sorted(_planogram_categories(planogram)))
     brands = ", ".join(sorted(_planogram_brands(planogram)))
@@ -110,7 +118,7 @@ def get_policy(
     if cache_path.exists() and not force:
         return json.loads(cache_path.read_text(encoding="utf-8"))
 
-    prompt = _render_prompt(persona, planogram, baseline_conv)
+    prompt = render_prompt(persona, planogram, baseline_conv)
     schema = _load_schema()
     policy = complete_json(prompt, schema, temperature=0.0, client=client)
 

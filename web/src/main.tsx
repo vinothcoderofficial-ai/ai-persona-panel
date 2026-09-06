@@ -5,6 +5,7 @@ import type { Planogram } from "@/contracts/planogram.schema";
 import type { Session } from "@/contracts/session.schema";
 import { createSession, getResolvedVariant } from "@/api/client";
 import type { ArchetypeLabel, Intake } from "@/capture/archetype";
+import { AiPanel } from "@/ai/AiPanel";
 import { CaptureFlow, type CaptureResult } from "@/capture/CaptureFlow";
 import type { GazeTracker } from "@/capture/GazeTracker";
 import { SessionSocket } from "@/capture/SessionSocket";
@@ -310,13 +311,21 @@ function Dashboard() {
  * A hash is enough here. Each of these screens reads its own params out of the
  * URL, and a router would be three dependencies for one branch.
  */
-type Route = "store" | "home" | "whatif" | "spectator" | "dashboard";
+type Route = "store" | "home" | "ai" | "whatif" | "spectator" | "dashboard";
 
 function routeFromHash(hash: string): Route {
   // #/home is the operator's launcher (an additional route, never the default):
   // four screens that were only reachable by typing their URLs, one of which
   // needed a uuid typed by hand on camera.
   if (hash.startsWith("#/home")) return "home";
+
+  // #/ai is the S26 model screen: which model is configured, whether it can be
+  // called at all, the prompt that produced each persona policy, a button that
+  // asks the model again, and the slow agent's turn-by-turn shopping traces.
+  // It creates no session and measures nobody. It exists because the language
+  // model's work was committed under data/cache/ and rendered by nothing, so
+  // from a running instance there was no evidence a model had been involved.
+  if (hash.startsWith("#/ai")) return "ai";
 
   // #/whatif is the S8 planning screen: change one thing about the shelf and
   // re-run 10,000 synthetic shoppers per persona against it. It creates no
@@ -374,6 +383,7 @@ function Root() {
   }, []);
 
   if (route === "home") return <Launcher />;
+  if (route === "ai") return <AiPanel />;
   if (route === "whatif") return <WhatIfPanel />;
   if (route === "spectator") return <SpectatorView />;
   if (route === "dashboard") return <Dashboard />;

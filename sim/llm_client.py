@@ -85,6 +85,27 @@ class LLMUnavailableError(LLMClientError):
     """
 
 
+class LLMHttpError(LLMClientError):
+    """The provider was reached, and refused the request.
+
+    Distinct from `LLMUnavailableError` (never got there) and
+    `LLMValidationError` (got there, answered, answered wrongly): here the
+    service answered with an error status, and *which* status is the whole
+    diagnosis. A wrong key, an unknown model and an exhausted quota are three
+    different problems with three different fixes, and they are indistinguishable
+    from a generic failure.
+
+    This exists because `raise_for_status()` used to let `httpx.HTTPStatusError`
+    escape untranslated. That surfaced as a raw traceback in a `slow_agent` run,
+    and as an opaque `500 Internal Server Error` on the AI panel - the exact
+    "unavailable, cause unknown" message that screen was built to prevent.
+    """
+
+    def __init__(self, status_code: int, message: str) -> None:
+        super().__init__(message)
+        self.status_code = status_code
+
+
 class LLMValidationError(LLMClientError):
     """The model never produced schema-valid JSON within the retry budget."""
 
@@ -241,6 +262,60 @@ def resolve_model(model: str | None = None) -> str:
     return model or os.environ.get("LLM_MODEL") or _default_model_for(resolve_provider())
 
 
+# What each refusal actually means, in terms of the setting that fixes it. The
+# codes are the ones a real run hits: a stale key, a model name that moved, a
+# spent quota, a throttle. Anything else falls through to the generic line,
+# which still carries the status and the provider's own words.
+_HTTP_ADVICE = {
+    401: "the provider rejected the credential. Check LLM_API_KEY in .env",
+    403: "the provider refused this credential. Check LLM_API_KEY in .env, "
+         "and that the key is allowed to use this model",
+    402: "the account has no remaining credit for this provider",
+    404: "the provider does not know this model. Check LLM_MODEL in .env",
+    429: "the provider is rate limiting this key; wait and try again",
+}
+
+
+def _http_error_message(status_code: int, provider: str, model: str, body: str) -> str:
+    """One sentence naming the status, the configuration, and what to change.
+
+    The provider's own body is appended when there is one: it is the most
+    specific evidence available, and reducing it to a status code throws away
+    the part that most often says exactly what is wrong.
+    """
+    advice = _HTTP_ADVICE.get(
+        status_code,
+        "the provider returned an error status" if status_code < 500
+        else "the provider is failing; this is not a problem with the request",
+    )
+    excerpt = body.strip().replace("\n", " ")[:300]
+    tail = f" Provider said: {excerpt}" if excerpt else ""
+    return (
+        f"{provider} returned HTTP {status_code} for model {model!r}: {advice}.{tail}"
+    )
+
+
+def _raise_for_status(response: Any, provider: str, model: str) -> None:
+    """`raise_for_status()`, with an httpx refusal translated on the way out.
+
+    Only `httpx.HTTPStatusError` is translated. A test double whose
+    `raise_for_status` raises something else is raising something this module
+    has no diagnosis for, and swallowing it into an `LLMHttpError` would be
+    inventing one.
+    """
+    raise_for_status = getattr(response, "raise_for_status", None)
+    if not callable(raise_for_status):
+        return
+    try:
+        raise_for_status()
+    except httpx.HTTPStatusError as exc:
+        status_code = exc.response.status_code
+        body = getattr(exc.response, "text", "") or ""
+        raise LLMHttpError(
+            status_code, _http_error_message(status_code, provider, model, body)
+        ) from exc
+
+
 def _validation_error_summary(errors: list) -> str:
     return "; ".join(
         f"{'/'.join(str(p) for p in e.path)}: {e.message}" if e.path else e.message
@@ -314,9 +389,11 @@ def complete_json(
             transport, url, payload, headers, timeout_s,
             attempts=transport_retries, sleep=sleep,
         )
-        raise_for_status = getattr(response, "raise_for_status", None)
-        if callable(raise_for_status):
-            raise_for_status()
+        # Not inside the retry loop's budget: a refusal is a configuration
+        # problem, and asking the same wrong key three times only takes three
+        # times as long to be told no. Only a schema failure earns a retry,
+        # because only a schema failure changes the prompt.
+        _raise_for_status(response, provider, model_name)
 
         try:
             body = response.json()

@@ -298,6 +298,23 @@ export function Launcher({ readStoredSession = readLastSession }: LauncherProps)
       </div>
 
       <div style={gridStyle}>
+        {/* First of the four, deliberately. "Where is the AI?" is the question
+            a first-time viewer asks before any other, and it was the one thing
+            this launcher could not answer: the model's policies and traces were
+            committed under data/cache/ and rendered by no screen at all. */}
+        <Destination
+          testId="launcher-ai"
+          linkTestId="launcher-ai-link"
+          href="#/ai"
+          title="The model"
+          action="Open the AI panel"
+        >
+          Which model is configured and whether it can be called right now, the exact prompt
+          that turned each archetype into a numeric policy, a button that asks the model
+          again, and the twenty shopping trips it reasoned through per persona — every turn
+          with the reason it gave. Asking again never changes what the simulator runs.
+        </Destination>
+
         <Destination
           testId="launcher-whatif"
           linkTestId="launcher-whatif-link"

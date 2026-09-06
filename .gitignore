@@ -20,6 +20,10 @@ web/public/mediapipe/
 data/vision/*.mp4
 data/vision/overlay_frames/
 predictions/dev/
+# POST /ai/personas/{id}/policy writes here. A re-ask is shown beside the
+# committed policy, never adopted, so this directory is scratch - committing it
+# would put a second, unused answer next to the pre-registered one.
+data/cache/policies/preview/
 .idea/
 .vscode/
 # Agent tooling: launch.json is a local dev-server config, and worktrees/ holds

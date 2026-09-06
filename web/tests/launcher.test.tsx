@@ -93,11 +93,12 @@ afterEach(() => {
   document.body.innerHTML = "";
 });
 
-describe("the four destinations", () => {
+describe("the five destinations", () => {
   it("offers every screen in the demo, so none of them needs a typed URL", () => {
     const view = render();
     for (const testId of [
       "launcher-store",
+      "launcher-ai",
       "launcher-whatif",
       "launcher-spectator",
       "launcher-dashboard",
@@ -107,8 +108,9 @@ describe("the four destinations", () => {
     view.unmount();
   });
 
-  it("links the three hash routes exactly as main.tsx routes them", () => {
+  it("links the four hash routes exactly as main.tsx routes them", () => {
     const view = render();
+    expect(href(view.container, "launcher-ai-link")).toBe("#/ai");
     expect(href(view.container, "launcher-whatif-link")).toBe("#/whatif");
     expect(href(view.container, "launcher-spectator-link")).toBe("#/spectator");
     expect(href(view.container, "launcher-dashboard-link")).toBe("#/dashboard");
@@ -123,6 +125,10 @@ describe("the four destinations", () => {
     expect(text(find(view.container, "launcher-spectator"))).toContain("second monitor");
     expect(text(find(view.container, "launcher-whatif"))).toContain("shelf");
     expect(text(find(view.container, "launcher-dashboard"))).toContain("session");
+    // The AI card is the answer to "where is the AI in this" - the question a
+    // first-time viewer actually asks - so it has to name the model's work
+    // rather than only linking to a screen.
+    expect(text(find(view.container, "launcher-ai"))).toContain("model");
     view.unmount();
   });
 });

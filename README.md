@@ -189,6 +189,7 @@ Parameters may be written on either side of the `#`; on a collision the hash win
 | `…/#/spectator?session=<id>` | Second monitor. Gaze trail, live heatmap vs the locked prediction, agreement meter, prediction badge, clock. |
 | `…/#/spectator` | The same, following the last session started in this browser. It says on screen that it is doing so. |
 | `…/#/spectator?session=demo&fake=1` | The server's synthetic demo stream, for when no session is running. It draws itself with a yellow border and a banner so a fake frame can never be mistaken for a real one. |
+| `…/#/ai` | The language model: which one is configured and whether a call is even possible, the exact prompt that turned each archetype into a numeric policy, a button that asks it again, and the twenty shopping trips it reasoned through per persona — every turn with the reason it gave. Asking again writes to `data/cache/policies/preview/` and never touches the committed policy. |
 | `…/#/whatif` | Move a SKU or a creative, re-run the population, read the lift. |
 | `…/#/dashboard?session=<id>&variant=<id>` | Real vs synthetic attention bars, Spearman, purchase-share MAE for one session. Exports a session report — see below. |
 | `…/#/dashboard?experiment=<id>` | An experiment that has already been run. |

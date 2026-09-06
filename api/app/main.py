@@ -11,7 +11,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from api.app.db import init_db, seed_all
-from api.app.routers import experiments, planograms, sessions, variants, whatif, ws
+from api.app.routers import ai, experiments, planograms, sessions, variants, whatif, ws
 
 
 @asynccontextmanager
@@ -41,3 +41,7 @@ app.include_router(sessions.router)
 app.include_router(experiments.router)
 app.include_router(whatif.router)
 app.include_router(ws.router)
+# S26: the AI layer, made visible and triggerable. Everything under /ai reads
+# what sim/ already produced; only POST /ai/personas/{id}/policy calls a model,
+# and it writes to a preview directory rather than the committed cache.
+app.include_router(ai.router)

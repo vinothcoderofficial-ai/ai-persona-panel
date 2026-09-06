@@ -178,6 +178,16 @@ describe("changing the hash changes the screen, with no reload", () => {
     expect(has("consent-agree")).toBe(false);
   });
 
+  it("reaches the AI panel at #/ai", async () => {
+    await boot("/");
+    await goTo("#/ai");
+    // The panel fetches its status on mount; the harness's fetch stub answers
+    // nothing useful, so what is asserted here is that the screen is routed to
+    // at all - the panel's own behaviour is web/tests/aiPanel.test.tsx.
+    expect(has("ai-panel")).toBe(true);
+    expect(has("consent-agree")).toBe(false);
+  });
+
   it("reaches the dashboard at #/dashboard", async () => {
     await boot("/");
     await goTo("#/dashboard");

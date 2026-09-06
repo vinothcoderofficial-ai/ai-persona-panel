@@ -10,9 +10,16 @@ from __future__ import annotations
 
 import json as json_module
 
+import httpx
 import pytest
 
-from sim.llm_client import LLMUnavailableError, LLMValidationError, complete_json
+from sim.llm_client import (
+    LLMClientError,
+    LLMHttpError,
+    LLMUnavailableError,
+    LLMValidationError,
+    complete_json,
+)
 
 # A small, self-contained schema -- deliberately not policy.schema.json, so these tests exercise
 # complete_json's own contract without depending on sim/policy.py's shape.
@@ -146,3 +153,103 @@ def test_no_api_key_and_no_injected_client_raises_without_attempting_a_call(monk
     monkeypatch.delenv("LLM_API_KEY", raising=False)
     with pytest.raises(LLMUnavailableError):
         complete_json("describe the persona", SCHEMA)
+
+
+# ---------------------------------------------------------------------------
+# The provider answered, and refused (S26)
+# ---------------------------------------------------------------------------
+
+class RefusingResponse:
+    """A real `httpx.Response` for an error status, in the one respect that matters.
+
+    `httpx.Response.raise_for_status()` raises `HTTPStatusError`, and before
+    `LLMHttpError` existed that exception escaped `complete_json` untranslated -
+    so a wrong API key surfaced as an httpx traceback in a CLI run, and as an
+    opaque `500 Internal Server Error` on the AI panel, which is the exact
+    "unavailable, cause unknown" failure that screen exists to prevent.
+    """
+
+    def __init__(self, status_code: int, text: str = "") -> None:
+        self.status_code = status_code
+        self.text = text
+
+    def json(self) -> dict:  # pragma: no cover - never reached; the raise comes first
+        return {}
+
+    def raise_for_status(self) -> None:
+        request = httpx.Request("POST", "https://api.anthropic.com/v1/messages")
+        response = httpx.Response(self.status_code, text=self.text, request=request)
+        response.raise_for_status()
+
+
+class RefusingTransport:
+    def __init__(self, status_code: int, text: str = "") -> None:
+        self.status_code = status_code
+        self.text = text
+        self.calls: list[dict] = []
+
+    def post(self, url, **kwargs):
+        self.calls.append({"url": url, **kwargs})
+        return RefusingResponse(self.status_code, self.text)
+
+
+def test_http_error_is_translated_rather_than_escaping_as_httpx():
+    transport = RefusingTransport(401)
+
+    with pytest.raises(LLMHttpError) as excinfo:
+        complete_json("prompt", SCHEMA, client=transport)
+
+    assert excinfo.value.status_code == 401
+
+
+def test_http_error_is_an_llm_client_error():
+    """Callers that catch the module's own base class must catch this too."""
+    with pytest.raises(LLMClientError):
+        complete_json("prompt", SCHEMA, client=RefusingTransport(500))
+
+
+def test_a_rejected_credential_names_the_setting_to_fix():
+    with pytest.raises(LLMHttpError) as excinfo:
+        complete_json("prompt", SCHEMA, client=RefusingTransport(401))
+
+    message = str(excinfo.value)
+    assert "401" in message
+    assert "LLM_API_KEY" in message
+
+
+def test_an_unknown_model_names_the_model_setting():
+    with pytest.raises(LLMHttpError) as excinfo:
+        complete_json("prompt", SCHEMA, client=RefusingTransport(404))
+
+    assert "LLM_MODEL" in str(excinfo.value)
+
+
+def test_a_rate_limit_says_so():
+    with pytest.raises(LLMHttpError) as excinfo:
+        complete_json("prompt", SCHEMA, client=RefusingTransport(429))
+
+    assert "rate" in str(excinfo.value).lower()
+
+
+def test_a_refusal_is_not_retried():
+    """A 401 is a wrong key; asking again three times just spends three times
+    as long being refused. Only schema failures earn a retry."""
+    transport = RefusingTransport(401)
+
+    with pytest.raises(LLMHttpError):
+        complete_json("prompt", SCHEMA, client=transport, retries=3)
+
+    assert len(transport.calls) == 1
+
+
+def test_the_message_carries_the_providers_own_body():
+    """Whatever the service said is the most specific evidence available, and
+    guessing from the status code alone throws it away."""
+    with pytest.raises(LLMHttpError) as excinfo:
+        complete_json(
+            "prompt",
+            SCHEMA,
+            client=RefusingTransport(402, '{"error":"insufficient credits"}'),
+        )
+
+    assert "insufficient credits" in str(excinfo.value)
