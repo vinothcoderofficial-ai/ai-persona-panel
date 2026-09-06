@@ -188,6 +188,13 @@ describe("changing the hash changes the screen, with no reload", () => {
     expect(has("consent-agree")).toBe(false);
   });
 
+  it("reaches the synthetic shopper at #/panel", async () => {
+    await boot("/");
+    await goTo("#/panel");
+    expect(has("panel-view")).toBe(true);
+    expect(has("consent-agree")).toBe(false);
+  });
+
   it("reaches the dashboard at #/dashboard", async () => {
     await boot("/");
     await goTo("#/dashboard");

@@ -4,9 +4,12 @@ import { readLastSession, type LastSession } from "@/session/lastSession";
 /**
  * `#/home` - the operator's launcher.
  *
- * There are four screens and, before this, the only way to reach any of them
- * was to type a URL. The dashboard's needed a raw uuid, typed by hand, on
- * camera. That was the weakest part of the demo, and this page is the fix.
+ * Before this, the only way to reach any screen was to type a URL. The
+ * dashboard's needed a raw uuid, typed by hand, on camera. That was the
+ * weakest part of the demo, and this page is the fix. Every screen the
+ * product has is listed here and nowhere else, so adding one without adding
+ * a card for it leaves it as undiscoverable as they all used to be -
+ * `web/tests/launcher.test.tsx` counts them for that reason.
  *
  * It is an **operator** screen, and only that. CLAUDE.md keeps navigation
  * chrome off the two screens that are being looked at for real - the store,
@@ -313,6 +316,19 @@ export function Launcher({ readStoredSession = readLastSession }: LauncherProps)
           that turned each archetype into a numeric policy, a button that asks the model
           again, and the twenty shopping trips it reasoned through per persona — every turn
           with the reason it gave. Asking again never changes what the simulator runs.
+        </Destination>
+
+        <Destination
+          testId="launcher-panel"
+          linkTestId="launcher-panel-link"
+          href="#/panel"
+          title="A synthetic shopper"
+          action="Watch a persona shop"
+        >
+          The other half of the demo. One persona&apos;s committed trip, replayed over the
+          same shelf a person shops — the bay it is standing at, the product it is looking
+          at, the reason it gave, the cart filling. Every shelf position is named as a
+          product. It opens no session and measures nobody.
         </Destination>
 
         <Destination

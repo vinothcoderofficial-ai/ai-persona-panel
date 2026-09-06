@@ -6,6 +6,7 @@ import type { Session } from "@/contracts/session.schema";
 import { createSession, getResolvedVariant } from "@/api/client";
 import type { ArchetypeLabel, Intake } from "@/capture/archetype";
 import { AiPanel } from "@/ai/AiPanel";
+import { PanelView } from "@/panel/PanelView";
 import { CaptureFlow, type CaptureResult } from "@/capture/CaptureFlow";
 import type { GazeTracker } from "@/capture/GazeTracker";
 import { SessionSocket } from "@/capture/SessionSocket";
@@ -311,7 +312,7 @@ function Dashboard() {
  * A hash is enough here. Each of these screens reads its own params out of the
  * URL, and a router would be three dependencies for one branch.
  */
-type Route = "store" | "home" | "ai" | "whatif" | "spectator" | "dashboard";
+type Route = "store" | "home" | "ai" | "panel" | "whatif" | "spectator" | "dashboard";
 
 function routeFromHash(hash: string): Route {
   // #/home is the operator's launcher (an additional route, never the default):
@@ -326,6 +327,14 @@ function routeFromHash(hash: string): Route {
   // model's work was committed under data/cache/ and rendered by nothing, so
   // from a running instance there was no evidence a model had been involved.
   if (hash.startsWith("#/ai")) return "ai";
+
+  // #/panel is the S27 synthetic-shopper screen: one persona's committed trace
+  // replayed over the same shelf a person shops, turn by turn, with the reason
+  // the model gave for each move. It is the counterpart to the store, and it
+  // deliberately does not render PlanogramScene - that component owns a
+  // session, a webcam tracker and the checkout gate, and a replay must never be
+  // able to open a session or trip a gate.
+  if (hash.startsWith("#/panel")) return "panel";
 
   // #/whatif is the S8 planning screen: change one thing about the shelf and
   // re-run 10,000 synthetic shoppers per persona against it. It creates no
@@ -384,6 +393,7 @@ function Root() {
 
   if (route === "home") return <Launcher />;
   if (route === "ai") return <AiPanel />;
+  if (route === "panel") return <PanelView variantId={variantFromQuery()} />;
   if (route === "whatif") return <WhatIfPanel />;
   if (route === "spectator") return <SpectatorView />;
   if (route === "dashboard") return <Dashboard />;

@@ -232,3 +232,26 @@ export function getPersonaTrace(
     fetchImpl,
   );
 }
+
+/**
+ * The resolved planogram for one arm, through an injected fetch.
+ *
+ * `src/api/client.ts` has `getResolvedVariant`, and it closes over the global
+ * `fetch` because it is the shopper's path, where there is nothing to inject.
+ * The operator screens need the same document with a transport they control,
+ * and a second copy of the *resolution* would be the thing CLAUDE.md forbids —
+ * so this is a second call site, not a second resolver. `resolve()` still runs
+ * only in `api/app/resolve.py`; this asks the server for its answer.
+ */
+export function getResolvedPlanogram(
+  variantId: string,
+  fetchImpl: FetchLike,
+): Promise<PlanogramDocument> {
+  return request<PlanogramDocument>(
+    `/variants/${encodeURIComponent(variantId)}/resolved`,
+    fetchImpl,
+  );
+}
+
+/** Re-exported so panel modules import one client, not two. */
+export type PlanogramDocument = import("@/contracts/planogram.schema").Planogram;
