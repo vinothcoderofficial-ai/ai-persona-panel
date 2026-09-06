@@ -13,10 +13,10 @@ name: CI
 
 on:
   push:
-    # `master` was renamed to `main`; both are listed so the rename cannot
-    # silently switch CI off, and so a push to the old name still runs it for
-    # as long as that branch exists.
-    branches: [main, master]
+    # `master` was renamed to `main` and the old branch is deleted. Both names
+    # were listed during the transition so the rename could not silently switch
+    # CI off; `master` no longer exists, so listing it would only be misleading.
+    branches: [main]
   pull_request:
   workflow_dispatch:
 
