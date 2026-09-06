@@ -6,6 +6,7 @@ import type { Session } from "@/contracts/session.schema";
 import { createSession, getResolvedVariant } from "@/api/client";
 import type { ArchetypeLabel, Intake } from "@/capture/archetype";
 import { AiPanel } from "@/ai/AiPanel";
+import { OptimizeView } from "@/optimize/OptimizeView";
 import { PanelView } from "@/panel/PanelView";
 import { CaptureFlow, type CaptureResult } from "@/capture/CaptureFlow";
 import type { GazeTracker } from "@/capture/GazeTracker";
@@ -318,7 +319,15 @@ function Dashboard() {
  * A hash is enough here. Each of these screens reads its own params out of the
  * URL, and a router would be three dependencies for one branch.
  */
-type Route = "store" | "home" | "ai" | "panel" | "whatif" | "spectator" | "dashboard";
+type Route =
+  | "store"
+  | "home"
+  | "ai"
+  | "panel"
+  | "optimize"
+  | "whatif"
+  | "spectator"
+  | "dashboard";
 
 function routeFromHash(hash: string): Route {
   // #/home is the operator's launcher (an additional route, never the default):
@@ -341,6 +350,13 @@ function routeFromHash(hash: string): Route {
   // session, a webcam tracker and the checkout gate, and a replay must never be
   // able to open a session or trip a gate.
   if (hash.startsWith("#/panel")) return "panel";
+
+  // #/optimize is the S29 screen for S24's placement optimizer: every placement
+  // of a creative scored and ranked, with today's placement marked. Distinct
+  // from #/whatif, which answers "what if I moved this one thing" - this
+  // answers "where should it go", which is the recommendation-engine claim and
+  // had no screen at all.
+  if (hash.startsWith("#/optimize")) return "optimize";
 
   // #/whatif is the S8 planning screen: change one thing about the shelf and
   // re-run 10,000 synthetic shoppers per persona against it. It creates no
@@ -400,6 +416,7 @@ function Root() {
   if (route === "home") return <Launcher />;
   if (route === "ai") return <AiPanel />;
   if (route === "panel") return <PanelView variantId={variantFromQuery()} />;
+  if (route === "optimize") return <OptimizeView variantId={variantFromQuery()} />;
   if (route === "whatif") return <WhatIfPanel />;
   if (route === "spectator") return <SpectatorView />;
   if (route === "dashboard") return <Dashboard />;

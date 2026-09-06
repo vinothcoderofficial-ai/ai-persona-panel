@@ -344,6 +344,19 @@ export function Launcher({ readStoredSession = readLastSession }: LauncherProps)
         </Destination>
 
         <Destination
+          testId="launcher-optimize"
+          linkTestId="launcher-optimize-link"
+          href="#/optimize"
+          title="Placement optimizer"
+          action="Rank every placement"
+        >
+          Where <em>should</em> the creative go? Every placement scored against the synthetic
+          panel and ranked, with the one running today marked so &ldquo;best&rdquo; has
+          something to be better than. It says when the order is not settled rather than
+          printing a clean winner.
+        </Destination>
+
+        <Destination
           testId="launcher-spectator"
           linkTestId="launcher-spectator-link"
           href="#/spectator"

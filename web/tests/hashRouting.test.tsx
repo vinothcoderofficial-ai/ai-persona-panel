@@ -195,6 +195,13 @@ describe("changing the hash changes the screen, with no reload", () => {
     expect(has("consent-agree")).toBe(false);
   });
 
+  it("reaches the placement optimizer at #/optimize", async () => {
+    await boot("/");
+    await goTo("#/optimize");
+    expect(has("optimize-view")).toBe(true);
+    expect(has("consent-agree")).toBe(false);
+  });
+
   it("reaches the dashboard at #/dashboard", async () => {
     await boot("/");
     await goTo("#/dashboard");

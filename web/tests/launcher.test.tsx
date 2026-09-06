@@ -93,7 +93,7 @@ afterEach(() => {
   document.body.innerHTML = "";
 });
 
-describe("the six destinations", () => {
+describe("the seven destinations", () => {
   it("offers every screen in the demo, so none of them needs a typed URL", () => {
     const view = render();
     for (const testId of [
@@ -101,6 +101,7 @@ describe("the six destinations", () => {
       "launcher-ai",
       "launcher-panel",
       "launcher-whatif",
+      "launcher-optimize",
       "launcher-spectator",
       "launcher-dashboard",
     ]) {
@@ -109,11 +110,12 @@ describe("the six destinations", () => {
     view.unmount();
   });
 
-  it("links the five hash routes exactly as main.tsx routes them", () => {
+  it("links the six hash routes exactly as main.tsx routes them", () => {
     const view = render();
     expect(href(view.container, "launcher-ai-link")).toBe("#/ai");
     expect(href(view.container, "launcher-panel-link")).toBe("#/panel");
     expect(href(view.container, "launcher-whatif-link")).toBe("#/whatif");
+    expect(href(view.container, "launcher-optimize-link")).toBe("#/optimize");
     expect(href(view.container, "launcher-spectator-link")).toBe("#/spectator");
     expect(href(view.container, "launcher-dashboard-link")).toBe("#/dashboard");
     view.unmount();
@@ -134,6 +136,10 @@ describe("the six destinations", () => {
     // The synthetic-shopper card is the other half of the demo, and the thing
     // a viewer looks for after watching a person shop.
     expect(text(find(view.container, "launcher-panel"))).toContain("shop");
+    // The optimizer card has to say what makes it different from what-if:
+    // what-if answers "what if I moved this", the optimizer answers "where
+    // should it go", which is the recommendation-engine claim.
+    expect(text(find(view.container, "launcher-optimize"))).toContain("rank");
     view.unmount();
   });
 });

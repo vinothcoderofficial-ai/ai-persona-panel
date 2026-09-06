@@ -11,7 +11,16 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from api.app.db import init_db, seed_all
-from api.app.routers import ai, experiments, planograms, sessions, variants, whatif, ws
+from api.app.routers import (
+    ai,
+    experiments,
+    optimize,
+    planograms,
+    sessions,
+    variants,
+    whatif,
+    ws,
+)
 
 
 @asynccontextmanager
@@ -45,3 +54,7 @@ app.include_router(ws.router)
 # what sim/ already produced; only POST /ai/personas/{id}/policy calls a model,
 # and it writes to a preview directory rather than the committed cache.
 app.include_router(ai.router)
+# S29: the placement ranking, over HTTP. analytics/optimizer.py has scored and
+# ranked every placement since S24 with no route and no screen, so the
+# recommendation-engine claim was not one a viewer could check.
+app.include_router(optimize.router)
