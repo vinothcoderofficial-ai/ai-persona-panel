@@ -115,6 +115,79 @@ afterEach(() => {
   window.localStorage.clear();
 });
 
+
+// ---------------------------------------------------------------------------
+// A scene with a tracker the test drives by hand (S28)
+// ---------------------------------------------------------------------------
+
+/**
+ * A `GazeTracker` in the one respect the HUD cares about: it hands samples to
+ * whoever subscribes, and it can be stopped. No camera, no WebGazer, no clock.
+ */
+class FakeTracker {
+  private listeners: Array<(sample: { x: number; y: number; conf: number; t: number }) => void> = [];
+  stopped = false;
+
+  subscribe(listener: (sample: { x: number; y: number; conf: number; t: number }) => void) {
+    this.listeners.push(listener);
+    return () => {
+      this.listeners = this.listeners.filter((l) => l !== listener);
+    };
+  }
+
+  stop(): void {
+    this.stopped = true;
+  }
+
+  emit(n: number): void {
+    for (let i = 0; i < n; i += 1) {
+      for (const listener of this.listeners) {
+        listener({ x: 100 + i, y: 200, conf: 0.9, t: 1000 + i * 30 });
+      }
+    }
+  }
+}
+
+interface SceneHarness {
+  container: HTMLDivElement;
+  emitGaze: (n: number) => void;
+  settle: () => Promise<void>;
+  unmount: () => void;
+}
+
+async function mountScene(opts: {
+  mode: Session["mode"];
+  calibrationErrorPx: number | null;
+  screenW?: number;
+}): Promise<SceneHarness> {
+  const tracker = opts.mode === "webcam" ? new FakeTracker() : null;
+  const view = mount(
+    <PlanogramScene
+      planogram={planogram}
+      logger={new NullSink()}
+      tracker={tracker as never}
+      consent={true}
+      mode={opts.mode}
+      calibrationErrorPx={opts.calibrationErrorPx}
+      screenWidthPx={opts.screenW}
+    />,
+  );
+  return {
+    container: view.container,
+    emitGaze: (n: number) => act(() => tracker?.emit(n)),
+    settle: async () => {
+      await act(async () => {
+        await Promise.resolve();
+      });
+    },
+    unmount: view.unmount,
+  };
+}
+
+function text(view: { container: HTMLElement }, testId: string): string {
+  return view.container.querySelector(`[data-testid="${testId}"]`)?.textContent ?? "";
+}
+
 describe("armOfSession", () => {
   it("is the variant the server recorded against this very session", () => {
     expect(
@@ -197,5 +270,83 @@ describe("the store HUD", () => {
     const view = mountStore("webcam", "C");
     expect(hud(view.container)).toContain("Variant C");
     view.unmount();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The measurement, on the screen where it is being taken (S28)
+// ---------------------------------------------------------------------------
+
+describe("the HUD reports the calibration it is measuring against", () => {
+  it("states the error in pixels and as a share of the screen", async () => {
+    // `calibration_error_px` decides whether a session is webcam or
+    // cursor_only, is written into the session document, and was said out loud
+    // exactly once - on a capture screen the operator has already clicked past.
+    // From the store, the only way to find out how well the tracker was doing
+    // was to read the session document afterwards, by which point the session
+    // is evidence.
+    const view = await mountScene({ mode: "webcam", calibrationErrorPx: 96, screenW: 1920 });
+    try {
+      const hud = text(view, "hud-calibration");
+      expect(hud).toContain("96");
+      expect(hud).toContain("5"); // 96 / 1920 = 5% of screen width
+    } finally {
+      view.unmount();
+    }
+  });
+
+  it("says the calibration was not measured rather than printing a confident 0", async () => {
+    const view = await mountScene({ mode: "cursor_only", calibrationErrorPx: null });
+    try {
+      expect(text(view, "hud-calibration").toLowerCase()).toContain("not measured");
+      expect(text(view, "hud-calibration")).not.toContain("0 px");
+    } finally {
+      view.unmount();
+    }
+  });
+
+  it("shows no calibration line at all for a cursor-only session that never ran one", async () => {
+    const view = await mountScene({ mode: "cursor_only", calibrationErrorPx: null });
+    try {
+      // Present but honest, rather than absent: an operator glancing at the HUD
+      // has to be able to tell "cursor only, on purpose" from "the webcam line
+      // is missing because something broke".
+      expect(text(view, "hud-calibration")).toBeTruthy();
+    } finally {
+      view.unmount();
+    }
+  });
+});
+
+describe("the HUD reports whether the tracker is still producing samples", () => {
+  it("reads as waiting before any sample arrives", async () => {
+    const view = await mountScene({ mode: "webcam", calibrationErrorPx: 40 });
+    try {
+      expect(text(view, "hud-tracker").toLowerCase()).toContain("waiting");
+    } finally {
+      view.unmount();
+    }
+  });
+
+  it("counts the samples the tracker has delivered", async () => {
+    const view = await mountScene({ mode: "webcam", calibrationErrorPx: 40 });
+    try {
+      view.emitGaze(30);
+      await view.settle();
+      expect(text(view, "hud-tracker")).toContain("30");
+    } finally {
+      view.unmount();
+    }
+  });
+
+  it("says nothing about samples in a cursor-only session", async () => {
+    // There is no tracker, so there is nothing to be healthy or unhealthy, and
+    // a "0 samples" reading would look like a webcam that had died.
+    const view = await mountScene({ mode: "cursor_only", calibrationErrorPx: null });
+    try {
+      expect(text(view, "hud-tracker").toLowerCase()).not.toContain("sample");
+    } finally {
+      view.unmount();
+    }
   });
 });

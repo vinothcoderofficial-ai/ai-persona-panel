@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { AiPanel } from "@/ai/AiPanel";
+import { readFileSync } from "node:fs";
+import { resolve as resolvePath } from "node:path";
 import type { FetchLike } from "@/ai/client";
 
 /**
@@ -24,6 +26,10 @@ import type { FetchLike } from "@/ai/client";
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT =
   true;
+
+const PLANOGRAM = JSON.parse(
+  readFileSync(resolvePath(__dirname, "../../data/planograms/demo_aisle.json"), "utf-8"),
+) as unknown;
 
 const STATUS = {
   provider: "ollama",
@@ -141,6 +147,8 @@ const TRACE = {
 
 interface Route {
   status?: unknown;
+  /** Non-200 to simulate a planogram the panel cannot fetch. */
+  planogramStatus?: number;
   policy?: unknown;
   trace?: unknown;
   /** [status, body] for the POST re-ask. */
@@ -175,6 +183,11 @@ async function mount(routes: Route): Promise<Harness> {
       return json(code, body);
     }
     if (path.endsWith("/ai/status")) return json(200, routes.status ?? STATUS);
+    if (path.includes("/resolved")) {
+      const code = routes.planogramStatus ?? 200;
+      if (code !== 200) return json(code, { detail: "no planogram" });
+      return json(200, PLANOGRAM);
+    }
     if (path.endsWith("/policy")) return json(200, routes.policy ?? POLICY);
     if (path.endsWith("/trace")) {
       if (routes.trace === null) {
@@ -478,6 +491,34 @@ describe("the panel is a way back, not a dead end", () => {
         '[data-testid="ai-home-link"]',
       );
       expect(link?.getAttribute("href")).toBe("#/home");
+    } finally {
+      harness.unmount();
+    }
+  });
+});
+
+describe("the trace names the shelf positions it moved through", () => {
+  it("shows the product a turn is about, not only its slot id", async () => {
+    // Asserted on the turn itself rather than on the trace as a whole: the cart
+    // line already carried a product name from `cart_detail`, so a whole-trace
+    // assertion passes without the turns being named at all. It did, on the
+    // first run of this test.
+    const harness = await mount({});
+    try {
+      const turn = text(harness, "ai-turn-0-1");
+      expect(turn).toContain("Crunch Chips 100g");
+      expect(turn).toContain("Need chips; this one is cheap and on promotion.");
+    } finally {
+      harness.unmount();
+    }
+  });
+
+  it("still renders the turns when the planogram cannot be fetched", async () => {
+    const harness = await mount({ planogramStatus: 500 });
+    try {
+      const turn = text(harness, "ai-turn-0-1");
+      expect(turn).toContain("B1S1P1");
+      expect(turn).toContain("Need chips; this one is cheap and on promotion.");
     } finally {
       harness.unmount();
     }

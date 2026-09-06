@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
+import { describeSlot, type MappedBay } from "@/panel/aisleMap";
 import {
   diffRows,
   prefersReducedMotion,
@@ -45,6 +46,15 @@ const rafScheduler: FrameScheduler = (callback) => {
 };
 
 export interface HeatmapDiffProps {
+  /**
+   * The mapped shelf, for naming each row.
+   *
+   * Optional: this component is also rendered before the planogram lands,
+   * and a row labelled with its slot id is what it always showed. What it
+   * must never do is show a name for a slot the planogram does not have -
+   * `describeSlot` returns null there and the id stands alone.
+   */
+  aisle?: MappedBay[];
   /** The attention vector that was on screen before this run. */
   previous: Attention;
   /** This run's `population_fixation_prob` - the numbers being reported. */
@@ -86,6 +96,7 @@ function formatDelta(delta: number | null): string {
 export function HeatmapDiff({
   previous,
   next,
+  aisle,
   durationMs = ANIMATION_MS,
   reducedMotion,
   requestFrame = rafScheduler,
@@ -159,7 +170,12 @@ export function HeatmapDiff({
             data-frame={String(row.frame)}
             style={rowStyle}
           >
-            <div style={{ ...slotColumnStyle, ...mono }}>{row.slotId}</div>
+            <div style={slotColumnStyle}>
+              <div style={{ fontSize: 12.5, fontWeight: 600 }}>
+                {describeSlot(aisle ?? [], row.slotId)?.product ?? row.slotId}
+              </div>
+              <div style={{ ...mono, fontSize: 10.5, opacity: 0.6 }}>{row.slotId}</div>
+            </div>
 
             <div style={trackStyle}>
               {row.previous !== null && (
@@ -211,10 +227,13 @@ const rowStyle: CSSProperties = {
 };
 
 const slotColumnStyle: CSSProperties = {
-  width: 86,
-  flex: "0 0 86px",
+  // Wider than the 86px the bare slot id needed: a product name is the point
+  // of the column now, and truncating it back to `Crunch Chi…` would undo it.
+  width: 168,
+  flex: "0 0 168px",
   fontSize: 12,
   color: GREY,
+  overflow: "hidden",
 };
 
 const trackStyle: CSSProperties = {

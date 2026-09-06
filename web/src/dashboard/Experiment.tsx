@@ -10,12 +10,14 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { toChartRows } from "@/dashboard/chartRows";
+import { buildAisle, type MappedBay } from "@/panel/aisleMap";
+import { toChartRows, type ChartRow } from "@/dashboard/chartRows";
 import {
   NOT_APPLICABLE,
   formatMetric,
   type ExperimentResult,
 } from "@/dashboard/experimentResult";
+import { getResolvedPlanogram } from "@/ai/client";
 import {
   buildReportHtml,
   buildReportJson,
@@ -166,10 +168,13 @@ function download(filename: string, mime: string, contents: string): void {
  * once written, and a lock that could not be read produces a report that says
  * so rather than an export that fails.
  */
-function ExportRow({ result }: { result: ExperimentResult }) {
+function ExportRow({ result, aisle }: { result: ExperimentResult; aisle: MappedBay[] }) {
   async function exportReport(format: "html" | "json"): Promise<void> {
     const lock = await fetchPredictionLock(result.session_id);
-    const input = { result, lock, generatedAt: new Date().toISOString() };
+    // The aisle goes into the document so the exported table names products.
+    // Empty when the planogram request has not landed, which downgrades the
+    // table to slot ids rather than blocking the export.
+    const input = { result, lock, aisle, generatedAt: new Date().toISOString() };
     if (format === "html") {
       download(
         reportFilename(result, "html"),
@@ -257,6 +262,18 @@ function TitleRow() {
  */
 export default function Experiment() {
   const [state, setState] = useState<LoadState>({ status: "loading" });
+  /**
+   * The shelf this experiment was run against, for naming the bars.
+   *
+   * A second request, on purpose, and one this page never waits for. The chart
+   * plotted raw slot ids - `B1S3P2`, `B2S1P1` - so the headline comparison of
+   * the whole project was labelled in a vocabulary only this repository speaks.
+   * The names live in the resolved planogram, one fetch away. Empty until it
+   * lands, and empty forever if it fails: `toChartRows` falls back to the ids,
+   * which is what the chart showed before and is strictly better than a
+   * dashboard that will not render because a cosmetic request 404ed.
+   */
+  const [aisle, setAisle] = useState<MappedBay[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -279,6 +296,26 @@ export default function Experiment() {
       cancelled = true;
     };
   }, []);
+
+  const variantId = state.status === "ready" ? state.result.variant_id : null;
+  useEffect(() => {
+    if (variantId === null) return undefined;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const planogram = await getResolvedPlanogram(variantId, (input, init) =>
+          fetch(input, init),
+        );
+        if (!cancelled) setAisle(buildAisle(planogram));
+      } catch {
+        // Names are a courtesy; ids are the truth and are already on screen.
+        if (!cancelled) setAisle([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [variantId]);
 
   if (state.status === "loading") {
     return (
@@ -312,7 +349,12 @@ export default function Experiment() {
   }
 
   const { result } = state;
-  const rows = toChartRows(result.real_attention, result.synth_attention, result.slot_ids);
+  const rows = toChartRows(
+    result.real_attention,
+    result.synth_attention,
+    result.slot_ids,
+    aisle,
+  );
 
   return (
     <div style={root} data-testid="experiment-dashboard">
@@ -374,27 +416,40 @@ export default function Experiment() {
           </dl>
         </section>
 
-        <ExportRow result={result} />
+        <ExportRow result={result} aisle={aisle} />
 
         <section style={panel}>
           <div style={panelHeading}>Attention by slot</div>
           <ResponsiveContainer width="100%" height={420}>
             <BarChart data={rows} margin={{ top: 8, right: 16, bottom: 48, left: 8 }}>
               <CartesianGrid stroke={PANEL_BORDER} strokeDasharray="3 3" />
+              {/* The product, not the shelf coordinate. `label` falls back to
+                  the slot id when the planogram has not loaded or does not know
+                  the slot, so a bar is never unlabelled. */}
               <XAxis
-                dataKey="slot_id"
+                dataKey="label"
                 angle={-45}
                 textAnchor="end"
                 interval={0}
-                height={60}
+                height={130}
                 stroke={GREY}
-                tick={{ fontSize: 12, fill: GREY }}
+                tick={{ fontSize: 11, fill: GREY }}
               />
               <YAxis domain={[0, "auto"]} stroke={GREY} tick={{ fontSize: 12, fill: GREY }} />
+              {/* The shelf position and the slot id belong in the tooltip:
+                  the axis answers "which product", and this answers "which
+                  shelf, and what is it called in the data". */}
               <Tooltip
                 contentStyle={{ background: PANEL_BG, border: `1px solid ${PANEL_BORDER}` }}
                 labelStyle={{ color: INK }}
                 itemStyle={{ color: INK }}
+                labelFormatter={(label: unknown, payload: unknown) => {
+                  const rows_ = Array.isArray(payload) ? payload : [];
+                  const row = rows_[0]?.payload as ChartRow | undefined;
+                  if (row === undefined) return String(label);
+                  const where = row.position === "" ? row.slot_id : `${row.position} · ${row.slot_id}`;
+                  return `${row.label} — ${where}`;
+                }}
               />
               <Legend wrapperStyle={{ color: INK }} />
               <Bar dataKey="real" name="Real attention" fill={REAL} />

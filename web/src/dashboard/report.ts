@@ -1,3 +1,4 @@
+import { describeSlot, type MappedBay } from "@/panel/aisleMap";
 import {
   NOT_APPLICABLE,
   formatMetric,
@@ -267,6 +268,13 @@ function limitsFor(result: ExperimentResult, captured: boolean): string[] {
 // ---------------------------------------------------------------------------
 
 export interface ReportInput {
+  /**
+   * The resolved planogram this experiment ran against, mapped, for naming the
+   * slots. Optional: the dashboard fetches it separately and may not have it,
+   * and a report with slot ids is the document that already existed - strictly
+   * better than no export at all.
+   */
+  aisle?: MappedBay[];
   result: ExperimentResult;
   lock: PredictionLock;
   /** ISO-8601 instant the document was produced. */
@@ -275,6 +283,19 @@ export interface ReportInput {
 
 export interface ReportSlotRow {
   slot_id: string;
+  /**
+   * The product in this slot, "empty" for a position holding none, or null when
+   * the planogram was not available to ask.
+   *
+   * Beside the slot id, never instead of it. A report months old is read next
+   * to `predictions/<id>.json` and `data/sessions/anon/`, and both of those key
+   * on the slot id - a document that dropped it would be unjoinable to its own
+   * evidence. But a table of `B1S3P2` and `B2S1P1` is unreadable to everyone
+   * who was not in the room, which is most people who will ever open it.
+   */
+  product: string | null;
+  /** "bay 1, eye level", or null alongside a null product. */
+  position: string | null;
   /** null when the real side was not captured, or the slot carries no figure. */
   real: number | null;
   synth: number | null;
@@ -326,13 +347,22 @@ function gazeMeasured(mode: string | undefined): boolean | null {
   return null;
 }
 
-function slotRows(result: ExperimentResult, captured: boolean): ReportSlotRow[] {
+function slotRows(
+  result: ExperimentResult,
+  captured: boolean,
+  aisle: MappedBay[],
+): ReportSlotRow[] {
   const slotIds = Array.isArray(result.slot_ids) ? result.slot_ids : [];
-  return slotIds.map((slot_id) => ({
+  return slotIds.map((slot_id) => {
+    const described = describeSlot(aisle, slot_id);
+    return {
     slot_id,
+    product: described?.product ?? null,
+    position: described?.position ?? null,
     real: captured ? finite((result.real_attention ?? {})[slot_id]) : null,
     synth: finite((result.synth_attention ?? {})[slot_id]),
-  }));
+    };
+  });
 }
 
 /**
@@ -343,7 +373,7 @@ function slotRows(result: ExperimentResult, captured: boolean): ReportSlotRow[] 
  * `null`, which survives `JSON.stringify` and means the same thing there that
  * "not applicable" means on the printed page.
  */
-export function buildReportJson({ result, lock, generatedAt }: ReportInput): ReportJson {
+export function buildReportJson({ result, lock, generatedAt, aisle }: ReportInput): ReportJson {
   const captured = realPanelCaptured(result);
   return {
     report_version: 1,
@@ -367,7 +397,7 @@ export function buildReportJson({ result, lock, generatedAt }: ReportInput): Rep
       attention_spearman: headlineMetric(result.attention_spearman, captured),
       purchase_share_mae: headlineMetric(result.purchase_share_mae, captured),
     },
-    attention_by_slot: slotRows(result, captured),
+    attention_by_slot: slotRows(result, captured, aisle ?? []),
     purchase_share: {
       real: captured ? (result.real_purchase_share ?? {}) : null,
       synth: result.synth_purchase_share ?? {},
@@ -617,6 +647,8 @@ function slotTable(rows: ReportSlotRow[], captured: boolean): string {
       .map(
         (row) => `
           <tr>
+            <td>${escape(row.product ?? row.slot_id)}</td>
+            <td class="mono">${escape(row.position ?? "")}</td>
             <td class="mono">${escape(row.slot_id)}</td>
             <td class="mono">${attentionCell(row.synth)}</td>
           </tr>`,
@@ -629,7 +661,7 @@ function slotTable(rows: ReportSlotRow[], captured: boolean): string {
           there is no real measurement for this session.
         </caption>
         <thead>
-          <tr><th>Slot</th><th class="synth">Synthetic attention</th></tr>
+          <tr><th>Product</th><th>Shelf</th><th>Slot</th><th class="synth">Synthetic attention</th></tr>
         </thead>
         <tbody>${body}</tbody>
       </table>`;
@@ -639,6 +671,8 @@ function slotTable(rows: ReportSlotRow[], captured: boolean): string {
     .map(
       (row) => `
         <tr>
+          <td>${escape(row.product ?? row.slot_id)}</td>
+          <td class="mono">${escape(row.position ?? "")}</td>
           <td class="mono">${escape(row.slot_id)}</td>
           <td class="mono">${attentionCell(row.real)}</td>
           <td class="mono">${attentionCell(row.synth)}</td>
@@ -655,6 +689,8 @@ function slotTable(rows: ReportSlotRow[], captured: boolean): string {
       </caption>
       <thead>
         <tr>
+          <th>Product</th>
+          <th>Shelf</th>
           <th>Slot</th>
           <th class="real">Real attention</th>
           <th class="synth">Synthetic attention</th>

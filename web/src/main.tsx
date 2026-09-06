@@ -191,6 +191,12 @@ function Store({ variantId, fields }: { variantId: string; fields: SessionFields
       tracker={fields.tracker ?? null}
       consent={fields.consent}
       mode={fields.mode}
+      // The number the capture flow measured, carried through to the HUD. It
+      // was written into the session document and said out loud once, on a
+      // screen the operator has already clicked past; from the store there was
+      // no way to see how well the tracker was calibrated until the session was
+      // over and had become evidence.
+      calibrationErrorPx={fields.calibration_error_px}
     />
   );
 }

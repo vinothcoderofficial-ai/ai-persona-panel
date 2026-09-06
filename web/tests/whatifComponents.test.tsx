@@ -8,6 +8,7 @@ import { WhatIfControls } from "@/whatif/WhatIfControls";
 import { NOT_APPLICABLE, type PersonaLiftRow } from "@/whatif/lift";
 import { CLEAR_CREATIVE, EMPTY_SELECTION, type WhatIfSelection } from "@/whatif/patches";
 import { chooseOption, demoAisle } from "./whatifFixture";
+import { buildAisle, type MappedBay } from "@/panel/aisleMap";
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT =
   true;
@@ -287,5 +288,60 @@ describe("WhatIfControls", () => {
     chooseOption(find(view.container, "whatif-focal-sku") as HTMLSelectElement, "SKU_008");
     expect(view.changes).toEqual([{ ...EMPTY_SELECTION, focalSkuId: "SKU_008" }]);
     view.unmount();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Naming the rows (S28)
+// ---------------------------------------------------------------------------
+
+describe("HeatmapDiff names the shelf position it is drawing", () => {
+  const AISLE = buildAisle(demoAisle());
+
+  function renderDiff(props: {
+    previous: Record<string, number>;
+    next: Record<string, number>;
+    aisle?: MappedBay[];
+  }) {
+    return mount(
+      <HeatmapDiff
+        previous={props.previous}
+        next={props.next}
+        aisle={props.aisle}
+        reducedMotion
+      />,
+    );
+  }
+
+  it("shows the product in the slot, beside its id", () => {
+    const view = renderDiff({
+      previous: { B1S1P1: 0.1 },
+      next: { B1S1P1: 0.2 },
+      aisle: AISLE,
+    });
+    try {
+      const row = view.container.querySelector('[data-testid="heat-diff-row-B1S1P1"]');
+      // Read from the fixture rather than typed here: the assertion is that the
+      // row carries whatever the planogram calls this product, not that the
+      // planogram calls it any particular thing.
+      const expected = demoAisle().skus.find((sku) => sku.sku_id === "SKU_001")?.name;
+      expect(expected).toBeTruthy();
+      expect(row?.textContent).toContain(expected);
+      // The id stays: it is what the response is keyed on, and what an operator
+      // reads back into a patch.
+      expect(row?.textContent).toContain("B1S1P1");
+    } finally {
+      view.unmount();
+    }
+  });
+
+  it("falls back to the id alone when there is no planogram", () => {
+    const view = renderDiff({ previous: {}, next: { B1S1P1: 0.2 } });
+    try {
+      const row = view.container.querySelector('[data-testid="heat-diff-row-B1S1P1"]');
+      expect(row?.textContent).toContain("B1S1P1");
+    } finally {
+      view.unmount();
+    }
   });
 });

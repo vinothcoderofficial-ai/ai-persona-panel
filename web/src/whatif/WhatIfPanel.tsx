@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import type { Planogram } from "@/contracts/planogram.schema";
 import { getResolvedVariant } from "@/api/client";
+import { buildAisle } from "@/panel/aisleMap";
 import { HeatmapDiff, ANIMATION_MS } from "@/whatif/HeatmapDiff";
 import { LiftBars } from "@/whatif/LiftBars";
 import { WhatIfControls } from "@/whatif/WhatIfControls";
@@ -170,6 +171,12 @@ export function WhatIfPanel(props: WhatIfPanelProps) {
 
   // A handed-in planogram wins, so the prop cannot go stale behind state.
   const planogram = given ?? (fetched.status === "ready" ? fetched.planogram : null);
+  // The same document, mapped once, so the heatmap rows can name the shelf
+  // positions they are drawing instead of listing slot ids.
+  const aisle = useMemo(
+    () => (planogram === null ? [] : buildAisle(planogram)),
+    [planogram],
+  );
 
   useEffect(() => {
     if (given !== undefined) return undefined;
@@ -332,6 +339,7 @@ export function WhatIfPanel(props: WhatIfPanelProps) {
             <HeatmapDiff
               previous={frames.previous}
               next={frames.next}
+              aisle={aisle}
               durationMs={props.animationMs ?? ANIMATION_MS}
               reducedMotion={props.reducedMotion}
             />

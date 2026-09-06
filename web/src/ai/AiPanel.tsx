@@ -13,7 +13,9 @@ import {
   type AiTraceShopper,
   type FetchLike,
   type PersonaPolicy,
+  getResolvedPlanogram,
 } from "@/ai/client";
+import { buildAisle, describeSlot, type MappedBay } from "@/panel/aisleMap";
 import * as style from "@/ai/styles";
 
 /**
@@ -65,6 +67,32 @@ export function AiPanel({ fetchImpl = defaultFetch }: AiPanelProps) {
   const [selected, setSelected] = useState<string | null>(null);
   const [policy, setPolicy] = useState<Load<AiPolicyResponse>>({ status: "loading" });
   const [trace, setTrace] = useState<Load<AiTrace>>({ status: "loading" });
+
+  /**
+   * The shelf, for naming the slots a turn is about.
+   *
+   * The trace records targets as slot ids - `B1S1P1` - which told a viewer
+   * nothing at all on a screen whose whole job is to be readable evidence. This
+   * is the same join the dashboard and the replay use, and like both of them it
+   * degrades to the raw id rather than blocking: variant A is the unpatched
+   * baseline and its slots are the base planogram's, which is what the traces
+   * were generated against.
+   */
+  const [aisle, setAisle] = useState<MappedBay[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const planogram = await getResolvedPlanogram("A", fetchImpl);
+        if (!cancelled) setAisle(buildAisle(planogram));
+      } catch {
+        if (!cancelled) setAisle([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [fetchImpl]);
 
   const [asking, setAsking] = useState(false);
   const [asked, setAsked] = useState<AiRegenerateResponse | null>(null);
@@ -219,7 +247,7 @@ export function AiPanel({ fetchImpl = defaultFetch }: AiPanelProps) {
             />
           </div>
 
-          <TracePanel load={trace} />
+          <TracePanel load={trace} aisle={aisle} />
         </div>
       )}
     </div>
@@ -539,7 +567,7 @@ const changedRow: CSSProperties = {
   background: "#2a2415",
 };
 
-function TracePanel({ load }: { load: Load<AiTrace> }) {
+function TracePanel({ load, aisle }: { load: Load<AiTrace>; aisle: MappedBay[] }) {
   if (load.status !== "ready") {
     return (
       <div style={style.panel}>
@@ -563,14 +591,14 @@ function TracePanel({ load }: { load: Load<AiTrace> }) {
       </div>
       <div data-testid="ai-trace" style={{ display: "grid", gap: 12 }}>
         {trace.shoppers.map((shopper) => (
-          <Shopper key={shopper.shopper_index} shopper={shopper} />
+          <Shopper key={shopper.shopper_index} shopper={shopper} aisle={aisle} />
         ))}
       </div>
     </div>
   );
 }
 
-function Shopper({ shopper }: { shopper: AiTraceShopper }) {
+function Shopper({ shopper, aisle }: { shopper: AiTraceShopper; aisle: MappedBay[] }) {
   return (
     <div
       data-testid={`ai-trace-shopper-${shopper.shopper_index}`}
@@ -590,11 +618,13 @@ function Shopper({ shopper }: { shopper: AiTraceShopper }) {
 
       <ol style={{ margin: "10px 0 0", padding: "0 0 0 20px", display: "grid", gap: 6 }}>
         {shopper.turns.map((turn) => (
-          <li key={turn.turn} style={{ fontSize: 13.5 }}>
+          <li
+            key={turn.turn}
+            data-testid={`ai-turn-${shopper.shopper_index}-${turn.turn}`}
+            style={{ fontSize: 13.5 }}
+          >
             <span style={{ fontFamily: style.mono, color: style.ACCENT }}>{turn.action}</span>
-            {turn.target !== null && (
-              <span style={{ fontFamily: style.mono, opacity: 0.7 }}> {turn.target}</span>
-            )}
+            {turn.target !== null && <TurnTarget aisle={aisle} slotId={turn.target} />}
             <span style={{ opacity: 0.5 }}> · {turn.station_id}</span>
             <div style={{ ...style.note, marginTop: 1 }}>&ldquo;{turn.reason}&rdquo;</div>
           </li>
@@ -613,5 +643,30 @@ function Shopper({ shopper }: { shopper: AiTraceShopper }) {
         )}
       </div>
     </div>
+  );
+}
+
+
+/**
+ * The slot a turn is about, named.
+ *
+ * The product first, because that is what a viewer is reading for, and the slot
+ * id after it in small type, because that is the key the trace, the attention
+ * vector and every patch are written in - an operator reading a turn and then
+ * writing a what-if patch needs both. Falls back to the id alone when the
+ * planogram is not loaded or does not know the slot; it never guesses.
+ */
+function TurnTarget({ aisle, slotId }: { aisle: MappedBay[]; slotId: string }) {
+  const described = describeSlot(aisle, slotId);
+  if (described === null) {
+    return <span style={{ fontFamily: style.mono, opacity: 0.7 }}> {slotId}</span>;
+  }
+  return (
+    <>
+      {" "}
+      <strong>{described.product}</strong>
+      <span style={{ opacity: 0.5 }}> ({described.position})</span>
+      <span style={{ fontFamily: style.mono, opacity: 0.35, fontSize: 11 }}> {slotId}</span>
+    </>
   );
 }

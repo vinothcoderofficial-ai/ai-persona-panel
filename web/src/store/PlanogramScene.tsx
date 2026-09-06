@@ -75,6 +75,22 @@ export interface PlanogramSceneProps {
    * main.tsx to hand down the `variant_id` it already has.
    */
   variantId?: string;
+  /**
+   * The validation error the capture flow measured, in pixels, or null when no
+   * validation ever ran (the camera was refused, or this is `cursor_only`).
+   *
+   * It decides whether a session is `webcam` or `cursor_only` and it is written
+   * into the session document - and it used to be said out loud exactly once,
+   * on a capture screen the operator has already clicked past. From here, the
+   * only way to find out how well the tracker was doing was to read the session
+   * document afterwards, by which point the session is evidence.
+   */
+  calibrationErrorPx?: number | null;
+  /**
+   * The screen width the error is a fraction of. Defaults to the real screen,
+   * falling back to the viewport the way `main.tsx` records `screen_w`.
+   */
+  screenWidthPx?: number;
 }
 
 /**
@@ -95,6 +111,42 @@ export interface PlanogramSceneProps {
  */
 export function armOfSession(sessionId: string, note: LastSession | null): string | null {
   return note !== null && note.session_id === sessionId ? note.variant_id : null;
+}
+
+/**
+ * The calibration, in the terms the threshold is applied in.
+ *
+ * Never a confident `0 px` for a session that was never validated:
+ * `CalibrationReport` holds itself to the same rule on the capture screen, and
+ * a HUD that printed a fabricated zero would be claiming a perfect calibration
+ * for a shopper whose camera was refused.
+ */
+export function calibrationLine(errorPx: number | null, screenWidthPx: number): string {
+  if (errorPx === null || !Number.isFinite(errorPx)) {
+    return "Calibration: not measured";
+  }
+  if (!Number.isFinite(screenWidthPx) || screenWidthPx <= 0) {
+    return `Calibration: ${Math.round(errorPx)} px (screen width unknown)`;
+  }
+  const percent = (errorPx / screenWidthPx) * 100;
+  return `Calibration: ${Math.round(errorPx)} px, ${percent.toFixed(1).replace(/\.0$/, "")}% of screen`;
+}
+
+/**
+ * Whether the tracker is still delivering, in one phrase.
+ *
+ * A cursor-only session has no tracker at all, and reporting "0 samples" there
+ * would read as a webcam that had died rather than one that was never asked
+ * for - the distinction an operator most needs from this line.
+ */
+export function trackerLine(
+  mode: Session["mode"],
+  tracker: GazeTracker | null,
+  samples: number,
+): string {
+  if (mode !== "webcam" || tracker === null) return "Mouse position stands in for gaze";
+  if (samples === 0) return "Webcam: waiting for the first sample";
+  return `Webcam: ${samples} gaze samples`;
 }
 
 function clamp(value: number, low: number, high: number): number {
@@ -204,6 +256,8 @@ export function PlanogramScene({
   tracker,
   consent,
   mode,
+  calibrationErrorPx = null,
+  screenWidthPx,
   variantId,
 }: PlanogramSceneProps) {
   const [stationIndex, setStationIndex] = useState(0);
@@ -213,6 +267,25 @@ export function PlanogramScene({
   const [cart, setCart] = useState<CartLine[]>([]);
   const [checkedOut, setCheckedOut] = useState(false);
   const [finishError, setFinishError] = useState<string | null>(null);
+  /**
+   * How many gaze samples the tracker has delivered since the store opened.
+   *
+   * The operator's answer to "is the webcam still working?", which until now
+   * could only be answered after the fact by counting rows in the session. A
+   * total rather than a rate, and never a dot: CLAUDE.md keeps live gaze
+   * feedback off the measured screen because people chase what moves, and a
+   * number that only ever climbs gives the shopper nothing to aim at.
+   */
+  const [gazeSamples, setGazeSamples] = useState(0);
+  /**
+   * The width the calibration error is a fraction of.
+   *
+   * The same fallback `main.tsx` uses when it records `screen_w`: an offscreen
+   * window reports a screen of 0, so the viewport stands in. Read once per
+   * render rather than held in state - it is only ever used to divide by.
+   */
+  const screenWidth =
+    screenWidthPx ?? Math.round(window.screen?.width || window.innerWidth || 0);
   // False until `SceneReadySentinel` proves every pack texture below the
   // <Suspense> boundary has resolved. Before this gate existed,
   // `<Suspense fallback={null}>` meant the canvas was blank and had nothing
@@ -368,6 +441,12 @@ export function PlanogramScene({
     };
 
     const unsubscribe = tracker.subscribe((sample) => {
+      // Counted, not timed. A rate would be a live number on the shopper's own
+      // screen, and CLAUDE.md keeps live gaze feedback off it because people
+      // chase what moves. A running total answers the operator's question -
+      // "is the camera still delivering?" - without giving the shopper
+      // anything that reacts to where they look.
+      setGazeSamples((n) => n + 1);
       logger.log("gaze", stationIdRef.current, {
         x: sample.x,
         y: sample.y,
@@ -618,6 +697,18 @@ export function PlanogramScene({
           <span style={chipStyle}>
             {mode === "webcam" ? "Webcam gaze" : "Cursor only"}
           </span>
+        </div>
+        {/*
+          The measurement, on the screen where it is being taken. Both lines are
+          for the operator standing behind the shopper: dim, small, and - in the
+          tracker's case - a total that climbs rather than a live position, so
+          there is nothing here for the person being measured to look at.
+        */}
+        <div style={sessionLineStyle} data-testid="hud-calibration">
+          <span style={chipStyle}>{calibrationLine(calibrationErrorPx, screenWidth)}</span>
+        </div>
+        <div style={sessionLineStyle} data-testid="hud-tracker">
+          <span style={chipStyle}>{trackerLine(mode, tracker ?? null, gazeSamples)}</span>
         </div>
         <div style={{ opacity: 0.55, marginTop: 4 }}>
           Left and right arrow keys move between bays.

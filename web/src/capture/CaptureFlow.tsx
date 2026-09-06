@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 import type { Session } from "@/contracts/session.schema";
+import { mergedQuery } from "@/session/urlParams";
 import { archetypeFromIntake, type ArchetypeLabel, type Intake } from "@/capture/archetype";
 import type { ValidationOutcome } from "@/capture/calibrationMath";
 import { Calibration } from "@/capture/Calibration";
@@ -266,10 +268,13 @@ export function CaptureFlow({ onComplete, createTracker }: CaptureFlowProps): JS
   switch (step) {
     case "consent":
       return (
-        <Consent
-          onAgree={() => setStep("intake")}
-          onDecline={() => setStep("declined")}
-        />
+        <>
+          <Consent
+            onAgree={() => setStep("intake")}
+            onDecline={() => setStep("declined")}
+          />
+          <OperatorLink />
+        </>
       );
 
     case "declined":
@@ -332,3 +337,61 @@ export function CaptureFlow({ onComplete, createTracker }: CaptureFlowProps): JS
       return doneScreen();
   }
 }
+
+
+/**
+ * The one link on the shopper's path, and it is not on the shopper's path.
+ *
+ * `#/home` lists every screen the product has, and nothing linked to it:
+ * a bare `http://localhost:5173/` is the store, so whoever ran `make web`
+ * landed on this consent screen with no way onward and no reason to guess a
+ * fragment. Every other screen has carried an "All screens" link for a while;
+ * this was the hole, and it was the first screen anybody saw.
+ *
+ * It is safe here because of a property `scripts/collect_link.py` guarantees
+ * and its own tests pin: **every participant link carries `?variant=`.** A URL
+ * with no `variant` at all was typed by somebody exploring the machine the
+ * servers are running on - it was never handed to a shopper. So this renders
+ * for an operator and for nobody who is about to be measured, which is what
+ * keeps CLAUDE.md's rule about navigation chrome intact rather than bent.
+ *
+ * Reads both sides of the `#` through `mergedQuery`, like every other
+ * param in this app, so `#/?variant=B` counts as naming one.
+ */
+function OperatorLink(): JSX.Element | null {
+  const variant = mergedQuery(window.location.search, window.location.hash).get("variant");
+  if (variant !== null && variant.length > 0) return null;
+
+  return (
+    <div style={operatorLinkStyle}>
+      <span style={{ opacity: 0.7 }}>
+        This URL names no variant, so it is not a participant link.
+      </span>{" "}
+      <a data-testid="capture-operator-link" href="#/home" style={operatorAnchorStyle}>
+        All screens →
+      </a>
+    </div>
+  );
+}
+
+const operatorLinkStyle: CSSProperties = {
+  position: "fixed",
+  left: 0,
+  right: 0,
+  bottom: 0,
+  zIndex: 30,
+  padding: "8px 14px",
+  boxSizing: "border-box",
+  borderTop: "1px solid #2b323d",
+  background: "#12151b",
+  color: "#e8eaed",
+  fontFamily: "system-ui, -apple-system, Segoe UI, sans-serif",
+  fontSize: 13,
+  textAlign: "center",
+};
+
+const operatorAnchorStyle: CSSProperties = {
+  color: "#4f8cff",
+  fontWeight: 600,
+  textDecoration: "none",
+};

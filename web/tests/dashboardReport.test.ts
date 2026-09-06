@@ -1,4 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
+import { readFileSync } from "node:fs";
+import { resolve as resolvePath } from "node:path";
+import type { Planogram } from "@/contracts/planogram.schema";
+import { buildAisle } from "@/panel/aisleMap";
 import {
   NOT_APPLICABLE,
   realPanelCaptured,
@@ -292,7 +296,15 @@ describe("the JSON export round-trips what the HTML displays", () => {
     const rows = json(MEASURED).attention_by_slot;
 
     expect(rows.map((row) => row.slot_id)).toEqual(MEASURED.slot_ids);
-    expect(rows[0]).toEqual({ slot_id: "B1S3P1", real: 0.41, synth: 0.37 });
+    // No planogram was passed, so the naming columns are null rather than
+    // absent: a reader of the JSON can tell "not looked up" from "empty".
+    expect(rows[0]).toEqual({
+      slot_id: "B1S3P1",
+      product: null,
+      position: null,
+      real: 0.41,
+      synth: 0.37,
+    });
   });
 
   it("survives a JSON round trip unchanged", () => {
@@ -352,5 +364,79 @@ describe("the document stands alone", () => {
     expect(reportFilename({ ...MEASURED, session_id: "a/b c" }, "html")).toBe(
       "shoppertwin-session-a_b_c.html",
     );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The exported document names products (S28)
+// ---------------------------------------------------------------------------
+
+describe("the report names the products, not only the slot ids", () => {
+  const AISLE = buildAisle(
+    JSON.parse(
+      readFileSync(resolvePath(__dirname, "../../data/planograms/demo_aisle.json"), "utf-8"),
+    ) as Planogram,
+  );
+
+  function withNames(result: ExperimentResult) {
+    return buildReportJson({ result, lock: NO_PREDICTION_LOCK, generatedAt: GENERATED_AT, aisle: AISLE });
+  }
+
+  it("carries the product and its shelf position on every row", () => {
+    const result = { ...MEASURED, slot_ids: ["B1S1P1"] };
+
+    const [row] = withNames(result).attention_by_slot;
+
+    expect(row.slot_id).toBe("B1S1P1");
+    expect(row.product).toBe("Crunch Chips 100g");
+    expect(row.position).toContain("bay 1");
+  });
+
+  it("keeps the slot id, because that is the key the data is stored under", () => {
+    // A report months old is read next to `predictions/<id>.json` and
+    // `data/sessions/anon/`, both of which key on the slot id. Replacing it
+    // with a name would make the document unjoinable to its own evidence.
+    const result = { ...MEASURED, slot_ids: ["B1S1P1"] };
+
+    expect(withNames(result).attention_by_slot[0].slot_id).toBe("B1S1P1");
+  });
+
+  it("says a slot is empty rather than leaving the product blank", () => {
+    const result = { ...MEASURED, slot_ids: ["B1S3P2"] };
+
+    expect(withNames(result).attention_by_slot[0].product).toBe("empty");
+  });
+
+  it("falls back to null for a slot the planogram does not have", () => {
+    const result = { ...MEASURED, slot_ids: ["NOPE"] };
+
+    expect(withNames(result).attention_by_slot[0].product).toBeNull();
+  });
+
+  it("still builds with no planogram, exactly as before", () => {
+    const result = { ...MEASURED, slot_ids: ["B1S1P1"] };
+
+    const row = buildReportJson({
+      result,
+      lock: NO_PREDICTION_LOCK,
+      generatedAt: GENERATED_AT,
+    }).attention_by_slot[0];
+
+    expect(row.slot_id).toBe("B1S1P1");
+    expect(row.product).toBeNull();
+  });
+
+  it("puts the product name in the exported HTML table", () => {
+    const result = { ...MEASURED, slot_ids: ["B1S1P1"] };
+
+    const html = buildReportHtml({
+      result,
+      lock: NO_PREDICTION_LOCK,
+      generatedAt: GENERATED_AT,
+      aisle: AISLE,
+    });
+
+    expect(html).toContain("Crunch Chips 100g");
+    expect(html).toContain("B1S1P1");
   });
 });

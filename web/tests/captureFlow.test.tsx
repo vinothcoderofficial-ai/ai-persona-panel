@@ -211,3 +211,62 @@ describe("the whole flow, cursor-only", () => {
     view.unmount();
   });
 });
+
+// ---------------------------------------------------------------------------
+// Finding the rest of the product from a bare URL (S28)
+// ---------------------------------------------------------------------------
+
+describe("the operator's way out of the store, and only theirs", () => {
+  afterEach(() => window.history.replaceState({}, "", "/"));
+
+  /**
+   * `#/home` lists every screen, and nothing linked to it: a bare
+   * `http://localhost:5173` is the store, so whoever ran `make web` landed on
+   * a consent screen with no way onward and no reason to guess a fragment.
+   *
+   * The rule that makes a link here safe: **every participant link carries
+   * `?variant=`.** `scripts/collect_link.py` builds them that way and its own
+   * tests pin it, so a URL with no `variant` at all was typed by somebody
+   * exploring - never handed to a shopper. CLAUDE.md keeps navigation chrome
+   * off the measured screens, and this stays off every screen a participant
+   * can reach.
+   */
+  function renderAt(search: string) {
+    window.history.replaceState({}, "", `/${search}`);
+    return mount(<CaptureFlow onComplete={vi.fn()} />);
+  }
+
+  it("offers the launcher when the URL names no variant", () => {
+    const view = renderAt("");
+    try {
+      const link = view.container.querySelector<HTMLAnchorElement>(
+        '[data-testid="capture-operator-link"]',
+      );
+      expect(link?.getAttribute("href")).toBe("#/home");
+    } finally {
+      view.unmount();
+    }
+  });
+
+  it("offers nothing of the kind on a participant link", () => {
+    const view = renderAt("?variant=B");
+    try {
+      expect(
+        view.container.querySelector('[data-testid="capture-operator-link"]'),
+      ).toBeNull();
+    } finally {
+      view.unmount();
+    }
+  });
+
+  it("still shows the consent buttons in both cases", () => {
+    for (const search of ["", "?variant=B"]) {
+      const view = renderAt(search);
+      try {
+        expect(view.container.querySelector('[data-testid="consent-agree"]')).not.toBeNull();
+      } finally {
+        view.unmount();
+      }
+    }
+  });
+});
