@@ -124,7 +124,7 @@ panel only, and says so: there is no real panel to draw.
 It is deliberately not wired into `make eval`. `analytics/report.py` would write the filename into
 `RESULTS.md`, and CI fails if `RESULTS.md` moves by a byte.
 
-To drive the same thing live, which is shot 5 of [`docs/video/shotlist.md`](docs/video/shotlist.md):
+To drive the same thing live, which is shot 7a of [`docs/video/shotlist.md`](docs/video/shotlist.md):
 
 ```
 make api            # terminal 1
