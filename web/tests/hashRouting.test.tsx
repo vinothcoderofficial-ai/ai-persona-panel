@@ -202,6 +202,13 @@ describe("changing the hash changes the screen, with no reload", () => {
     expect(has("consent-agree")).toBe(false);
   });
 
+  it("reaches the vision screen at #/vision", async () => {
+    await boot("/");
+    await goTo("#/vision");
+    expect(has("vision-view")).toBe(true);
+    expect(has("consent-agree")).toBe(false);
+  });
+
   it("reaches the dashboard at #/dashboard", async () => {
     await boot("/");
     await goTo("#/dashboard");

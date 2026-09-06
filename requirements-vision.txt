@@ -1,6 +1,15 @@
-# GPU laptop only - install after requirements.txt
+# GPU extras for the vision track - NOT required.
+#
+# The pipeline that ships (vision/pipeline.py) is classical CV and runs on a
+# CPU with opencv alone, which is now pinned in requirements.txt. Nothing in
+# this file is imported by any module in the repository.
+#
+# It is kept because PLAN S20's original design was Grounding DINO on a GPU,
+# and that remains the upgrade path: a detection model would read product
+# identities and promotional signs, which the classical pipeline states it
+# cannot (see vision/planogram.py). Installing these does not change the
+# pipeline's behaviour on its own - the detector is not written.
+#
 # torch: pick the CUDA build for your driver from https://pytorch.org/get-started/locally/
 torch
 transformers==4.48.0
-opencv-python-headless==4.10.0.84
-ffmpeg-python==0.2.0

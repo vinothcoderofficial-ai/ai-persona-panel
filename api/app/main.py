@@ -19,6 +19,7 @@ from api.app.routers import (
     planograms,
     sessions,
     variants,
+    vision,
     whatif,
     ws,
 )
@@ -62,3 +63,6 @@ app.include_router(optimize.router)
 # S31: what the real panel actually contains. Read-only - exporting writes
 # committed evidence and stays at a command line.
 app.include_router(collection.router)
+# S30: upload an aisle clip, get the planogram it supports. Reading is not
+# saving - the document comes back for a person to look at.
+app.include_router(vision.router)

@@ -93,7 +93,7 @@ afterEach(() => {
   document.body.innerHTML = "";
 });
 
-describe("the seven destinations", () => {
+describe("the eight destinations", () => {
   it("offers every screen in the demo, so none of them needs a typed URL", () => {
     const view = render();
     for (const testId of [
@@ -102,6 +102,7 @@ describe("the seven destinations", () => {
       "launcher-panel",
       "launcher-whatif",
       "launcher-optimize",
+      "launcher-vision",
       "launcher-spectator",
       "launcher-dashboard",
     ]) {
@@ -110,12 +111,13 @@ describe("the seven destinations", () => {
     view.unmount();
   });
 
-  it("links the six hash routes exactly as main.tsx routes them", () => {
+  it("links the seven hash routes exactly as main.tsx routes them", () => {
     const view = render();
     expect(href(view.container, "launcher-ai-link")).toBe("#/ai");
     expect(href(view.container, "launcher-panel-link")).toBe("#/panel");
     expect(href(view.container, "launcher-whatif-link")).toBe("#/whatif");
     expect(href(view.container, "launcher-optimize-link")).toBe("#/optimize");
+    expect(href(view.container, "launcher-vision-link")).toBe("#/vision");
     expect(href(view.container, "launcher-spectator-link")).toBe("#/spectator");
     expect(href(view.container, "launcher-dashboard-link")).toBe("#/dashboard");
     view.unmount();
@@ -140,6 +142,7 @@ describe("the seven destinations", () => {
     // what-if answers "what if I moved this", the optimizer answers "where
     // should it go", which is the recommendation-engine claim.
     expect(text(find(view.container, "launcher-optimize"))).toContain("rank");
+    expect(text(find(view.container, "launcher-vision"))).toContain("video");
     view.unmount();
   });
 });

@@ -362,6 +362,19 @@ export function Launcher({ readStoredSession = readLastSession }: LauncherProps)
         </Destination>
 
         <Destination
+          testId="launcher-vision"
+          linkTestId="launcher-vision-link"
+          href="#/vision"
+          title="Shelf from video"
+          action="Read a clip"
+        >
+          Drop in a front-on clip of a shelf bay and see the planogram it supports: shelf
+          edges, product facings, the colour of each, and how many frames agreed. It reads
+          geometry and colour, not products — brands, names and prices are written as
+          unknown rather than guessed, and nothing is saved.
+        </Destination>
+
+        <Destination
           testId="launcher-spectator"
           linkTestId="launcher-spectator-link"
           href="#/spectator"

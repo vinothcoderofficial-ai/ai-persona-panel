@@ -17,6 +17,12 @@ matplotlib==3.10.0
 # seed data
 pillow==11.1.0
 
+# vision (S30). CPU only and no deep model: the pipeline reads shelf edges
+# and colour runs, which OpenCV does in milliseconds without CUDA. It is in
+# the base requirements rather than the optional file because vision/tests
+# is in pytest.ini's testpaths - `make test` needs it.
+opencv-python-headless==4.10.0.84
+
 # dev
 pytest==8.3.4
 pytest-asyncio==0.25.2

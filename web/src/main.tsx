@@ -8,6 +8,7 @@ import type { ArchetypeLabel, Intake } from "@/capture/archetype";
 import { AiPanel } from "@/ai/AiPanel";
 import { OptimizeView } from "@/optimize/OptimizeView";
 import { PanelView } from "@/panel/PanelView";
+import { VisionView } from "@/vision/VisionView";
 import { CaptureFlow, type CaptureResult } from "@/capture/CaptureFlow";
 import type { GazeTracker } from "@/capture/GazeTracker";
 import { SessionSocket } from "@/capture/SessionSocket";
@@ -325,6 +326,7 @@ type Route =
   | "ai"
   | "panel"
   | "optimize"
+  | "vision"
   | "whatif"
   | "spectator"
   | "dashboard";
@@ -357,6 +359,12 @@ function routeFromHash(hash: string): Route {
   // answers "where should it go", which is the recommendation-engine claim and
   // had no screen at all.
   if (hash.startsWith("#/optimize")) return "optimize";
+
+  // #/vision is the S30 screen for the video pipeline: drop in an aisle clip
+  // and see the shelf it supports. `vision/` was two empty __init__.py files
+  // before that, so "video -> 3D store" was a claim with nothing behind it.
+  // Reading is not saving: the document comes back for a person to look at.
+  if (hash.startsWith("#/vision")) return "vision";
 
   // #/whatif is the S8 planning screen: change one thing about the shelf and
   // re-run 10,000 synthetic shoppers per persona against it. It creates no
@@ -417,6 +425,7 @@ function Root() {
   if (route === "ai") return <AiPanel />;
   if (route === "panel") return <PanelView variantId={variantFromQuery()} />;
   if (route === "optimize") return <OptimizeView variantId={variantFromQuery()} />;
+  if (route === "vision") return <VisionView />;
   if (route === "whatif") return <WhatIfPanel />;
   if (route === "spectator") return <SpectatorView />;
   if (route === "dashboard") return <Dashboard />;
