@@ -13,10 +13,56 @@ import type { Session } from "@/contracts/session.schema";
  * quality block: S19's noise dashboard plots the reject reasons, the
  * calibration-error histogram and the mode split, and it can only do that if
  * the sessions that failed are still there with a reason attached.
+ *
+ * ## Why there is no duration floor
+ *
+ * This gate used to open with `duration_s >= 45`, and the comment on it said
+ * "a shorter session has not seen enough shelf to say anything". That was an
+ * honest statement of intent and a bad rule, because the thing it stood in for
+ * is directly measurable and time is only correlated with it.
+ *
+ * The first real session collected made the cost concrete. A `mission` shopper
+ * with a list, who knew the brand and declared themselves in a hurry, entered
+ * three bays, picked up three products, carted all three and checked out - in
+ * 28.9 seconds. Everything else about the session passed. The gate discarded
+ * it for being sixteen seconds too quick.
+ *
+ * That is not a threshold in need of loosening. Rejecting on elapsed time
+ * systematically rejects the mission archetype, because a shopper with a list
+ * who knows the brand *is* finished in half a minute; the slower the rule, the
+ * more the surviving panel is made of browsers. The project's central claim is
+ * that synthetic personas match real shoppers, benchmarked against the real
+ * panel's own repeatability - and one of the four personas is `mission`. A
+ * duration floor would have had the synthetic panel validated against a real
+ * panel that excluded, by construction, the shoppers it was being asked to
+ * predict.
+ *
+ * So the gate asks the question the floor was proxying for: **did this session
+ * produce looking evidence on enough of the shelf to estimate attention?** It
+ * counts the distinct slots that produced a looking observation, in the
+ * channels `analytics/fusion.py` weights for that mode. Depth is already
+ * guaranteed per observation upstream - a `cursor_dwell` requires 300 ms held
+ * on one slot (`CursorTracker.ts`) and a `fixation` requires the filter's
+ * minimum duration - so spread is what is left to check, and one threshold
+ * does it.
+ *
+ * The trade this makes, stated rather than buried: a fast shopper who covered
+ * the shelf is now accepted, and a slow one who stared at a single product is
+ * still rejected. Time is reported in `quality.duration_s` as it always was.
+ * It is simply no longer a verdict.
  */
 
-/** SPEC M2. A shorter session has not seen enough shelf to say anything. */
-export const MIN_DURATION_S = 45;
+/**
+ * SPEC M2. Distinct slots that must have produced a looking observation.
+ *
+ * Six of the seed planogram's 24 slots - a quarter of the shelf, and with
+ * `MIN_STATIONS` it cannot be reached without leaving the first bay's eight.
+ * The number is absolute rather than a fraction of the variant's slot
+ * vocabulary because `summarise` reads an event stream and nothing else; if a
+ * much smaller planogram is ever shopped (`vision/pipeline.py` reads bays of
+ * eight or fewer), this constant is the thing to revisit, not the rule.
+ */
+export const MIN_OBSERVED_SLOTS = 6;
 
 /** One station is one bay: no navigation, no comparison, no browsing. */
 export const MIN_STATIONS = 2;
@@ -39,6 +85,29 @@ export const INTERACTION_EVENT_TYPES: readonly ShopperEvent["type"][] = [
   "add_to_cart",
 ];
 
+/**
+ * The event types that count as *looking*, per mode, mirroring the channels
+ * `analytics/fusion.py` gives non-zero weight in `_MODE_WEIGHTS`:
+ *
+ *     cursor_only:  0.7 * cursor_dwell + 0.3 * interaction
+ *     webcam:       0.5 * fixation + 0.3 * cursor_dwell + 0.2 * interaction
+ *
+ * Fixations are excluded in cursor_only because fusion weights them zero
+ * there. A session must not clear the gate on evidence the attention formula
+ * will then throw away: admitting sessions the analysis cannot use is the same
+ * class of error as rejecting ones it could.
+ *
+ * Interactions are deliberately absent from both lists. They have their own
+ * rule, and letting a pickup satisfy this one too would collapse two
+ * independent criteria into one.
+ */
+export const LOOKING_EVENT_TYPES: Readonly<
+  Record<Session["mode"], readonly ShopperEvent["type"][]>
+> = {
+  cursor_only: ["cursor_dwell"],
+  webcam: ["fixation", "cursor_dwell"],
+};
+
 export type RejectReason = NonNullable<Session["reject_reason"]>;
 
 /**
@@ -49,10 +118,16 @@ export type RejectReason = NonNullable<Session["reject_reason"]>;
  *
  * Consent first, because a session without it is not data at all, whatever else
  * it managed to do.
+ *
+ * `too_short` is absent and never emitted again. It remains in
+ * schemas/session.schema.json so that sessions rejected under the old duration
+ * rule stay valid and exportable - `scripts/anonymise_sessions.py` treats a
+ * session it cannot validate as a build failure, so dropping the value would
+ * make old evidence unreadable rather than merely obsolete.
  */
 export const REJECT_ORDER: readonly RejectReason[] = [
   "no_consent",
-  "too_short",
+  "too_few_slots",
   "one_station",
   "no_interaction",
   "low_coverage",
@@ -73,6 +148,18 @@ export interface SessionQuality {
    */
   fixation_coverage: number;
   stations_visited: number;
+  /**
+   * Distinct slots that produced at least one looking observation. The number
+   * the gate now decides on, so it is reported whether the session passed or
+   * failed: a rejection nobody can diagnose is not much better than a silent
+   * one.
+   */
+  slots_observed: number;
+  /**
+   * How long the session ran. Descriptive only - the noise dashboard plots it
+   * and RESULTS.md reports it - and deliberately not a criterion; see the
+   * module docstring.
+   */
   duration_s: number;
 }
 
@@ -90,7 +177,7 @@ export interface GateResult {
 }
 
 /**
- * Accept iff: consent given, `duration_s >= 45`, `stations_visited >= 2`, at
+ * Accept iff: consent given, `slots_observed >= 6`, `stations_visited >= 2`, at
  * least one interaction, and - webcam only - `fixation_coverage >= 0.4`.
  *
  * The numbers are reported exactly as they are given: this decides, it does not
@@ -104,6 +191,7 @@ export function evaluate(summary: SessionSummary): GateResult {
     quality: {
       fixation_coverage: summary.fixation_coverage,
       stations_visited: summary.stations_visited,
+      slots_observed: summary.slots_observed,
       duration_s: summary.duration_s,
     },
   };
@@ -112,7 +200,7 @@ export function evaluate(summary: SessionSummary): GateResult {
 function firstFailure(summary: SessionSummary): RejectReason | null {
   // Written in REJECT_ORDER, and the test asserts the two agree.
   if (!summary.consent) return "no_consent";
-  if (summary.duration_s < MIN_DURATION_S) return "too_short";
+  if (summary.slots_observed < MIN_OBSERVED_SLOTS) return "too_few_slots";
   if (summary.stations_visited < MIN_STATIONS) return "one_station";
   if (summary.interactions < MIN_INTERACTIONS) return "no_interaction";
   if (summary.mode === "webcam" && summary.fixation_coverage < MIN_FIXATION_COVERAGE) {
@@ -140,6 +228,8 @@ export function summarise(
   options: SummariseOptions,
 ): SessionSummary {
   const stations = new Set<string>();
+  const observedSlots = new Set<string>();
+  const lookingTypes = LOOKING_EVENT_TYPES[options.mode];
   let lastMs = 0;
   let interactions = 0;
   let fixationMs = 0;
@@ -150,6 +240,15 @@ export function summarise(
       stations.add(event.station_id);
     }
     if (INTERACTION_EVENT_TYPES.includes(event.type)) interactions += 1;
+
+    if (lookingTypes.includes(event.type)) {
+      // A null `slot_id` is a look at bare shelf between products. fusion.py
+      // skips it - it belongs to no slot and enters no denominator - so it is
+      // not evidence that a slot was seen either.
+      const slotId = event.payload.slot_id;
+      if (typeof slotId === "string" && slotId.length > 0) observedSlots.add(slotId);
+    }
+
     if (event.type === "fixation") {
       const durMs = event.payload.dur_ms;
       if (typeof durMs === "number" && Number.isFinite(durMs) && durMs > 0) {
@@ -166,6 +265,7 @@ export function summarise(
     mode: options.mode,
     duration_s: durationS,
     stations_visited: stations.size,
+    slots_observed: observedSlots.size,
     interactions,
     // Clamped: schemas/session.schema.json bounds this to [0, 1], and the API
     // refuses the whole finish call if it is out of range. Overlapping

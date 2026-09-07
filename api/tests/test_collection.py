@@ -168,10 +168,13 @@ def test_reports_what_acceptance_requires(client: TestClient) -> None:
     than by reading web/src/capture/SessionGate.ts."""
     body = client.get("/collection/status").json()
 
-    assert body["gate"]["min_duration_s"] == 45
+    assert body["gate"]["min_observed_slots"] == 6
     assert body["gate"]["min_stations"] == 2
     assert body["gate"]["min_interactions"] == 1
     assert body["gate"]["min_fixation_coverage"] == 0.4
+    # The duration floor is gone, not merely lowered: reporting one would send
+    # an operator looking for a rule that no longer decides anything.
+    assert "min_duration_s" not in body["gate"]
 
 
 def test_reports_how_many_locks_exist(client: TestClient, predictions_dir: Path) -> None:

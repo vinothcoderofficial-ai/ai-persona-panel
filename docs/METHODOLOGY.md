@@ -86,15 +86,39 @@ denominator (§3).
 
 ### 2.3 Session gate — `web/src/capture/SessionGate.ts`
 
-A session is accepted iff **all** of: consent given, `duration_s >= 45`,
+A session is accepted iff **all** of: consent given, `slots_observed >= 6`,
 `stations_visited >= 2`, at least one interaction, and — webcam sessions only —
 `fixation_coverage >= 0.4`.
+
+`slots_observed` counts the distinct slots that produced a looking observation,
+in the channels `analytics/fusion.py` weights for that mode: `cursor_dwell`
+alone in `cursor_only`, `fixation` and `cursor_dwell` in `webcam`. A look at
+bare shelf (`slot_id: null`) is skipped, exactly as fusion skips it. Depth is
+already guaranteed per observation upstream — a `cursor_dwell` requires 300 ms
+held on one slot, a `fixation` the filter's minimum — so this measures spread.
+
+**There is no minimum duration, and the absence is deliberate.** The gate
+opened with `duration_s >= 45` until the first real session was collected: a
+`mission` shopper with a list who entered three bays, picked up three products,
+carted all three and checked out in 28.9 seconds, and was discarded for being
+sixteen seconds too quick. Elapsed time was a proxy for "saw enough shelf", and
+a biased one — a shopper with a list who knows the brand *is* finished in half
+a minute, so a duration floor removes the mission archetype from the panel
+preferentially. Since the panel is what the synthetic personas are validated
+against, and `mission` is one of the four personas, that floor would have
+benchmarked the prediction against a real panel with the predicted shoppers
+filtered out of it. `duration_s` is still recorded and reported; it simply no
+longer decides.
 
 Rejection reports the **first** failure in a fixed order:
 
 ```
-no_consent → too_short → one_station → no_interaction → low_coverage
+no_consent → too_few_slots → one_station → no_interaction → low_coverage
 ```
+
+`too_short` is retained in `schemas/session.schema.json` and never emitted
+again, so sessions rejected under the old rule stay valid and exportable rather
+than becoming unreadable evidence.
 
 The order is fixed and tested (`REJECT_ORDER` and `firstFailure` must agree) for one reason:
 a reject-reason histogram is only readable if one session always yields one answer.

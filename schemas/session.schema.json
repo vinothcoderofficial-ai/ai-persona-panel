@@ -112,6 +112,7 @@
         "null"
       ],
       "enum": [
+        "too_few_slots",
         "too_short",
         "one_station",
         "no_interaction",
@@ -130,6 +131,10 @@
           "maximum": 1
         },
         "stations_visited": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "slots_observed": {
           "type": "integer",
           "minimum": 0
         },

@@ -7,7 +7,9 @@ up, could not see what people were being rejected for, and could not tell
 whether what they had collected had reached the committed corpus at all. The
 first real session was rejected for lasting 29 seconds against a 45-second
 minimum, and nobody found out until the run was over and the session was
-already evidence.
+already evidence. That floor has since been replaced by the shelf-coverage rule
+the gate now applies (see `web/src/capture/SessionGate.ts`), which is why this
+screen reports `min_observed_slots` and no duration at all.
 
 The endpoint reports **three things that are easy to conflate**, and keeping
 them apart is most of its value:
@@ -53,7 +55,7 @@ EVAL_COMMAND = "python scripts/eval.py"
 # pins the browser side; if these ever disagree, that is a real bug and this
 # comment is where to start.
 GATE = {
-    "min_duration_s": 45,
+    "min_observed_slots": 6,
     "min_stations": 2,
     "min_interactions": 1,
     "min_fixation_coverage": 0.4,

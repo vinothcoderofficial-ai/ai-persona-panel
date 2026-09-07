@@ -27,10 +27,12 @@ export interface Session {
   archetype_label?: "mission" | "browser" | "loyalist" | "switcher" | null;
   prediction_id?: string | null;
   accepted?: boolean | null;
-  reject_reason?: "too_short" | "one_station" | "no_interaction" | "low_coverage" | "no_consent" | null;
+  reject_reason?:
+    "too_few_slots" | "too_short" | "one_station" | "no_interaction" | "low_coverage" | "no_consent" | null;
   quality?: {
     fixation_coverage?: number;
     stations_visited?: number;
+    slots_observed?: number;
     duration_s?: number;
   };
 }

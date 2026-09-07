@@ -116,11 +116,18 @@ was written:
 | committed | **0** | And it is not in the corpus, because it was rejected. |
 | locks | **1** | The prediction for it was still locked first. |
 
-Below the figures: **`Rejected for: too_short (1)`**, and the acceptance rule — 45 s or longer,
-across 2 or more bays, with at least 1 interaction.
+Below the figures: **`Rejected for: too_short (1)`**, and the acceptance rule — 6 or more slots
+looked at, across 2 or more bays, with at least 1 interaction.
 
-Point at `too_short` and at the 45-second rule together. That is the whole shot: the panel is
-empty, the reason is on screen, and the gate is why.
+Point at the two together, because they no longer agree, and say why. That session was rejected
+by a 45-second floor that has since been removed: it was a proxy for "saw enough shelf" that
+preferentially threw away shoppers with a list, which is one of the four personas the panel
+exists to validate. The gate now counts slots actually looked at. The stale `too_short` on screen
+is the old verdict preserved rather than rewritten — re-gating a stored session would be editing
+evidence after the fact.
+
+If that is too much for the shot, cut it to one line: *"the panel is empty, the reason is on
+screen, and the rule that caused it is gone."*
 
 Then scroll once through the destination cards so the audience sees the product has eight screens
 and where the next few minutes are going. Do not click into any of them yet.
@@ -206,9 +213,10 @@ showed and shot 7 will change, so the live shots tell one story.
 
    A spectator joining mid-session is sent the current snapshot on its first frame, so the badge
    and the heatmap populate immediately.
-6. Shop for at least 45 seconds across at least two stations with at least one interaction, or the
-   session gate will reject it — and say so as you do it. Shot 2 has already shown the audience
-   what a `too_short` rejection looks like, so this lands.
+6. Dwell on at least six different products across at least two stations, with at least one
+   interaction, or the session gate will reject it — and say so as you do it. There is no time
+   requirement: shop briskly if you like, but cover the shelf. Shot 2 has already shown the
+   audience an empty panel and the gate that caused it, so this lands.
 7. **Move the cursor from pack to pack, deliberately.** The agreement meter needs fifteen cursor
    dwells, and a dwell is not elapsed time on the shelf. `CursorTracker` opens one when the pointer
    enters a *product* rectangle and emits it only when the pointer **leaves** that rectangle having

@@ -37,7 +37,7 @@ const STATUS = {
   export_command: "python scripts/anonymise_sessions.py",
   eval_command: "python scripts/eval.py",
   gate: {
-    min_duration_s: 45,
+    min_observed_slots: 6,
     min_stations: 2,
     min_interactions: 1,
     min_fixation_coverage: 0.4,
@@ -117,8 +117,15 @@ describe("what the panel holds", () => {
   it("says what acceptance requires, so a rejection is diagnosable here", async () => {
     const harness = await mount();
     try {
-      expect(text(harness, "collection-gate")).toContain("45");
-      expect(text(harness, "collection-gate")).toContain("2");
+      const gate = text(harness, "collection-gate");
+      expect(gate).toContain("6");
+      expect(gate).toContain("2");
+      // Shelf seen, not time spent. An operator reading "45s or longer" here
+      // would go on coaching participants to linger, which is the behaviour
+      // the old floor selected for and the reason the mission archetype never
+      // reached the panel.
+      expect(gate).not.toContain("45");
+      expect(gate.toLowerCase()).toContain("slot");
     } finally {
       harness.unmount();
     }

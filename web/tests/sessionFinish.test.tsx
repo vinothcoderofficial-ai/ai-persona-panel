@@ -9,8 +9,8 @@ import type { Planogram } from "@/contracts/planogram.schema";
 import type { Session } from "@/contracts/session.schema";
 import type { EventSink } from "@/capture/SessionSocket";
 import {
-  MIN_DURATION_S,
   MIN_FIXATION_COVERAGE,
+  MIN_OBSERVED_SLOTS,
   MIN_STATIONS,
 } from "@/capture/SessionGate";
 import { PlanogramScene } from "@/store/PlanogramScene";
@@ -108,47 +108,60 @@ function goodSession(): ShopperEvent[] {
   return [
     ev(0, "station_enter", "B1"),
     ev(1_000, "hover", "B1", { sku_id: "SKU_CRUNCH_1", slot_id: "B1S3P1" }),
-    ev(2_000, "fixation", "B1", {
-      x: 640,
-      y: 400,
-      dur_ms: 15_000,
-      slot_id: "B1S3P1",
-      shelf_id: "B1S3",
-    }),
+    ev(1_500, "cursor_dwell", "B1", { slot_id: "B1S1P1", dur_ms: 400 }),
+    ev(2_000, "cursor_dwell", "B1", { slot_id: "B1S2P1", dur_ms: 400 }),
+    ev(2_500, "cursor_dwell", "B1", { slot_id: "B1S3P1", dur_ms: 400 }),
+    ev(3_000, "fixation", "B1", { x: 640, y: 400, dur_ms: 5_000, slot_id: "B1S1P1", shelf_id: "B1S1" }),
+    ev(8_000, "fixation", "B1", { x: 640, y: 420, dur_ms: 5_000, slot_id: "B1S2P1", shelf_id: "B1S2" }),
+    ev(13_000, "fixation", "B1", { x: 640, y: 440, dur_ms: 5_000, slot_id: "B1S3P1", shelf_id: "B1S3" }),
     ev(30_000, "station_enter", "B2"),
-    ev(31_000, "fixation", "B2", {
-      x: 700,
-      y: 380,
-      dur_ms: 15_000,
-      slot_id: null,
-      shelf_id: "B2S1",
-    }),
+    ev(30_500, "cursor_dwell", "B2", { slot_id: "B2S1P1", dur_ms: 400 }),
+    ev(31_000, "cursor_dwell", "B2", { slot_id: "B2S2P1", dur_ms: 400 }),
+    ev(31_500, "cursor_dwell", "B2", { slot_id: "B2S3P1", dur_ms: 400 }),
+    ev(32_000, "fixation", "B2", { x: 700, y: 380, dur_ms: 5_000, slot_id: "B2S1P1", shelf_id: "B2S1" }),
+    ev(37_000, "fixation", "B2", { x: 700, y: 400, dur_ms: 5_000, slot_id: "B2S2P1", shelf_id: "B2S2" }),
+    ev(42_000, "fixation", "B2", { x: 700, y: 420, dur_ms: 5_000, slot_id: "B2S3P1", shelf_id: "B2S3" }),
   ];
 }
 
 /**
- * The same session, over in 10 s. Two stations, one interaction and 8 s of
- * fixation, so duration is the only threshold it misses.
+ * The mission shopper: a list, a known brand, and out in ten seconds.
+ *
+ * Modelled on the real session da18f055, which the old duration floor rejected
+ * as `too_short` at 28.9 seconds. Cursor-only, six slots dwelt on across two
+ * bays, three things touched. Nothing about it is low quality except its
+ * length, which is no longer a criterion.
  */
-function shortSession(): ShopperEvent[] {
+function briskSession(): ShopperEvent[] {
   return [
     ev(0, "station_enter", "B1"),
-    ev(500, "hover", "B1", { sku_id: "SKU_CRUNCH_1", slot_id: "B1S3P1" }),
-    ev(1_000, "fixation", "B1", {
-      x: 640,
-      y: 400,
-      dur_ms: 4_000,
-      slot_id: "B1S3P1",
-      shelf_id: "B1S3",
-    }),
-    ev(6_000, "station_enter", "B2"),
-    ev(6_500, "fixation", "B2", {
-      x: 700,
-      y: 380,
-      dur_ms: 4_000,
-      slot_id: null,
-      shelf_id: "B2S1",
-    }),
+    ev(600, "cursor_dwell", "B1", { slot_id: "B1S1P1", dur_ms: 320 }),
+    ev(1_100, "cursor_dwell", "B1", { slot_id: "B1S2P1", dur_ms: 380 }),
+    ev(1_700, "cursor_dwell", "B1", { slot_id: "B1S3P1", dur_ms: 900 }),
+    ev(2_400, "pickup", "B1", { sku_id: "SKU_CRUNCH_1", slot_id: "B1S3P1" }),
+    ev(2_800, "add_to_cart", "B1", { sku_id: "SKU_CRUNCH_1", slot_id: "B1S3P1" }),
+    ev(4_000, "station_enter", "B2"),
+    ev(4_600, "cursor_dwell", "B2", { slot_id: "B2S1P1", dur_ms: 340 }),
+    ev(5_200, "cursor_dwell", "B2", { slot_id: "B2S2P1", dur_ms: 460 }),
+    ev(6_000, "cursor_dwell", "B2", { slot_id: "B2S3P1", dur_ms: 700 }),
+    ev(7_000, "add_to_cart", "B2", { sku_id: "SKU_OAT_2", slot_id: "B2S3P1" }),
+  ];
+}
+
+/**
+ * A minute long, and it looked at two slots.
+ *
+ * This is the session the old gate called good: it cleared 45 seconds and two
+ * stations while barely seeing the shelf. Time was never what made a session
+ * evidence, and this is the case that shows it.
+ */
+function sparseSession(): ShopperEvent[] {
+  return [
+    ev(0, "station_enter", "B1"),
+    ev(1_000, "hover", "B1", { sku_id: "SKU_CRUNCH_1", slot_id: "B1S3P1" }),
+    ev(2_000, "fixation", "B1", { x: 640, y: 400, dur_ms: 15_000, slot_id: "B1S3P1", shelf_id: "B1S3" }),
+    ev(30_000, "station_enter", "B2"),
+    ev(31_000, "fixation", "B2", { x: 700, y: 380, dur_ms: 15_000, slot_id: "B2S1P1", shelf_id: "B2S1" }),
   ];
 }
 
@@ -252,35 +265,58 @@ describe("checkout finishes the session with the gate's verdict", () => {
     expect(body.quality).toEqual({
       fixation_coverage: 0.5,
       stations_visited: 2,
+      slots_observed: 6,
       duration_s: 60,
     });
     // The numbers the gate decided on are the numbers it reported.
     const quality = body.quality as Record<string, number>;
-    expect(quality.duration_s).toBeGreaterThanOrEqual(MIN_DURATION_S);
+    expect(quality.slots_observed).toBeGreaterThanOrEqual(MIN_OBSERVED_SLOTS);
     expect(quality.stations_visited).toBeGreaterThanOrEqual(MIN_STATIONS);
     expect(quality.fixation_coverage).toBeGreaterThanOrEqual(MIN_FIXATION_COVERAGE);
   });
 
-  it("rejects a short session as too_short, and still reports its quality", async () => {
-    // Everything else about this session is fine; it simply did not last.
+  it("accepts the brisk mission shopper the duration floor used to reject", async () => {
+    // Ten seconds, and every one of them spent on the shelf. Under the old
+    // gate this was `too_short` and never reached the panel; rejecting it
+    // meant benchmarking synthetic personas against a real panel with the
+    // mission archetype filtered out of it.
     const body = await checkout({
       consent: true,
-      mode: "webcam",
-      events: shortSession(),
+      mode: "cursor_only",
+      events: briskSession(),
       t_ms: 10_000,
     });
 
-    expect(body.accepted).toBe(false);
-    expect(body.reject_reason).toBe("too_short");
-    // Rejecting is not deleting: the quality block is still there for S19's
-    // noise dashboard to plot. Only duration_s is under the floor.
-    expect(body.quality).toEqual({
-      fixation_coverage: 0.8,
-      stations_visited: 2,
-      duration_s: 10,
+    expect(body.accepted).toBe(true);
+    expect(body.reject_reason).toBeNull();
+    const quality = body.quality as Record<string, number>;
+    expect(quality.duration_s).toBe(10);
+    expect(quality.slots_observed).toBe(6);
+  });
+
+  it("rejects a long session that saw two slots, and still reports its quality", async () => {
+    // A full minute across two bays, spent on two products. This is the
+    // session the duration floor called good, and the one the shelf-coverage
+    // rule is for.
+    const body = await checkout({
+      consent: true,
+      mode: "webcam",
+      events: sparseSession(),
+      t_ms: 60_000,
     });
-    expect((body.quality as Record<string, number>).duration_s).toBeLessThan(
-      MIN_DURATION_S,
+
+    expect(body.accepted).toBe(false);
+    expect(body.reject_reason).toBe("too_few_slots");
+    // Rejecting is not deleting: the quality block is still there for S19's
+    // noise dashboard to plot. Only slots_observed is under the floor.
+    expect(body.quality).toEqual({
+      fixation_coverage: 0.5,
+      stations_visited: 2,
+      slots_observed: 2,
+      duration_s: 60,
+    });
+    expect((body.quality as Record<string, number>).slots_observed).toBeLessThan(
+      MIN_OBSERVED_SLOTS,
     );
   });
 
@@ -301,7 +337,9 @@ describe("checkout finishes the session with the gate's verdict", () => {
 
   it("does not hold a cursor_only session to the webcam coverage floor", async () => {
     // A cursor-only session has no fixations at all, so its coverage is 0 by
-    // construction. Judging it on that would reject every one of them.
+    // construction. Judging it on that would reject every one of them. Its
+    // cursor dwells still cover six slots, which is the channel fusion.py
+    // weights in this mode and the one the gate counts.
     const withoutFixations = goodSession().filter((e) => e.type !== "fixation");
     const body = await checkout({
       consent: true,

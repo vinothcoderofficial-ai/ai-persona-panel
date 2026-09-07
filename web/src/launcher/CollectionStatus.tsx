@@ -48,7 +48,7 @@ interface Status {
   export_command: string;
   eval_command: string;
   gate: {
-    min_duration_s: number;
+    min_observed_slots: number;
     min_stations: number;
     min_interactions: number;
     min_fixation_coverage: number;
@@ -169,10 +169,12 @@ export function CollectionStatus({ fetchImpl = defaultFetch }: CollectionStatusP
       )}
 
       <div data-testid="collection-gate" style={{ ...note, marginTop: 4 }}>
-        A session is accepted at {s.gate.min_duration_s}s or longer, across{" "}
-        {s.gate.min_stations} or more bays, with at least {s.gate.min_interactions}{" "}
-        interaction — and, for a webcam session, {Math.round(s.gate.min_fixation_coverage * 100)}%
-        fixation coverage.
+        A session is accepted once it has looked at {s.gate.min_observed_slots} or more
+        slots, across {s.gate.min_stations} or more bays, with at least{" "}
+        {s.gate.min_interactions} interaction — and, for a webcam session,{" "}
+        {Math.round(s.gate.min_fixation_coverage * 100)}% fixation coverage. There is no
+        minimum length: a shopper with a list who covers the shelf in half a minute is
+        evidence, and a slow one who studies a single product is not.
       </div>
 
       {s.export_needed && (

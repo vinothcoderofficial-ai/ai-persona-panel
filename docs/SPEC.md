@@ -228,9 +228,9 @@ Response: `{"sim_run_id":"uuid","elapsed_ms":640,"per_persona":{"mission":{...Si
 **Fixation filter** (`FixationFilter.ts`, mirrored in `analytics/noise.py`): drop `conf < 0.5` → median filter window 5 → I-DT (dispersion ≤ 60 px, min 100 ms) → centroid → `hitTest`; no slot but inside a shelf rect → `shelf_id`.
 **Cursor:** `CursorTracker.ts` emits `cursor_dwell` when the cursor stays inside one slot rect ≥ 300 ms.
 **Streaming:** `EventLogger.ts` buffers events; `SessionSocket.ts` flushes every 500 ms to `ws://api/ws/session/{id}`; falls back to `POST /sessions/{id}/events` if the socket drops; local buffer is retained until acknowledged.
-**Gate** (`SessionGate.ts` + `noise.py`): accept iff `duration_s ≥ 45`, `stations_visited ≥ 2`, ≥ 1 interaction, and (webcam) `fixation_coverage ≥ 0.4`. Reject reasons enumerated: `too_short`, `one_station`, `no_interaction`, `low_coverage`, `no_consent`.
+**Gate** (`SessionGate.ts`, browser only — there is no Python twin): accept iff `slots_observed ≥ 6`, `stations_visited ≥ 2`, ≥ 1 interaction, and (webcam) `fixation_coverage ≥ 0.4`. `slots_observed` counts distinct slots that produced a looking observation in the channels `fusion.py` weights for that mode (`cursor_dwell` in cursor_only; `fixation` and `cursor_dwell` in webcam), skipping `slot_id: null`. **No duration floor** — it was a biased proxy for shelf coverage that preferentially rejected the `mission` archetype; see METHODOLOGY.md §2.3. Reject reasons enumerated: `too_few_slots`, `one_station`, `no_interaction`, `low_coverage`, `no_consent`. (`too_short` remains in the schema, never emitted, so sessions rejected under the old rule stay readable.)
 **Noise parameters freeze on Day 7** (before numbers are locked); the freeze commit hash goes in METHODOLOGY.md.
-**Acceptance:** `tests/fixtures/jittery_gaze.json` → exactly `expected_fixations.json` in both TS and Python; 30 s session rejected `too_short`; socket drop mid-session loses zero events (test with a mocked socket).
+**Acceptance:** `tests/fixtures/jittery_gaze.json` → exactly `expected_fixations.json` in both TS and Python; a 60 s session that looked at 2 slots rejected `too_few_slots`, and a 10 s one that looked at 6 accepted; socket drop mid-session loses zero events (test with a mocked socket).
 
 ### M3 — Saliency (`sim/saliency.py`)
 ```

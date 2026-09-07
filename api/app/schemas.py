@@ -219,6 +219,7 @@ class ArchetypeLabel(Enum):
 
 
 class RejectReason(Enum):
+    too_few_slots = 'too_few_slots'
     too_short = 'too_short'
     one_station = 'one_station'
     no_interaction = 'no_interaction'
@@ -233,6 +234,7 @@ class Quality(BaseModel):
     )
     fixation_coverage: Optional[confloat(ge=0.0, le=1.0)] = None
     stations_visited: Optional[conint(ge=0)] = None
+    slots_observed: Optional[conint(ge=0)] = None
     duration_s: Optional[confloat(ge=0.0)] = None
 
 
