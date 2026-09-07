@@ -35,4 +35,11 @@ export interface Session {
     slots_observed?: number;
     duration_s?: number;
   };
+  regated?: {
+    at?: string;
+    from_accepted?: boolean | null;
+    from_reject_reason?: string | null;
+    rule_commit?: string;
+    note?: string;
+  } | null;
 }

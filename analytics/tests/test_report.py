@@ -49,7 +49,7 @@ class _FakeLLM:
         )
 
 
-def _report_input(*, has_real_panel: bool = True) -> dict:
+def _report_input(*, has_real_panel: bool = True, n_regated: int = 1) -> dict:
     """A complete report input, shaped the way scripts/eval.py builds it."""
     per_variant = [
         {
@@ -107,6 +107,7 @@ def _report_input(*, has_real_panel: bool = True) -> dict:
             "n_synth": 10000,
             "mode_split": {"webcam": 7, "cursor_only": 4} if has_real_panel else {},
             "reject_reasons": [{"reason": "too_short", "n": 2}] if has_real_panel else [],
+            "n_regated": n_regated if has_real_panel else 0,
             "fusion_mode": "webcam" if has_real_panel else "cursor_only",
             "has_real_panel": has_real_panel,
         },
@@ -412,3 +413,24 @@ def test_a_row_without_a_synthetic_interval_renders_not_collected():
 
     assert len(row) == 1
     assert row[0].count(report.NOT_COLLECTED) == 1
+
+
+def test_discloses_re_gated_sessions_in_the_panel_section() -> None:
+    """A session re-admitted after the rule that rejected it was removed.
+
+    METHODOLOGY.md records why the duration floor went, but RESULTS.md is where
+    the numbers are read, and an accepted panel that silently includes a
+    session re-gated under a rule written *because* that session was rejected
+    is the kind of thing a reader must be told without having to go looking.
+    """
+    markdown = report.render(_report_input(has_real_panel=True))
+
+    assert "re-gated" in markdown
+    assert "1 of 11" in markdown
+
+
+def test_says_nothing_about_re_gating_when_there_is_none() -> None:
+    # A caveat printed when it does not apply teaches readers to skip caveats.
+    markdown = report.render(_report_input(has_real_panel=True, n_regated=0))
+
+    assert "re-gated" not in markdown

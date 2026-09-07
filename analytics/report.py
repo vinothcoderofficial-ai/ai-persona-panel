@@ -389,6 +389,18 @@ def _panel_section(lines: list[str], data: Mapping[str, Any]) -> None:
     else:
         lines.append(f"- Capture mode of the accepted panel: {NOT_COLLECTED}")
 
+    # Stated only when it happened. A session re-admitted under a rule written
+    # because that session was rejected is something a reader has to be told
+    # here, where the numbers are read - METHODOLOGY.md explains why the rule
+    # changed, but nobody checks a methodology document before reading a table.
+    if panel.get("n_regated"):
+        lines.append(
+            f"- **{_fmt_int(panel['n_regated'])} of {_fmt_int(panel['n_real_accepted'])} "
+            "accepted sessions were re-gated**: rejected by the duration floor, "
+            "re-admitted when it was removed (METHODOLOGY.md 2.3). Each carries a "
+            "`regated` block naming the verdict it replaced."
+        )
+
     if panel["reject_reasons"]:
         reasons = ", ".join(
             f"{row['reason']} {_fmt_int(row['n'])}" for row in panel["reject_reasons"]

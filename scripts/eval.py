@@ -927,6 +927,12 @@ def _analyse(
                     ).items()
                 )
             ],
+            # Accepted sessions whose verdict was rewritten after the fact.
+            # Counted here so RESULTS.md can disclose it: see
+            # scripts/regate_session.py for why one would ever exist.
+            "n_regated": sum(
+                1 for loaded in accepted if loaded.session.get("regated") is not None
+            ),
             "fusion_mode": fusion_mode,
             "has_real_panel": bool(accepted),
         },

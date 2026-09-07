@@ -143,6 +143,37 @@
           "minimum": 0
         }
       }
+    },
+    "regated": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "from_accepted": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "from_reject_reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "rule_commit": {
+          "type": "string"
+        },
+        "note": {
+          "type": "string"
+        }
+      }
     }
   }
 }

@@ -120,6 +120,39 @@ no_consent → too_few_slots → one_station → no_interaction → low_coverage
 again, so sessions rejected under the old rule stay valid and exportable rather
 than becoming unreadable evidence.
 
+#### Disclosure: one session was re-gated
+
+`da18f055-d99a-4308-af7a-6aafcd8c9178` — the 28.9-second `mission` session
+described above — was rejected as `too_short` when it was collected, and was
+re-admitted under the new rule by `scripts/regate_session.py` on 2026-09-07
+(gate commit `1d97717`). It cleared the new rule at exactly the threshold: six
+slots observed, against a minimum of six.
+
+**This is disclosed because it is the weakest link in this section.** The rule
+was changed *because* this session was rejected, and then the changed rule was
+applied to re-admit it. That is the shape of a p-hack whatever the reasoning
+behind the rule, and a reader is entitled to discount the session on that basis
+alone. The mitigations are that the threshold was derived from the planogram's
+slot vocabulary (6 of 24, a quarter of the shelf) before any session's score
+was computed; that the session carries a `regated` block naming the verdict it
+replaced, which travels with it into `data/sessions/anon/`; and that
+`RESULTS.md` prints the count of re-gated sessions beside the panel size, so
+the caveat cannot be separated from the number.
+
+The events themselves were never touched. Re-gating changes a verdict, not the
+record it was reached from.
+
+**It is not in the committed corpus, and cannot be.** `scripts/eval.py` refuses
+it on a separate and stricter ground: the session was collected before the
+server stamped `first_event_at` (S31), so eval must fall back to reconstructing
+its first event as `started_at + t_ms`, which is biased early by the
+`POST /sessions` round trip and places the first event about a second before
+the prediction lock. The true ordering was almost certainly sound — the lock
+was written 1.2 s after `started_at`, and `t_ms` counts from after that call
+returned — but "almost certainly" is not the standard pre-registration runs on,
+and the check was not weakened to admit it. Every session collected from now
+on is stamped by the server and checked exactly.
+
 The order is fixed and tested (`REJECT_ORDER` and `firstFailure` must agree) for one reason:
 a reject-reason histogram is only readable if one session always yields one answer.
 

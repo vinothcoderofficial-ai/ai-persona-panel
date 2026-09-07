@@ -109,25 +109,37 @@ was written:
 
 | Figure | Value | Say |
 |---|---|---|
-| accepted | **0** | The real panel does not exist yet. |
-| rejected | **1** | One person has shopped a recorded session. |
+| accepted | **1** | One person has shopped a recorded session, and it passed the gate. |
+| rejected | **0** | — |
 | unfinished | 0 | — |
 | declined consent | 1 | A rehearsal run — `consent: false`, self-rejecting. |
-| committed | **0** | And it is not in the corpus, because it was rejected. |
-| locks | **1** | The prediction for it was still locked first. |
+| committed | **0** | And it is *not* in the corpus. This is the honest part of the shot. |
+| locks | **1** | The prediction for it was locked before it started. |
 
-Below the figures: **`Rejected for: too_short (1)`**, and the acceptance rule — 6 or more slots
-looked at, across 2 or more bays, with at least 1 interaction.
+Below the figures, the acceptance rule — 6 or more slots looked at, across 2 or more bays, with
+at least 1 interaction, and no minimum length.
 
-Point at the two together, because they no longer agree, and say why. That session was rejected
-by a 45-second floor that has since been removed: it was a proxy for "saw enough shelf" that
-preferentially threw away shoppers with a list, which is one of the four personas the panel
-exists to validate. The gate now counts slots actually looked at. The stale `too_short` on screen
-is the old verdict preserved rather than rewritten — re-gating a stored session would be editing
-evidence after the fact.
+**The line to land is accepted 1, committed 0.** The session passed the gate and still did not
+become evidence, because `scripts/eval.py` could not verify that its prediction lock was written
+before its first event. It was collected before the server stamped `first_event_at`, so eval has
+to reconstruct the arrival time as `started_at + t_ms`, which is biased early by the
+`POST /sessions` round trip. The ordering was almost certainly fine. Almost certainly is not the
+standard, and the check was not weakened to let it through.
 
-If that is too much for the shot, cut it to one line: *"the panel is empty, the reason is on
-screen, and the rule that caused it is gone."*
+Say that plainly. A demo that shows a system refusing its own only datapoint is worth more than
+one that shows a full dashboard, and this is the single strongest thirty seconds in the video for
+proving the pre-registration is real rather than decorative.
+
+Two things to be honest about if asked, both documented in METHODOLOGY.md 2.3:
+
+* That accepted **1** was a re-gate. The session was originally rejected by a 45-second duration
+  floor, which was removed because it preferentially discarded shoppers with a list — the
+  `mission` archetype, one of the four the panel exists to validate. The rule was changed because
+  of this session and then applied to it, which a sceptical viewer is right to flag. It cleared
+  the new rule at exactly the threshold, 6 slots of 6.
+* The session carries a `regated` block recording the verdict it replaced, and RESULTS.md prints
+  the re-gated count beside the panel size, so the caveat cannot be read separately from the
+  number.
 
 Then scroll once through the destination cards so the audience sees the product has eight screens
 and where the next few minutes are going. Do not click into any of them yet.

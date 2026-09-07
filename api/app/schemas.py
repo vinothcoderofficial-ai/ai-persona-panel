@@ -238,6 +238,17 @@ class Quality(BaseModel):
     duration_s: Optional[confloat(ge=0.0)] = None
 
 
+class Regated(BaseModel):
+    model_config = ConfigDict(
+        extra='forbid',
+    )
+    at: Optional[datetime] = None
+    from_accepted: Optional[bool] = None
+    from_reject_reason: Optional[str] = None
+    rule_commit: Optional[str] = None
+    note: Optional[str] = None
+
+
 class Session(BaseModel):
     model_config = ConfigDict(
         extra='forbid',
@@ -261,6 +272,7 @@ class Session(BaseModel):
     accepted: Optional[bool] = None
     reject_reason: Optional[RejectReason] = None
     quality: Optional[Quality] = None
+    regated: Optional[Regated] = None
 
 
 # -----------------------------------------------------------------------------
