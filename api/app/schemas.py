@@ -178,8 +178,27 @@ class Patch4(BaseModel):
     promo: Optional[bool] = None
 
 
-class Patch(RootModel[Union[Patch1, Patch2, Patch3, Patch4]]):
-    root: Union[Patch1, Patch2, Patch3, Patch4]
+class VariantType(Enum):
+    shelf_talker = 'shelf_talker'
+    endcap_header = 'endcap_header'
+    floor_decal = 'floor_decal'
+    screen = 'screen'
+
+
+class Patch5(BaseModel):
+    model_config = ConfigDict(
+        extra='forbid',
+    )
+    op: Literal['add_ad_slot']
+    ad_slot_id: str
+    type: VariantType
+    attached_to: str
+    x_m: confloat(ge=0.0)
+    width_m: PositiveFloat
+
+
+class Patch(RootModel[Union[Patch1, Patch2, Patch3, Patch4, Patch5]]):
+    root: Union[Patch1, Patch2, Patch3, Patch4, Patch5]
 
 
 class Variant(BaseModel):

@@ -89,6 +89,70 @@ def _apply_set_price(patch: Dict[str, Any], skus: Dict[str, Dict[str, Any]]) -> 
         skus[sku_id]["promo"] = patch["promo"]
 
 
+def _apply_add_ad_slot(
+    patch: Dict[str, Any],
+    planogram: Dict[str, Any],
+    ad_slots: Dict[str, Dict[str, Any]],
+) -> None:
+    """Hang a new, empty ad fixture on a shelf or a bay.
+
+    Every other op edits something the planogram already carries. This one adds,
+    and it exists because a shelf read from video carries no fixtures at all:
+    `vision/planogram.py` emits `ad_slots: []` on purpose, since it detects no
+    signage and will not invent the one variable the experiment manipulates. So
+    a video-read bay could be shopped, and could sell things once an operator
+    labelled it, and could never produce an ad lift - there was nothing for a
+    shopper to be exposed to.
+
+    **The bay is derived from `attached_to`, never passed alongside it.** Two
+    fields naming a location are two fields that can disagree, and the two
+    consumers read different ones: `sim/saliency.py` scores adjacency from
+    `attached_to`, while the bay's own `ad_slots` array decides which bay
+    carries the fixture. A patch that set them inconsistently would put a
+    talker on one bay and score it against another, and nothing downstream
+    could see it.
+
+    **The fixture is created empty.** `set_ad_creative` books it, already exists
+    and already refuses a creative the planogram does not carry, so splitting
+    the two keeps one validation path rather than two. A variant that wants a
+    booked fixture writes both patches, in that order, which also reads as what
+    it is: install the holder, then put a poster in it.
+    """
+    ad_slot_id = patch["ad_slot_id"]
+    if ad_slot_id in ad_slots:
+        raise PatchError(
+            f"add_ad_slot: ad_slot_id {ad_slot_id!r} already exists. Two fixtures "
+            "with one id would make the ad-slot index ambiguous, and "
+            "set_ad_creative would book whichever it happened to find."
+        )
+
+    attached_to = patch["attached_to"]
+    owner = None
+    for bay in planogram["bays"]:
+        if bay["bay_id"] == attached_to or any(
+            shelf["shelf_id"] == attached_to for shelf in bay["shelves"]
+        ):
+            owner = bay
+            break
+
+    if owner is None:
+        raise PatchError(
+            f"add_ad_slot: unknown attached_to {attached_to!r} (no bay or shelf "
+            "carries that id)"
+        )
+
+    fixture = {
+        "ad_slot_id": ad_slot_id,
+        "type": patch["type"],
+        "attached_to": attached_to,
+        "x_m": patch["x_m"],
+        "width_m": patch["width_m"],
+        "creative_id": None,
+    }
+    owner["ad_slots"].append(fixture)
+    ad_slots[ad_slot_id] = fixture
+
+
 def resolve(base: Dict[str, Any], variant: Dict[str, Any]) -> Dict[str, Any]:
     """Apply variant["patches"] to base, in list order, and return a full
     resolved planogram.
@@ -114,6 +178,12 @@ def resolve(base: Dict[str, Any], variant: Dict[str, Any]) -> Dict[str, Any]:
             _apply_swap_texture(patch, skus)
         elif op == "set_price":
             _apply_set_price(patch, skus)
+        elif op == "add_ad_slot":
+            # Given the planogram itself, not just the index: this op appends to
+            # a bay, so it has to find the bay that owns `attached_to`. It keeps
+            # `ad_slots` current so a later `set_ad_creative` in the same variant
+            # can book what it just installed.
+            _apply_add_ad_slot(patch, planogram, ad_slots)
         else:
             raise PatchError(f"unknown patch op {op!r}")
 

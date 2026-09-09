@@ -81,3 +81,31 @@ def test_variant_rejects_missing_required_field():
 
     with pytest.raises(ValidationError):
         Variant(**bad)
+
+
+def test_the_ad_slot_type_enum_is_the_same_in_both_schemas():
+    """`add_ad_slot` inlines planogram.schema.json's ad-slot `type` enum.
+
+    Nothing in `schemas/` references another file - every document is
+    self-contained and `scripts/gen_schemas.py` has no resolver - so the enum is
+    duplicated rather than shared. Duplicated is fine; drifting is not. A
+    `type` accepted by the variant schema and rejected by the planogram schema
+    would let a variant validate and then produce a resolved planogram that
+    does not, which `resolve()` has no way to warn about because both documents
+    were individually legal.
+    """
+    import json
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[2]
+    planogram = json.loads((root / "schemas" / "planogram.schema.json").read_text(encoding="utf-8"))
+    variant = json.loads((root / "schemas" / "variant.schema.json").read_text(encoding="utf-8"))
+
+    on_planogram = planogram["definitions"]["ad_slot"]["properties"]["type"]["enum"]
+    add_op = next(
+        branch
+        for branch in variant["definitions"]["patch"]["oneOf"]
+        if branch["properties"]["op"]["const"] == "add_ad_slot"
+    )
+
+    assert add_op["properties"]["type"]["enum"] == on_planogram

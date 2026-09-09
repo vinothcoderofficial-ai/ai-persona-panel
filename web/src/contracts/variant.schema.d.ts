@@ -30,6 +30,14 @@ export type Patch =
       sku_id: string;
       price: number;
       promo?: boolean;
+    }
+  | {
+      op: "add_ad_slot";
+      ad_slot_id: string;
+      type: "shelf_talker" | "endcap_header" | "floor_decal" | "screen";
+      attached_to: string;
+      x_m: number;
+      width_m: number;
     };
 
 export interface Variant {

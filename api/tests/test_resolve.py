@@ -13,7 +13,7 @@ from pathlib import Path
 import pytest
 from jsonschema import Draft7Validator
 
-from api.app.resolve import resolve
+from api.app.resolve import PatchError, resolve
 
 ROOT = Path(__file__).resolve().parents[2]
 PLANOGRAM_PATH = ROOT / "data" / "planograms" / "demo_aisle.json"
@@ -219,4 +219,193 @@ def test_patch_with_unknown_reference_raises(patch):
     }
 
     with pytest.raises(ValueError):
+        resolve(base, v)
+
+
+# ---------------------------------------------------------------------------
+# add_ad_slot
+#
+# The op exists because a shelf read from video has nowhere to put an ad.
+# `vision/planogram.py` emits `ad_slots: []` on purpose - it detects no signage
+# and refuses to invent the one variable the whole experiment manipulates - and
+# every other patch op only edits something already there. `set_ad_creative`
+# needs an `ad_slot_id` that exists. So a video-read bay could be shopped and
+# could produce purchases once labelled, and could never produce an ad lift,
+# because there was no fixture to expose anybody to.
+#
+# The bay is derived from `attached_to` rather than passed alongside it. Two
+# fields naming a location is two fields that can disagree, and a slot whose
+# `attached_to` shelf sits in a different bay from its `ad_slots` array would
+# put a talker on one bay and score it against another - `sim/saliency.py`
+# reads `attached_to` for adjacency and the bay array for which bay carries it.
+
+
+def test_add_ad_slot_appends_to_the_bay_that_owns_the_shelf():
+    base = base_planogram()
+    v = {
+        "variant_id": "test_add_ad",
+        "base_planogram_id": "demo_aisle",
+        "name": "add an ad slot",
+        "patches": [
+            {
+                "op": "add_ad_slot",
+                "ad_slot_id": "B2_TALKER_2",
+                "type": "shelf_talker",
+                "attached_to": "B2S3",
+                "x_m": 0.15,
+                "width_m": 0.4,
+            }
+        ],
+    }
+
+    result = resolve(base, v)
+
+    added = find_ad_slot(result, "B2_TALKER_2")
+    assert added["attached_to"] == "B2S3"
+    assert added["creative_id"] is None, "a new fixture is empty until something books it"
+    owning = next(b for b in result["bays"] if b["bay_id"] == "B2")
+    assert any(a["ad_slot_id"] == "B2_TALKER_2" for a in owning["ad_slots"])
+
+
+def test_add_ad_slot_can_attach_to_a_bay_rather_than_a_shelf():
+    """`attached_to` is a shelf_id or a bay_id - `geometry.ts` says so, and an
+    endcap header hangs off the bay, not off one of its shelves."""
+    base = base_planogram()
+    v = {
+        "variant_id": "test_add_bay",
+        "base_planogram_id": "demo_aisle",
+        "name": "bay-level fixture",
+        "patches": [
+            {
+                "op": "add_ad_slot",
+                "ad_slot_id": "B1_HEADER",
+                "type": "endcap_header",
+                "attached_to": "B1",
+                "x_m": 0.0,
+                "width_m": 1.0,
+            }
+        ],
+    }
+
+    result = resolve(base, v)
+
+    owning = next(b for b in result["bays"] if b["bay_id"] == "B1")
+    assert any(a["ad_slot_id"] == "B1_HEADER" for a in owning["ad_slots"])
+
+
+def test_add_ad_slot_then_set_ad_creative_books_it():
+    """The two ops compose, which is why `add_ad_slot` does not take a creative
+    of its own. One op creates the fixture, the existing one books it - and
+    `set_ad_creative` already refuses a creative the planogram does not carry."""
+    base = base_planogram()
+    v = {
+        "variant_id": "test_add_book",
+        "base_planogram_id": "demo_aisle",
+        "name": "add then book",
+        "patches": [
+            {
+                "op": "add_ad_slot",
+                "ad_slot_id": "B2_TALKER_2",
+                "type": "shelf_talker",
+                "attached_to": "B2S3",
+                "x_m": 0.15,
+                "width_m": 0.4,
+            },
+            {"op": "set_ad_creative", "ad_slot_id": "B2_TALKER_2", "creative_id": "AD_1"},
+        ],
+    }
+
+    result = resolve(base, v)
+
+    assert find_ad_slot(result, "B2_TALKER_2")["creative_id"] == "AD_1"
+
+
+def test_add_ad_slot_does_not_mutate_the_base():
+    base = base_planogram()
+    before = sum(len(bay["ad_slots"]) for bay in base["bays"])
+    v = {
+        "variant_id": "test_add_pure",
+        "base_planogram_id": "demo_aisle",
+        "name": "purity",
+        "patches": [
+            {
+                "op": "add_ad_slot",
+                "ad_slot_id": "B3_EXTRA",
+                "type": "floor_decal",
+                "attached_to": "B3",
+                "x_m": 0.2,
+                "width_m": 0.3,
+            }
+        ],
+    }
+
+    resolve(base, v)
+
+    assert sum(len(bay["ad_slots"]) for bay in base["bays"]) == before
+
+
+def test_add_ad_slot_output_validates_against_the_planogram_schema():
+    base = base_planogram()
+    v = {
+        "variant_id": "test_add_valid",
+        "base_planogram_id": "demo_aisle",
+        "name": "schema",
+        "patches": [
+            {
+                "op": "add_ad_slot",
+                "ad_slot_id": "B1_TALKER_2",
+                "type": "screen",
+                "attached_to": "B1S2",
+                "x_m": 0.05,
+                "width_m": 0.5,
+            }
+        ],
+    }
+
+    errors = sorted(planogram_validator().iter_errors(resolve(base, v)), key=str)
+
+    assert errors == []
+
+
+@pytest.mark.parametrize(
+    "patch,message",
+    [
+        (
+            {
+                "op": "add_ad_slot",
+                "ad_slot_id": "NOWHERE",
+                "type": "shelf_talker",
+                "attached_to": "B9S9",
+                "x_m": 0.1,
+                "width_m": 0.2,
+            },
+            "attached_to",
+        ),
+        (
+            {
+                "op": "add_ad_slot",
+                "ad_slot_id": "B1_TALKER",
+                "type": "shelf_talker",
+                "attached_to": "B1S1",
+                "x_m": 0.1,
+                "width_m": 0.2,
+            },
+            "already",
+        ),
+    ],
+    ids=["unknown-attachment", "duplicate-ad-slot-id"],
+)
+def test_add_ad_slot_refuses_a_fixture_it_cannot_place(patch, message):
+    """An unplaceable fixture must not be silently dropped or silently
+    duplicated. A second `B1_TALKER` would make `_index_ad_slots` ambiguous and
+    `set_ad_creative` would then book whichever one it happened to index."""
+    base = base_planogram()
+    v = {
+        "variant_id": "bad",
+        "base_planogram_id": "demo_aisle",
+        "name": "bad",
+        "patches": [patch],
+    }
+
+    with pytest.raises(PatchError, match=message):
         resolve(base, v)

@@ -68,23 +68,39 @@ capture pipeline in `web/src/capture/` is tested and has never seen a camera.
 
 ## 2. Real, and visible if a judge pushes on the video track
 
-### Ad-to-lift on a video-read shelf is still structurally impossible
+### Ad-to-lift on a video-read shelf: the fixture is solved, the creative is not
 
-This is the sharpest remaining hole in the "video in, recommendations out" story, and it is worth
-stating precisely because the neighbouring problems *were* fixed.
+**This was listed here as structurally impossible. Half of it no longer is.**
 
-`vision/planogram.py` emits `ad_slots: []` deliberately — no sign detection, so no invented ads.
-And nothing downstream can add one: `schemas/variant.schema.json` offers exactly four patch ops —
-`move_sku`, `set_ad_creative`, `swap_texture`, `set_price` — none of which creates a fixture, and
-`set_ad_creative` requires an `ad_slot_id` that already exists. So a shelf read from video can be shopped, can produce attention, and can produce
-purchases once an operator labels it, but it **cannot carry an ad and therefore cannot produce an
-ad lift**.
+`schemas/variant.schema.json` now carries a fifth patch op, `add_ad_slot`, which hangs an empty
+fixture on a shelf or a bay; `set_ad_creative` then books it. The owning bay is derived from
+`attached_to` rather than passed alongside it, so a fixture cannot be scored against a bay it is
+not on. Measured end to end on a shelf read from `data/vision/demo_aisle_60s.mp4`, labelled, then
+patched:
 
-- **The honest framing on stage:** the camera reads geometry; the retailer tells you where their
-  signage hangs. That is one thing they never needed a camera for.
-- **The fix, if you want it:** an `add_ad_slot` patch op, or an operator step on `#/vision` that
-  places a fixture on the read bay — the same shape as the labelling step already built. Half a day,
-  and it would make the chain complete end to end rather than complete-except-for-ads.
+```
+treated  ad_slots=1  ad_slot_attention={'V1_TALKER': 0.0683}  exposed purchases=185
+control  ad_slots=0  ad_slot_attention={}                     exposed purchases=0
+
+within-run lift on the treated arm  : 0.87
+between-arm lift, treated vs control: 0.48
+```
+
+So a shelf read from video can now carry an ad, be shopped, and produce a lift on both estimators.
+(Note the within-run figure is again the larger one, on a shelf nobody tuned.)
+
+**What is still missing is the creative, not the fixture.** `vision/planogram.py` emits
+`creatives: []` alongside `ad_slots: []`, and `set_ad_creative` refuses a `creative_id` the
+planogram does not carry — correctly, since booking a poster nobody supplied is exactly the
+fabrication the pipeline refuses everywhere else. The end-to-end run above works because the
+creative was added to the planogram document by hand before patching.
+
+- **What it needs:** the operator step on `#/vision` already collects category, brand, price and
+  promo per facing. It does not collect a creative, and `web/src/vision/VisionView.tsx` contains
+  no reference to one. Letting the operator name a brand and a headline at save time — the same
+  shape as the labelling rows — would close it. An hour or two.
+- **Until then:** a video-read shelf is one hand-edited field away from an ad lift, and the
+  fixture, the exposure and both estimators are all real.
 
 ### The pipeline has still never seen a real shelf
 
@@ -169,7 +185,8 @@ Section 2 — can a variant put an ad on a video-read shelf?
 python -c "import json; print([b['properties']['op']['const'] for b in json.load(open('schemas/variant.schema.json'))['definitions']['patch']['oneOf']])"
 ```
 
-Four ops, none of which creates a fixture, means it still cannot.
+Five ops. `add_ad_slot` creates the fixture; a video-read planogram still carries no
+`creatives`, which is the remaining half.
 
 Section 3 — the ladder, and everything else:
 

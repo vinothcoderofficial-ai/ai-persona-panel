@@ -3,56 +3,158 @@
   "$id": "variant.schema.json",
   "title": "Variant",
   "type": "object",
-  "required": ["variant_id", "base_planogram_id", "name", "patches"],
+  "required": [
+    "variant_id",
+    "base_planogram_id",
+    "name",
+    "patches"
+  ],
   "additionalProperties": false,
   "properties": {
-    "variant_id": { "type": "string" },
-    "base_planogram_id": { "type": "string" },
-    "name": { "type": "string" },
-    "patches": { "type": "array", "items": { "$ref": "#/definitions/patch" } }
+    "variant_id": {
+      "type": "string"
+    },
+    "base_planogram_id": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "patches": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/patch"
+      }
+    }
   },
   "definitions": {
     "patch": {
       "oneOf": [
         {
           "type": "object",
-          "required": ["op", "sku_id", "to_slot_id"],
+          "required": [
+            "op",
+            "sku_id",
+            "to_slot_id"
+          ],
           "additionalProperties": false,
           "properties": {
-            "op": { "const": "move_sku" },
-            "sku_id": { "type": "string" },
-            "to_slot_id": { "type": "string" }
+            "op": {
+              "const": "move_sku"
+            },
+            "sku_id": {
+              "type": "string"
+            },
+            "to_slot_id": {
+              "type": "string"
+            }
           }
         },
         {
           "type": "object",
-          "required": ["op", "ad_slot_id", "creative_id"],
+          "required": [
+            "op",
+            "ad_slot_id",
+            "creative_id"
+          ],
           "additionalProperties": false,
           "properties": {
-            "op": { "const": "set_ad_creative" },
-            "ad_slot_id": { "type": "string" },
-            "creative_id": { "type": ["string", "null"] }
+            "op": {
+              "const": "set_ad_creative"
+            },
+            "ad_slot_id": {
+              "type": "string"
+            },
+            "creative_id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
           }
         },
         {
           "type": "object",
-          "required": ["op", "sku_id", "texture_url"],
+          "required": [
+            "op",
+            "sku_id",
+            "texture_url"
+          ],
           "additionalProperties": false,
           "properties": {
-            "op": { "const": "swap_texture" },
-            "sku_id": { "type": "string" },
-            "texture_url": { "type": "string" }
+            "op": {
+              "const": "swap_texture"
+            },
+            "sku_id": {
+              "type": "string"
+            },
+            "texture_url": {
+              "type": "string"
+            }
           }
         },
         {
           "type": "object",
-          "required": ["op", "sku_id", "price"],
+          "required": [
+            "op",
+            "sku_id",
+            "price"
+          ],
           "additionalProperties": false,
           "properties": {
-            "op": { "const": "set_price" },
-            "sku_id": { "type": "string" },
-            "price": { "type": "number", "minimum": 0 },
-            "promo": { "type": "boolean" }
+            "op": {
+              "const": "set_price"
+            },
+            "sku_id": {
+              "type": "string"
+            },
+            "price": {
+              "type": "number",
+              "minimum": 0
+            },
+            "promo": {
+              "type": "boolean"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "op",
+            "ad_slot_id",
+            "type",
+            "attached_to",
+            "x_m",
+            "width_m"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "op": {
+              "const": "add_ad_slot"
+            },
+            "ad_slot_id": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "shelf_talker",
+                "endcap_header",
+                "floor_decal",
+                "screen"
+              ]
+            },
+            "attached_to": {
+              "type": "string"
+            },
+            "x_m": {
+              "type": "number",
+              "minimum": 0
+            },
+            "width_m": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            }
           }
         }
       ]
