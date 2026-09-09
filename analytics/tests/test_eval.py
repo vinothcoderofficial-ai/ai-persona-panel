@@ -494,6 +494,72 @@ def test_a_tampered_lock_is_rejected(tmp_path):
     assert any("sess-tampered" in failure and "sha256" in failure for failure in outcome.failures)
 
 
+def test_a_lock_whose_hash_does_not_match_fails_with_no_sessions_to_check(tmp_path):
+    """A committed lock is evidence before anyone has shopped against it.
+
+    The hash check used to live only in the per-session loop, so it ran once
+    per *session* and never once per *lock*. With `data/sessions/anon/` empty
+    -- which is the state of the repository until S21 -- that loop does not
+    execute at all, and yet `n_locks_verified` was set to `len(locks)`, so
+    RESULTS.md printed "`sha256` recomputed and matched: 1" directly above
+    "Locks verified to predate their session's first event: 0" without a
+    single digest having been recomputed. A lock that does not hash to its own
+    contents has been edited since it was written; it must fail the build the
+    day it is committed, not months later when its session finally lands.
+    """
+    panel = _empty_panel(tmp_path)
+    lock = _lock_document("sess-orphan", "A", BASE_TIME, prediction_id="pred-sess-orphan")
+    # The prediction, rewritten after it was hashed. Everything else about the
+    # file is well formed: only the digest disagrees with the payload.
+    lock["population_fixation_prob"]["B1S1P1"] = 0.99
+    (panel["predictions_dir"] / "sess-orphan.json").write_text(
+        json.dumps(lock, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+
+    outcome = _run(tmp_path, panel)
+
+    assert outcome.exit_code != 0
+    assert any(
+        "sess-orphan" in failure and "sha256" in failure for failure in outcome.failures
+    ), outcome.failures
+    assert not (tmp_path / "RESULTS.md").exists()
+
+
+def test_load_locks_counts_only_the_digests_it_recomputed_and_matched(tmp_path):
+    """`n_locks_verified` is a count of work done, not of files present.
+
+    `compute_sha256` needs nothing but the lock's own `population_fixation_prob`,
+    `sim_run_id` and `created_at`, so every lock can be verified as it is
+    loaded, whether or not a session exists to check it against. A lock whose
+    digest does not match is kept in `documents` -- so the session that names
+    it still gets its variant and ordering checked, and the operator is told
+    everything wrong with the evidence in one run rather than one problem per
+    run -- but it is excluded from `verified`, which is the number the report
+    prints.
+    """
+    predictions_dir = tmp_path / "predictions"
+    predictions_dir.mkdir(parents=True)
+    for session_id, mutate in (("sess-good", False), ("sess-bad", True)):
+        lock = _lock_document(
+            session_id, "A", BASE_TIME, prediction_id=f"pred-{session_id}"
+        )
+        if mutate:
+            # A re-run of the simulator, pasted in under the old digest.
+            lock["sim_run_id"] = "simrun-rewritten"
+        (predictions_dir / f"{session_id}.json").write_text(
+            json.dumps(lock, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+        )
+
+    loaded = evalmod.load_locks(predictions_dir)
+
+    assert set(loaded.documents) == {"sess-good", "sess-bad"}
+    assert set(loaded.verified) == {"sess-good"}
+    assert any(
+        "sess-bad" in failure and "sha256" in failure for failure in loaded.failures
+    ), loaded.failures
+    assert not any("sess-good" in failure for failure in loaded.failures)
+
+
 def test_an_accepted_session_with_no_lock_fails(tmp_path):
     panel = _write_panel(tmp_path, per_variant={"A": 4, "B": 4, "C": 4}, n_rejected=0)
     _write_session(

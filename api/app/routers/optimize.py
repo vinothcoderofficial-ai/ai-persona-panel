@@ -30,11 +30,42 @@ are deliberate rather than incidental:
 * **Skipped candidates come back.** A shelf level a bay does not have is not a
   placement that scored badly. Dropping it silently turns "there was no move to
   try" into the much stronger-sounding "we tried it and it lost".
+* **A question that was not asked comes back as `null`.** `beats_current` is
+  None when the comparison could not be made -- nothing in the space reproduces
+  today's planogram, or the current placement fell outside `spread_top_n` and
+  so has no range for anything to clear. This route wrote `list(... or ())`,
+  which turned that None into `[]`, and the screen renders `[]` as "No
+  placement clears the current one's spread either." On the committed aisle at
+  this route's own defaults the current placement ranks 5th to 8th, outside the
+  top five, for 23 of the 24 focal SKUs: an unanswered question printed as a
+  definite negative nearly every time.
+
+Which estimator the caller gets
+-------------------------------
+`analytics/lift.py` carries two Brand Lifts. The WITHIN-run one splits a single
+run by whether each shopper fixated an ad slot; the BETWEEN-arm one compares a
+treated run against a control run carrying no creative. docs/PHASE3.md P3.1
+measured them on this aisle at +4.5 % and +0.9 %, because within-run "ad
+exposed" is a selection -- those shoppers had already walked to the endcap --
+and not a randomisation.
+
+This route hardcoded the within-run one, so every screen in the product showed
+a number roughly five times the one a client's own study would produce.
+`objective` now names the estimator and **defaults to the between-arm
+comparison**: not for compatibility, but because a default is what almost
+everyone reads, and the estimator whose two arms are identical by construction
+is the one that should be under an unqualified percentage. The within-run split
+stays reachable by name -- it is the only estimator a real panel can produce -
+and `objective_caveat` travels with either, so the screen prints what the
+number is rather than inferring it.
+
+`sku_purchase_share` is the third option and needs no creative at all, which
+makes it the one that can rank a planogram whose advertising is unknown.
 """
 from __future__ import annotations
 
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
@@ -63,18 +94,34 @@ SPREAD_CAVEAT = (
     "larger run size narrows it. See docs/METHODOLOGY.md §12.7."
 )
 
+# The estimator names a caller can ask for, and the default. `between_arm_lift`
+# leads because it is the comparison a client's own study makes; see the module
+# docstring for why an unqualified percentage has to be that one.
+ObjectiveName = Literal["between_arm_lift", "within_run_lift", "sku_purchase_share"]
+DEFAULT_OBJECTIVE: ObjectiveName = "between_arm_lift"
+LIFT_OBJECTIVES = ("between_arm_lift", "within_run_lift")
+
 
 class OptimizeRequest(BaseModel):
     """`extra="forbid"`, like `WhatIfRequest`.
 
     A misspelled `n_synths` that was quietly ignored would hand back a ranking
     at the default run size while the caller believed they had asked for
-    another - and two rankings at different run sizes are not comparable.
+    another - and two rankings at different run sizes are not comparable. The
+    same argument is why `objective` is a `Literal` and not a free string: a
+    misspelled estimator that fell back to the default would answer a question
+    nobody asked, in a field where the two answers differ five-fold.
+
+    `creative_id` is optional because `sku_purchase_share` names no creative -
+    which is what makes it usable on a planogram whose ad furniture is unknown.
+    It is required for either lift, and `post_optimize` refuses rather than
+    guessing one.
     """
 
     model_config = ConfigDict(extra="forbid")
 
-    creative_id: str
+    creative_id: Optional[str] = None
+    objective: ObjectiveName = DEFAULT_OBJECTIVE
     variant_id: str = DEFAULT_VARIANT_ID
     focal_sku_id: Optional[str] = None
     n_synth: int = Field(default=DEFAULT_N_SYNTH, ge=1, le=MAX_N_SYNTH)
@@ -143,6 +190,39 @@ def _spread(spread: Any) -> Optional[Dict[str, Any]]:
     }
 
 
+def _build_objective(body: OptimizeRequest) -> Any:
+    """The `Objective` the caller asked for, or a 422 naming what is missing.
+
+    No fallbacks. A lift with no creative and a share with no SKU are both
+    questions with no subject, and inventing one - "the first creative in the
+    planogram", say - would produce a confident ranking of something the caller
+    did not ask about.
+    """
+    if body.objective in LIFT_OBJECTIVES and body.creative_id is None:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                f"objective {body.objective!r} is a brand lift and needs a creative_id; "
+                "there is no creative this endpoint could pick for you"
+            ),
+        )
+
+    if body.objective == "between_arm_lift":
+        return optimizer.between_arm_lift_objective(body.creative_id)
+    if body.objective == "within_run_lift":
+        return optimizer.ad_purchase_lift_objective(body.creative_id)
+
+    if body.focal_sku_id is None:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                "objective 'sku_purchase_share' needs a focal_sku_id: it ranks one "
+                "product's share of purchases, and there is no default product"
+            ),
+        )
+    return optimizer.sku_purchase_share_objective(body.focal_sku_id)
+
+
 def _entry(scored: Any, format_value) -> Dict[str, Any]:
     return {
         "rank": scored.rank,
@@ -162,6 +242,12 @@ def _entry(scored: Any, format_value) -> Dict[str, Any]:
         "sim_run_id": scored.sim_run_id,
         "seed_spread": _spread(scored.seed_spread),
         "unresolved_against": list(scored.unresolved_against),
+        # Three answers: True (the whole range is clear of no effect), False
+        # (the range contains it, so this placement has not been shown to do
+        # anything at all whatever it outranked), null (no range, or an
+        # objective with no meaningful null). False and null are not the same
+        # claim and neither is a bad score.
+        "spread_clears_no_effect": scored.spread_clears_no_effect,
     }
 
 
@@ -177,7 +263,8 @@ def post_optimize(
     better one somewhere".
     """
     planogram = _resolved_planogram(db, body.variant_id)
-    _check_creative(planogram, body.creative_id)
+    if body.creative_id is not None:
+        _check_creative(planogram, body.creative_id)
     if body.focal_sku_id is not None:
         _check_sku(planogram, body.focal_sku_id)
 
@@ -185,7 +272,7 @@ def post_optimize(
     if body.focal_sku_id is not None:
         space = space + optimizer.sku_level_candidates(planogram, body.focal_sku_id)
 
-    objective = optimizer.ad_purchase_lift_objective(body.creative_id)
+    objective = _build_objective(body)
 
     spread_seeds = (
         optimizer.DEFAULT_SPREAD_SEEDS
@@ -194,15 +281,33 @@ def post_optimize(
     )
 
     started = time.perf_counter()
-    ranking = optimizer.rank_candidates(
-        planogram,
-        space,
-        objective,
-        n_synth=body.n_synth,
-        seed=body.seed,
-        spread_seeds=spread_seeds,
-        spread_top_n=body.spread_top_n,
-    )
+    try:
+        ranking = optimizer.rank_candidates(
+            planogram,
+            space,
+            objective,
+            n_synth=body.n_synth,
+            seed=body.seed,
+            spread_seeds=spread_seeds,
+            spread_top_n=body.spread_top_n,
+        )
+    except FileNotFoundError as exc:
+        # `api.app.simcache.load_policy` raises this for a planogram nobody has
+        # generated persona policies for. POST /whatif has turned it into a 404
+        # since S15; this route did not, so the same input gave one endpoint a
+        # 404 and this one a 500 and a traceback. A 500 says "this server is
+        # broken"; the truth is that the caller named a planogram the simulator
+        # has no policies for, which is theirs to fix, so the detail names the
+        # file that is missing.
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                f"{exc}. Ranking placements simulates every candidate on planogram "
+                f"{planogram['planogram_id']!r}, and each persona needs its cached policy "
+                f"at data/cache/policies/<persona_id>_{planogram['planogram_id']}.json. "
+                "Generate them (make seed) before optimising against this planogram."
+            ),
+        ) from exc
     elapsed_ms = (time.perf_counter() - started) * 1000.0
 
     return {
@@ -210,7 +315,12 @@ def post_optimize(
         "planogram_id": planogram["planogram_id"],
         "creative_id": body.creative_id,
         "focal_sku_id": body.focal_sku_id,
+        "objective": body.objective,
         "objective_name": ranking.objective_name,
+        # The sentence that says what the number is. Two estimators, five-fold
+        # apart, so a percentage without this is an unlabelled percentage.
+        "objective_caveat": ranking.objective_caveat,
+        "no_effect_value": ranking.no_effect_value,
         "n_synth": ranking.n_synth,
         "seed": ranking.seed,
         "spread_seeds": list(ranking.spread_seeds),
@@ -228,7 +338,13 @@ def post_optimize(
         ],
         "current_rank": ranking.current_rank,
         "top_pick_is_resolved": ranking.top_pick_is_resolved,
-        "beats_current": list(ranking.beats_current or ()),
+        # JSON null when the comparison was never made, and a list - possibly
+        # empty - when it was. `list(... or ())` collapsed the first into the
+        # second, and the screen renders an empty list as "No placement clears
+        # the current one's spread either", so an unanswered question printed
+        # as a definite negative. See the module docstring for how often.
+        "beats_current": (None if ranking.beats_current is None
+                          else list(ranking.beats_current)),
         # The recommendation in words, from the library that produced it, so the
         # screen prints the same sentence RESULTS.md and the CLI do rather than
         # composing a third version that could disagree with both.

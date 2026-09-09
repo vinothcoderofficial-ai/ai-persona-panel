@@ -40,17 +40,58 @@ see what they asked for.
 The objective is a purchase metric
 ----------------------------------
 This is the whole argument of PLAN section 6: "no attention vendor does it,
-because they don't model purchase." The default objective is the advertised
-brand's Ad-to-Purchase Lift, computed by `analytics.lift.synth_lift` -- the
-project's one lift formula, not a second copy of it -- over the population
-SimResult from `api.app.simcache.population`, which is the same call that
-produces a prediction lock. An optimizer score and a locked prediction
-therefore cannot disagree about what the simulator said.
+because they don't model purchase." Every objective here reads a purchase
+number off the population SimResult from `api.app.simcache.population`, which
+is the same call that produces a prediction lock, so an optimizer score and a
+locked prediction cannot disagree about what the simulator said. **A ranking
+is meaningless without knowing which objective produced it**, so
+`Ranking.objective_name` carries it, `Ranking.objective_caveat` carries the
+sentence a screen has to print next to it, and `summary()` prints both.
+
+Which lift, and why the default changed
+---------------------------------------
+There are two Brand Lifts in `analytics/lift.py` and there are two objectives
+here, one for each. They are not interchangeable and on this aisle they
+disagree by a factor of five.
+
+* `ad_purchase_lift_objective` is `analytics.lift.synth_lift`: ONE run of the
+  candidate, split into the shoppers who fixated an ad slot on their trip and
+  the shoppers who did not. That split is a **selection**, not a
+  randomisation -- reaching the endcap at all is correlated with wanting what
+  is on it -- so the two sides differ in composition before the ad does
+  anything.
+* `between_arm_lift_objective` is `analytics.lift.between_variant_lift`: the
+  candidate's whole run against a control run of **that same candidate with
+  the creative taken down**. Two whole populations, identical by construction,
+  differing only in whether the ad is on the wall. It is the study a client
+  commissions and it is the default here.
+
+Measured on the committed aisle, AD_1 on B3_ENDCAP at 10,000 shoppers and
+seed 42: the within-run split says +4.50 %, the between-arm comparison says
++0.91 %. docs/PHASE3.md P3.1 records the same pair. Ranking on the within-run
+number was overstating every placement in the space by roughly five-fold, and
+that is why the default is the other one.
+
+**The control is derived per candidate, not once per ranking.** The obvious
+implementation -- one control run of "the base planogram with the creative
+taken down" -- is right for a pure ad space and wrong the moment
+`sku_level_candidates` is composed in: for `sku:SKU_008@eye` the treated arm
+would carry a shelf move AND the ad while the control carried neither, and the
+difference between them is not the ad's effect. So the control for a candidate
+is that candidate's own patches followed by a clear on every ad slot still
+carrying the creative. For the ad space every one of those resolves to the same
+planogram -- the `ad:{creative}@none` arm the space already contains -- and
+because the control run is keyed on its resolved CONTENT rather than on its
+patch list, they are one simulation and one bar, not N of them.
+
+A candidate that hangs the creative nowhere scores None: `ad:AD_1@none` is the
+campaign withdrawn and `ad:AD_2@B3_ENDCAP` takes AD_1 down as a side effect,
+and neither has an AD_1 lift to report. That is undefined, never 0.0.
 
 `sku_purchase_share_objective` optimises a focal SKU's population purchase
-share instead. Both are purchase metrics. **A ranking is meaningless without
-knowing which one it was produced against**, so `Ranking.objective_name`
-carries it, `summary()` prints it, and no function here returns a bare number.
+share instead. It is the only objective here that needs no creative at all,
+which makes it the one that works on a planogram whose ad furniture is
+unknown -- a shelf reconstructed by `vision/`, for instance.
 
 The uncertainty field is NOT a confidence interval
 --------------------------------------------------
@@ -76,6 +117,16 @@ recommendation, and `summary()` says so in words. Presenting rank 1 and rank 2
 as a settled result when the spreads overlap would be exactly the false
 precision the interval decision above is trying to avoid.
 
+"Rank 1 beats rank 2" is not the first question a spread answers, though.
+`Scored.spread_clears_no_effect` asks the prior one: does this row's own range
+exclude the objective's no-effect value? A placement whose between-arm lift
+runs from -0.4 % to +0.7 % has not been shown to do anything at all, whatever
+it sorted above, and on the committed aisle that describes most of the space
+at 10,000 shoppers. An objective with no meaningful null -- a purchase share,
+where 0 means "sold nothing" rather than "did nothing" -- sets
+`Objective.no_effect_value` to None, and then every row's answer is None,
+which is this module's word for a question it did not ask.
+
 Two claims, and only one of them is usually available
 ------------------------------------------------------
 "Rank 1 beats rank 2" and "this placement beats the one we are running" are
@@ -89,6 +140,11 @@ including when the second one is "nothing clears it", which is a finding.
 On the committed aisle the two come apart exactly this way: at
 n_synth=250,000 no pair of leaders is separated, and `sku:SKU_008@top` at
 +9.3% is nonetheless clear of the current placement's +7.8% at every seed.
+Both of those figures are `ad_purchase_lift_objective`'s -- the within-run
+split, which is what this ranking defaulted to when they were measured. The
+between-arm numbers on the same aisle are roughly a fifth of them, so the
+n_synth at which anything clears the current placement under the default
+objective has NOT been measured and must not be assumed to be 250,000.
 
 Seeds are the wrong lever, and n_synth is the right one
 -------------------------------------------------------
@@ -136,7 +192,13 @@ import hashlib
 from dataclasses import dataclass
 from typing import Any, Callable, Iterable, Mapping, Optional, Sequence
 
-from analytics.lift import creative_brand, sku_brands, synth_lift
+from analytics.lift import (
+    ad_slots_showing,
+    between_variant_lift,
+    creative_brand,
+    sku_brands,
+    synth_lift,
+)
 from api.app import simcache
 from api.app.resolve import resolve
 
@@ -181,6 +243,14 @@ DEFAULT_SPREAD_TOP_N = 5
 # spread: `sku:SKU_008@top` at +9.3% against +7.8%, winning at all five seeds.
 # At 10,000 through 100,000 nothing does. That one rung is what turns
 # `beats_current` from an empty tuple into a claim.
+#
+# Those figures were measured on `ad_purchase_lift_objective`, the within-run
+# split. The ladder itself is objective-agnostic and the noise argument above
+# is not -- a between-arm lift is a ratio of two whole-run shares rather than
+# of the exposed arm, and its seed-to-seed spread on this aisle is smaller in
+# absolute points and larger relative to the effect. Which rung separates
+# anything under the default objective is an open question, not this one's
+# answer carried over.
 #
 # **This is deliberately not the default of `rank_candidates` and must not
 # become one.** A 250,000-shopper rung costs about twenty-five times a
@@ -264,26 +334,61 @@ class CandidateSet:
 class Objective:
     """What "best" means for one ranking.
 
-    `score(population, resolved)` takes the population SimResult and the
-    resolved planogram it came from, and returns a number or None. None means
-    *undefined* -- the metric has no answer for this configuration -- and is
-    never to be substituted with 0, which is a measured value.
+    `score(population, resolved, control)` takes the candidate's population
+    SimResult, the resolved planogram it came from, and the population
+    SimResult of that candidate's CONTROL arm -- or None when this objective
+    declared no control arm, or when the candidate has no control to run
+    against. It returns a number or None. None means *undefined* -- the metric
+    has no answer for this configuration -- and is never to be substituted with
+    0, which is a measured value.
 
     `name` is carried through onto `Ranking.objective_name` and printed by
     `summary()`, because a ranking without its metric is not a result.
+    `caveat` is the sentence that has to be printed beside the number, and it
+    is a required field for the same reason: the two lift objectives here
+    differ by a factor of five on the committed aisle, and a screen showing one
+    of them without saying which is showing an unlabelled percentage.
+
+    `control_patches(resolved)` returns the EXTRA patches that turn a
+    candidate into its own control -- appended to the candidate's own patches,
+    so the control keeps every change the candidate made except the one under
+    test. An empty tuple means this candidate has no treatment to control and
+    its objective is undefined. None means the objective is single-arm and no
+    control is ever simulated.
+
+    `no_effect_value` is the value of this objective that means "this
+    configuration did nothing" -- 0.0 for a lift. A row whose seed spread
+    contains it has not been shown to work, whatever it outranked. None where
+    the objective has no such null (a purchase share of 0 means "sold nothing",
+    not "did nothing"), and then the question is simply not asked.
     """
 
     name: str
-    score: Callable[[Mapping[str, Any], Mapping[str, Any]], Optional[float]]
+    score: Callable[
+        [Mapping[str, Any], Mapping[str, Any], Optional[Mapping[str, Any]]], Optional[float]
+    ]
     format_value: Callable[[float], str]
+    caveat: str
+    control_patches: Optional[Callable[[Mapping[str, Any]], tuple[dict, ...]]] = None
+    no_effect_value: Optional[float] = None
 
 
 def ad_purchase_lift_objective(creative_id: str) -> Objective:
-    """Maximise the Ad-to-Purchase Lift of the brand `creative_id` advertises.
+    """Maximise the WITHIN-RUN Ad-to-Purchase Lift of `creative_id`'s brand.
 
     The metric is `analytics.lift.synth_lift` -- trip-level ad exposure, the
     advertised brand's share of each arm's purchases, `(exposed - unexposed) /
     unexposed`. This module does not re-derive any of it.
+
+    **This is not the default and should not be, because the split it rests on
+    is a selection.** Within one run, "ad exposed" means the shopper fixated an
+    ad slot, and who walks to the endcap is not random: the exposed side is
+    already likelier to want what is on it, before the creative does anything.
+    On the committed aisle this reports roughly five times what
+    `between_arm_lift_objective` does for the same placement. Use it when there
+    is genuinely only one arm -- which is the position the REAL panel is in,
+    since a real panel shops one store, and is why `analytics.lift.real_lift`
+    is a within-run split too and why this objective still has to exist.
 
     Returns None for a configuration where the lift is undefined: no exposed
     shoppers (nothing carries a creative anywhere), no unexposed shoppers, or
@@ -291,7 +396,8 @@ def ad_purchase_lift_objective(creative_id: str) -> Objective:
     rather than being read as a lift of zero.
     """
 
-    def score(population: Mapping[str, Any], resolved: Mapping[str, Any]) -> Optional[float]:
+    def score(population: Mapping[str, Any], resolved: Mapping[str, Any],
+              control: Optional[Mapping[str, Any]]) -> Optional[float]:
         return synth_lift(
             population,
             brand_of_sku=sku_brands(resolved),
@@ -299,9 +405,77 @@ def ad_purchase_lift_objective(creative_id: str) -> Objective:
         )
 
     return Objective(
-        name=f"ad-to-purchase lift for creative {creative_id}",
+        name=f"within-run ad-to-purchase lift for creative {creative_id}",
         score=score,
         format_value=lambda value: f"{value:+.1%}",
+        caveat=(
+            f"Within-run split: one simulation of each placement, divided by whether the "
+            f"shopper fixated an ad slot. That division is a SELECTION and not a "
+            f"randomisation -- the exposed shoppers had already walked to the ad -- so it "
+            f"overstates what {creative_id} is worth. On the committed aisle it reports "
+            f"about five times the between-arm number for the same placement. It is the "
+            f"only estimator the real panel can produce, and the wrong one to rank on."
+        ),
+        no_effect_value=0.0,
+    )
+
+
+def between_arm_lift_objective(creative_id: str) -> Objective:
+    """Maximise the BETWEEN-ARM Brand Lift of `creative_id`: the default.
+
+    Each candidate is scored by `analytics.lift.between_variant_lift` against a
+    control run of that same candidate with `creative_id` taken down from every
+    ad slot still carrying it. Two whole populations, identical by
+    construction, differing only in whether the ad is on the wall -- which is
+    the study a client commissions, and the reason `data/variants/D.json`
+    exists. This module re-derives none of the maths.
+
+    The control is built per candidate rather than once per ranking, because a
+    ranking can compose ad placements with shelf moves: the control for
+    `sku:SKU_008@eye` has to carry the eye-level move too, or the "lift" would
+    be the move and the ad added together. See the module docstring.
+
+    Returns None -- undefined, never 0.0 -- for a candidate that hangs the
+    creative nowhere. `ad:AD_1@none` is the campaign withdrawn and
+    `ad:AD_2@B3_ENDCAP` takes AD_1 down as a side effect of hanging AD_2; in
+    both, the campaign under test is not running, so its lift has no answer and
+    the row sorts last rather than reading as a measured zero.
+    `between_variant_lift`'s own undefined cases -- a control arm that bought
+    none of the advertised brand, or a run with no purchases at all -- come
+    back as None through the same path.
+    """
+
+    def control_patches(resolved: Mapping[str, Any]) -> tuple[dict, ...]:
+        return tuple(_clear(ad_slot_id)
+                     for ad_slot_id in ad_slots_showing(resolved, creative_id))
+
+    def score(population: Mapping[str, Any], resolved: Mapping[str, Any],
+              control: Optional[Mapping[str, Any]]) -> Optional[float]:
+        if control is None:
+            # The candidate hangs this creative nowhere, so there is no
+            # treatment to compare and no control distinct from it.
+            return None
+        return between_variant_lift(
+            population,
+            control,
+            brand_of_sku=sku_brands(resolved),
+            brand=creative_brand(resolved, creative_id),
+        )
+
+    return Objective(
+        name=f"between-arm brand lift for creative {creative_id}",
+        score=score,
+        format_value=lambda value: f"{value:+.1%}",
+        caveat=(
+            f"Between-arm comparison: each placement's whole synthetic population against "
+            f"a control run of the same shelf with {creative_id} taken down. The two arms "
+            f"are identical by construction and differ only in the ad, so this is a "
+            f"randomisation rather than the within-run exposed/unexposed selection -- and "
+            f"it is several times smaller. It is also, at this run size, frequently not "
+            f"separable from no effect at all; the rows say which."
+        ),
+        control_patches=control_patches,
+        no_effect_value=0.0,
     )
 
 
@@ -313,13 +487,23 @@ def sku_purchase_share_objective(sku_id: str) -> Objective:
     `purchase_share` off the population SimResult, which `sim.simulator`
     normalises across every SKU in the planogram.
 
+    It is also the only objective here that names no creative, which makes it
+    the one that still works on a planogram whose ad furniture is unknown -- a
+    shelf reconstructed by `vision/`, where the products are identified and the
+    campaigns on the wall are not.
+
+    `no_effect_value` is None and must stay None: a share of 0 means the SKU
+    sold nothing, which is a measurement, not "this move did nothing". Treating
+    it as a null would report every unsold SKU as an unresolved result.
+
     Raises ValueError if the SKU is not in the planogram at all. An absent key
     in `purchase_share` means "this SKU sold nothing", which is a measurement
     and reads as 0.0; an unknown sku id means the caller asked the wrong
     question and would otherwise get 0.0 for every candidate.
     """
 
-    def score(population: Mapping[str, Any], resolved: Mapping[str, Any]) -> Optional[float]:
+    def score(population: Mapping[str, Any], resolved: Mapping[str, Any],
+              control: Optional[Mapping[str, Any]]) -> Optional[float]:
         if not any(sku["sku_id"] == sku_id for sku in resolved["skus"]):
             raise ValueError(f"planogram has no sku {sku_id!r}")
         return float(population["purchase_share"].get(sku_id, 0.0))
@@ -328,6 +512,13 @@ def sku_purchase_share_objective(sku_id: str) -> Objective:
         name=f"population purchase share of {sku_id}",
         score=score,
         format_value=lambda value: f"{value:.3%}",
+        caveat=(
+            f"Share of all simulated purchases that went to {sku_id}, not a lift and not a "
+            f"comparison against anything: a bigger share here can come from taking sales "
+            f"off a neighbour. It names no creative, so it is the objective that still "
+            f"works on a shelf whose advertising is unknown."
+        ),
+        no_effect_value=None,
     )
 
 
@@ -590,6 +781,16 @@ class SeedSpread:
         candidates is not resolved at this number of seeds."""
         return self.low <= other.high and other.low <= self.high
 
+    def contains(self, value: float) -> bool:
+        """Is `value` inside the range, endpoints included?
+
+        Used with `Objective.no_effect_value`: a range that contains no effect
+        has not shown that the configuration does anything, and the endpoints
+        are included because a range that merely touches zero has not cleared
+        it either.
+        """
+        return self.low <= value <= self.high
+
 
 @dataclass(frozen=True)
 class Scored:
@@ -601,6 +802,15 @@ class Scored:
     was not requested or when the objective is undefined at any seed.
     `unresolved_against` names the other candidates whose seed spread overlaps
     this one's, i.e. the rows this row is not actually ranked against.
+
+    `spread_clears_no_effect` answers the question that comes BEFORE the
+    ranking: does this row's own seed range exclude `Objective.no_effect_value`
+    entirely? False means the placement has not been shown to do anything at
+    all, whatever it outranked -- the honest between-arm lift on the committed
+    aisle is False for most of the space at 10,000 shoppers. None means the
+    question was not answered, either because there is no spread for this row
+    or because the objective has no meaningful null; those are different from
+    each other and neither is False.
     """
 
     rank: int
@@ -611,6 +821,7 @@ class Scored:
     sim_run_id: str
     seed_spread: Optional[SeedSpread] = None
     unresolved_against: tuple[str, ...] = ()
+    spread_clears_no_effect: Optional[bool] = None
 
 
 @dataclass(frozen=True)
@@ -620,6 +831,10 @@ class Ranking:
     `objective_name` is not decoration: the same space ranked on ad lift and on
     a focal SKU's purchase share gives different orders, and a ranking quoted
     without its metric is not a result. `summary()` always prints it.
+
+    `objective_caveat` is the sentence that has to travel with the number.
+    There are two Brand Lifts and they disagree several-fold on this aisle, so
+    a percentage on a screen without it is an unlabelled percentage.
 
     `n_synth` and `seed` are the simulation the ranking was produced at.
     `skipped` carries the configurations the planogram could not express.
@@ -631,6 +846,8 @@ class Ranking:
     n_synth: int
     seed: int
     spread_seeds: tuple[int, ...]
+    objective_caveat: str = ""
+    no_effect_value: Optional[float] = None
     format_value: Callable[[float], str] = repr
 
     @property
@@ -780,11 +997,14 @@ def rank_candidates(
     variant_by_id: dict[str, str] = {}
     rows: list[tuple[Candidate, Optional[float], bool, str, str]] = []
 
+    control_arm = _control_arms(base, objective, simulate=simulate, n_synth=n_synth)
+
     for candidate in space.candidates:
         resolved = resolve(base, _variant_document(base, candidate))
         variant_id = variant_id_for(base, candidate.patches)
         bundle = simulate(resolved, variant_id, n_synth=n_synth, seed=seed)
-        value = objective.score(bundle.population, resolved)
+        value = objective.score(bundle.population, resolved,
+                                control_arm(candidate, resolved, seed))
         rows.append((
             candidate,
             None if value is None else float(value),
@@ -812,6 +1032,7 @@ def rank_candidates(
         entries, objective=objective, seed=seed, spread_seeds=spread_seeds,
         spread_top_n=spread_top_n, n_synth=n_synth, simulate=simulate,
         resolved_by_id=resolved_by_id, variant_by_id=variant_by_id,
+        control_arm=control_arm,
     )
 
     return Ranking(
@@ -821,6 +1042,8 @@ def rank_candidates(
         n_synth=int(n_synth),
         seed=int(seed),
         spread_seeds=tuple(spread_seeds),
+        objective_caveat=objective.caveat,
+        no_effect_value=objective.no_effect_value,
         format_value=objective.format_value,
     )
 
@@ -848,6 +1071,9 @@ def summary(ranking: Ranking) -> str:
         f"{best.candidate.label} at {value}."
     )
 
+    if ranking.objective_caveat:
+        lines.append(ranking.objective_caveat)
+
     if best.seed_spread is not None:
         spread = best.seed_spread
         lines.append(
@@ -856,6 +1082,24 @@ def summary(ranking: Ranking) -> str:
             f"{', '.join(str(s) for s in spread.seeds)} -- Monte Carlo run-to-run "
             "variability, not a confidence interval."
         )
+
+    # Before "is rank 1 above rank 2" comes "does rank 1 do anything at all".
+    # A top pick whose own range contains no effect is not a recommendation,
+    # however comfortably it outranked the rest, and saying so first is the
+    # difference between reporting a result and dressing one up.
+    if best.spread_clears_no_effect is False:
+        null_text = ranking.format_value(ranking.no_effect_value)
+        lines.append(
+            f"The top pick's own seed spread contains no effect ({null_text}), so at "
+            f"{ranking.n_synth} shoppers this placement has not been shown to do anything "
+            "at all -- its rank says only that it sorted above the others."
+        )
+    elif best.spread_clears_no_effect is True:
+        null_text = ranking.format_value(ranking.no_effect_value)
+        lines.append(
+            f"The top pick's seed spread clears no effect ({null_text}) at every seed."
+        )
+
     if ranking.top_pick_is_resolved is False:
         lines.append(
             "The order is not resolved against "
@@ -1082,11 +1326,86 @@ def stability_summary(stability: Stability) -> str:
 # ---------------------------------------------------------------------------
 
 
+def _control_arms(
+    base: Mapping[str, Any], objective: Objective, *,
+    simulate: Callable[..., Any], n_synth: int,
+) -> Callable[[Candidate, Mapping[str, Any], int], Optional[Mapping[str, Any]]]:
+    """Build `control_arm(candidate, resolved, seed) -> population or None`.
+
+    A two-arm objective needs a second simulation per candidate per seed, and
+    getting that wrong is how a comparison quietly stops being one. Three
+    properties are deliberate:
+
+    * **The control keeps everything the candidate changed except the one thing
+      under test.** Its patch list is the candidate's own, then whatever
+      `Objective.control_patches` appends -- for a lift objective, a clear on
+      every ad slot still carrying the creative. A control built from `base`
+      alone would confound a shelf move with the ad for every `sku:` candidate
+      in a composed space.
+    * **The control run is keyed on its resolved CONTENT, not on its patch
+      list.** Every ad placement of one creative controls against the same
+      unadvertised aisle, reached by different patches; content addressing
+      makes those one simulation and therefore one bar. `sim.simulator.run`
+      seeds on `seed` alone, so the numbers would have matched anyway -- but
+      "every candidate is measured against the same control" is then a fact
+      about the key rather than a coincidence about the RNG.
+    * **An empty patch list means no control exists**, and the objective is
+      told None rather than being handed a run identical to the treated arm.
+      That is the `ad:AD_1@none` case: nothing to control, nothing to report.
+
+    Returns None for every candidate when the objective is single-arm, and
+    simulates nothing at all in that case.
+    """
+    prepared: dict[str, Optional[tuple[Mapping[str, Any], str]]] = {}
+    runs: dict[tuple[str, int], Mapping[str, Any]] = {}
+
+    def prepare(candidate: Candidate,
+                resolved: Mapping[str, Any]) -> Optional[tuple[Mapping[str, Any], str]]:
+        candidate_id = candidate.candidate_id
+        if candidate_id in prepared:
+            return prepared[candidate_id]
+
+        extra = tuple(objective.control_patches(resolved))
+        if not extra:
+            prepared[candidate_id] = None
+            return None
+
+        patches = tuple(candidate.patches) + extra
+        control_resolved = resolve(base, {
+            "variant_id": f"{candidate_id}#control",
+            "base_planogram_id": base["planogram_id"],
+            "name": f"control arm for {candidate_id}",
+            "patches": list(patches),
+        })
+        # `opt_ctl_` rather than `opt_`: a control run is not a row of the
+        # ranking and its id should not be mistaken for one in a sim_run_id.
+        variant_id = f"opt_ctl_{simcache.document_hash(control_resolved)[:12]}"
+        prepared[candidate_id] = (control_resolved, variant_id)
+        return prepared[candidate_id]
+
+    def control_arm(candidate: Candidate, resolved: Mapping[str, Any],
+                    seed: int) -> Optional[Mapping[str, Any]]:
+        if objective.control_patches is None:
+            return None
+        arm = prepare(candidate, resolved)
+        if arm is None:
+            return None
+        control_resolved, variant_id = arm
+        key = (variant_id, int(seed))
+        if key not in runs:
+            runs[key] = simulate(control_resolved, variant_id,
+                                 n_synth=n_synth, seed=seed).population
+        return runs[key]
+
+    return control_arm
+
+
 def _attach_seed_spread(
     entries: Sequence[Scored], *, objective: Objective, seed: int,
     spread_seeds: Sequence[int], spread_top_n: int, n_synth: int,
     simulate: Callable[..., Any], resolved_by_id: Mapping[str, Any],
     variant_by_id: Mapping[str, str],
+    control_arm: Callable[[Candidate, Mapping[str, Any], int], Optional[Mapping[str, Any]]],
 ) -> list[Scored]:
     """Re-score the top entries at the extra seeds and record the range.
 
@@ -1096,6 +1415,17 @@ def _attach_seed_spread(
     any of the seeds gets no spread at all: a range over the seeds that
     happened to be defined would be a different quantity from a range over all
     of them.
+
+    A two-arm objective is re-scored against its control AT THAT SAME SEED, not
+    against the primary seed's control. Holding the control fixed while the
+    treated arm is re-rolled would measure half the run-to-run variability and
+    report a range about sqrt(2) too narrow -- an uncertainty field that
+    flatters itself is the one failure `SeedSpread` exists to avoid.
+
+    `spread_clears_no_effect` is filled in here too, since it is a property of
+    the range: True when the whole range is on one side of
+    `Objective.no_effect_value`, False when the range contains it, and None
+    when the objective has no such null.
     """
     seeds = [int(seed)]
     for extra in spread_seeds:
@@ -1115,7 +1445,8 @@ def _attach_seed_spread(
         defined_at_every_seed = True
         for extra in seeds[1:]:
             bundle = simulate(resolved, variant_id, n_synth=n_synth, seed=extra)
-            value = objective.score(bundle.population, resolved)
+            value = objective.score(bundle.population, resolved,
+                                    control_arm(entry.candidate, resolved, extra))
             if value is None:
                 defined_at_every_seed = False
                 break
@@ -1137,10 +1468,13 @@ def _attach_seed_spread(
             other_id for other_id, other in spreads.items()
             if other_id != entry.candidate.candidate_id and spread.overlaps(other)
         ))
+        clears = (None if objective.no_effect_value is None
+                  else not spread.contains(objective.no_effect_value))
         updated.append(Scored(
             rank=entry.rank, candidate=entry.candidate, objective=entry.objective,
             is_current=entry.is_current, variant_id=entry.variant_id,
             sim_run_id=entry.sim_run_id, seed_spread=spread, unresolved_against=unresolved,
+            spread_clears_no_effect=clears,
         ))
     return updated
 

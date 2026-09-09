@@ -31,6 +31,27 @@ import * as style from "@/ai/styles";
  *     and the screen says which rows, by name.
  *  4. **Skipped candidates are listed.** A shelf level a bay does not have is
  *     not a move that lost.
+ *  5. **A question that was not asked is not answered "no".** `beats_current`
+ *     is null when the comparison could never be made — nothing in the space
+ *     reproduces today's planogram, or the current placement has no seed range
+ *     of its own for anything to clear. This screen printed the empty list as
+ *     "No placement clears the current one's spread either", and the server
+ *     sent `[]` for both cases, so on the committed aisle an unanswered
+ *     question was rendered as a definite negative for 23 of the 24 focal
+ *     SKUs. Null now travels all the way here, `normalise` preserves it, and
+ *     there is a third branch that says the comparison was not made.
+ *  6. **The number says which estimator produced it.** `analytics/lift.py`
+ *     carries two Brand Lifts; on this aisle the within-run split reports
+ *     roughly five times what the between-arm comparison does, because
+ *     within-run "ad exposed" is a selection and not a randomisation. A
+ *     percentage with no estimator beside it is an unlabelled percentage, so
+ *     `objective_caveat` is printed verbatim from the library that made the
+ *     ranking — not paraphrased here, for the same reason the summary is not.
+ *  7. **Each row carries its own spread, and says UNRESOLVED when that spread
+ *     contains no effect at all.** A row can outrank six others and still not
+ *     have been shown to do anything; sorting descending is not evidence. A
+ *     row with no spread at all says so instead, because "not measured" and
+ *     "measured and straddling zero" are different answers.
  *
  * The summary sentence is printed verbatim from `optimizer.summary()` rather
  * than composed here: the CLI, `RESULTS.md` and this screen have to say the
@@ -67,13 +88,26 @@ interface Entry {
   is_current: boolean;
   seed_spread: SeedSpread | null;
   unresolved_against: string[];
+  /**
+   * Does this row's own seed range exclude "no effect" entirely? False means
+   * the placement has not been shown to do anything at all, whatever it
+   * outranked. Null means the question was not answered — no spread for this
+   * row, or an objective with no meaningful null — which is not the same
+   * answer as false and must not render like one.
+   */
+  spread_clears_no_effect: boolean | null;
 }
 
 interface Ranking {
   variant_id: string;
-  creative_id: string;
+  creative_id: string | null;
   focal_sku_id: string | null;
+  /** Which estimator was asked for: the two lifts differ several-fold. */
+  objective: string;
   objective_name: string;
+  /** The sentence that says what the number is, from the library that made it. */
+  objective_caveat: string;
+  no_effect_value: number | null;
   n_synth: number;
   seed: number;
   spread_seeds: number[];
@@ -81,7 +115,8 @@ interface Ranking {
   n_candidates: number;
   current_rank: number | null;
   top_pick_is_resolved: boolean | null;
-  beats_current: string[];
+  /** Null means the comparison was never made. `[]` means it was, and nothing won. */
+  beats_current: string[] | null;
   summary_lines: string[];
   spread_caveat: string;
   skipped: Array<{ candidate_id: string; kind: string; reason: string }>;
@@ -197,13 +232,21 @@ export function OptimizeView({
 // ---------------------------------------------------------------------------
 
 /**
- * The three list fields, guaranteed to be arrays.
+ * The list fields, guaranteed to be arrays — except the one where an array is
+ * itself a claim.
  *
- * The guarantee is the point: `Result` reads `entries[0]` and maps all three,
+ * The guarantee is the point: `Result` reads `entries[0]` and maps the rest,
  * and a 200 carrying anything else - an older API, a proxy answering for a dead
  * upstream - threw during render and left a blank page instead of a screen that
  * says what it does know. Normalising here rather than at each use keeps the one
  * guarantee in one place.
+ *
+ * `beats_current` is deliberately NOT coerced to an array. `[]` there means
+ * "every placement was compared against the current one's range and none
+ * cleared it", which is a finding; null means the comparison was never made.
+ * Coercing null to `[]` here is precisely how the second turned into the first,
+ * so anything that is not an array becomes null - the honest reading of a field
+ * that is missing or the wrong shape.
  */
 function normalise(ranking: Ranking): Ranking {
   return {
@@ -211,7 +254,7 @@ function normalise(ranking: Ranking): Ranking {
     entries: Array.isArray(ranking.entries) ? ranking.entries : [],
     summary_lines: Array.isArray(ranking.summary_lines) ? ranking.summary_lines : [],
     skipped: Array.isArray(ranking.skipped) ? ranking.skipped : [],
-    beats_current: Array.isArray(ranking.beats_current) ? ranking.beats_current : [],
+    beats_current: Array.isArray(ranking.beats_current) ? ranking.beats_current : null,
     spread_seeds: Array.isArray(ranking.spread_seeds) ? ranking.spread_seeds : [],
   };
 }
@@ -256,6 +299,18 @@ function Result({ ranking }: { ranking: Ranking }) {
           {(ranking.elapsed_ms / 1000).toFixed(1)}s
         </div>
       </div>
+
+      {/* What that metric actually is, printed verbatim from the library that
+          produced the ranking. There are two Brand Lifts in analytics/lift.py
+          and on this aisle they differ several-fold, so a percentage with no
+          estimator beside it is an unlabelled percentage. Paraphrasing it here
+          would be a third wording of one fact, which is how three wordings
+          start to disagree — the same reason the summary is printed verbatim. */}
+      {ranking.objective_caveat ? (
+        <div data-testid="optimize-caveat" style={style.cautionBox}>
+          <strong>What this number is:</strong> {ranking.objective_caveat}
+        </div>
+      ) : null}
 
       {best?.seed_spread != null && (
         <div data-testid="optimize-spread" style={style.cautionBox}>
@@ -309,20 +364,22 @@ function Result({ ranking }: { ranking: Ranking }) {
 function Resolution({ ranking }: { ranking: Ranking }) {
   const best = ranking.entries[0];
   const unresolved = best?.unresolved_against ?? [];
+  const beats = ranking.beats_current;
 
   if (ranking.top_pick_is_resolved === true) {
     return (
       <div data-testid="optimize-resolution" style={okBox}>
         The top pick&apos;s seed spread clears every other placement&apos;s, so the order at
         the top is settled at this run size.
-        {ranking.beats_current.length > 0 && (
+        {beats !== null && beats.length > 0 && (
           <>
             {" "}
-            {ranking.beats_current.length} placement
-            {ranking.beats_current.length === 1 ? "" : "s"} also clear the current
-            placement&apos;s spread entirely: {ranking.beats_current.join(", ")}.
+            {beats.length} placement
+            {beats.length === 1 ? "" : "s"} also clear the current placement&apos;s spread
+            entirely: {beats.join(", ")}.
           </>
         )}
+        <NotComparedToCurrent beats={beats} />
       </div>
     );
   }
@@ -335,9 +392,10 @@ function Resolution({ ranking }: { ranking: Ranking }) {
         {unresolved.length === 1 ? "that placement" : "those placements"} at this run size.
         More seeds will not fix it — the spread is a min-max range and can only widen. Only a
         larger run size narrows it.
-        {ranking.beats_current.length === 0 && (
+        {beats !== null && beats.length === 0 && (
           <> No placement clears the current one&apos;s spread either.</>
         )}
+        <NotComparedToCurrent beats={beats} />
       </div>
     );
   }
@@ -346,7 +404,35 @@ function Resolution({ ranking }: { ranking: Ranking }) {
     <div data-testid="optimize-resolution" style={{ ...style.panel, ...style.note }}>
       No seed spread was computed, so whether this order is settled is unknown rather than
       true.
+      <NotComparedToCurrent beats={beats} />
     </div>
+  );
+}
+
+/**
+ * The branch that did not exist, and the reason this component was lying.
+ *
+ * `beats_current` has three states and the screen used to render two. Null is
+ * "the comparison was never made" — either nothing in the space reproduces
+ * today's planogram, or the current placement fell outside the rows re-scored
+ * at extra seeds and so has no range for anything to clear. The server sent
+ * `[]` for that as well as for the real negative, and `[]` printed as "No
+ * placement clears the current one's spread either", which is a finding. On the
+ * committed aisle the current placement ranks 5th to 8th and the default
+ * re-scores the top five, so that sentence was being printed with nothing
+ * behind it for 23 of the 24 focal SKUs.
+ */
+function NotComparedToCurrent({ beats }: { beats: string[] | null }) {
+  if (beats !== null) return null;
+  return (
+    <>
+      {" "}
+      <strong>The current placement was not compared.</strong> It has no seed spread of its
+      own here — either nothing in this space reproduces the planogram running today, or it
+      ranked below the rows that were re-scored at the extra seeds — so &ldquo;does moving
+      beat where it is now&rdquo; was not asked. That is not the same as asking and getting
+      no.
+    </>
   );
 }
 
@@ -375,6 +461,27 @@ function Row({ entry }: { entry: Entry }) {
             this is what is running today
           </div>
         )}
+        {/* The row's own Monte Carlo range, on the row. Only the winner's used
+            to be shown, which left every other percentage looking exact. */}
+        <div style={{ ...style.note, fontSize: 12 }}>
+          {entry.seed_spread === null ? (
+            <span>no spread computed for this row</span>
+          ) : (
+            <span>
+              seeds {formatValue(entry.seed_spread.low)} to{" "}
+              {formatValue(entry.seed_spread.high)} over {entry.seed_spread.n_seeds}
+            </span>
+          )}
+          {/* Sorting descending is not evidence: a row can outrank six others
+              and still have a range that contains no effect at all. Only false
+              gets this badge — null means the question was not answered. */}
+          {entry.spread_clears_no_effect === false && (
+            <strong style={{ color: style.CHANGED }}>
+              {" "}
+              · UNRESOLVED: this range contains no effect at all
+            </strong>
+          )}
+        </div>
       </div>
       <div
         style={{

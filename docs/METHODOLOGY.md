@@ -17,7 +17,7 @@ real panel and a synthetic one. **At the time of writing only one of those two p
 |---|---|
 | Synthetic panel (10,000 shoppers × 4 personas × 3 variants) | **Computed.** Regenerate with `make eval`; every number in `RESULTS.md`'s synthetic sections comes from it. |
 | Real panel (`data/sessions/anon/`) | **Empty.** No human has shopped a recorded session. PLAN S9 (webcam pilot on 5 laptops) and S21 (collect ≥ 60 sessions) are outstanding. |
-| Prediction locks (`predictions/`) | **Empty**, because a lock is written per real session and there are none. The lock machinery is built, tested and enforced at both ends (§6). |
+| Prediction locks (`predictions/`) | **One**, from the single session that has been through the flow, plus one dev run. Enough to prove the mechanism (§6), not remotely a panel — and it cannot be graded, because no accepted session was ever exported to `data/sessions/anon/`. |
 | Persona decision traces (`data/cache/traces/`) | **Real.** 80 trips from `deepseek-v4-pro:cloud`, 4 personas x 20 shoppers, 973 turns, 1 rejection. `sim/slow_agent.py` still refuses to write a trace a test double produced, and a guard test asserts every committed trace names its model. |
 | Persona post-shop survey answers (S22) | **Not produced**, for the same reason: `sim/persona_survey.py` is built and tested, `docs/integration.md` describes the design, and no CPS data has been obtained or used. |
 | Every real-vs-synthetic metric | **Not computed.** `scripts/eval.py` prints `not yet collected` for each one and refuses to draw a figure whose bars would all be zero. |
@@ -679,10 +679,24 @@ Ordered roughly by how much they should change your reading of the results.
 
 ### 12.1 There is no real panel, so there is no accuracy result
 
-Everything in §§7–9 is machinery. `data/sessions/anon/` is empty; `predictions/` is empty;
-every real-vs-synthetic cell in `RESULTS.md` reads *not yet collected*. The webcam pilot (S9) and
-the collection round (S21) need people and laptops, and neither has happened. This is the
-limitation; the rest are refinements to a comparison nobody has run.
+Everything in §§7–9 is machinery. `data/sessions/anon/` is empty and every real-vs-synthetic cell
+in `RESULTS.md` reads *not yet collected*. The webcam pilot (S9) and the collection round (S21)
+need people and laptops, and neither has happened. This is the limitation; the rest are
+refinements to a comparison nobody has run.
+
+`predictions/` is not quite empty, and the difference is worth stating precisely rather than
+rounding to zero in either direction. It holds one lock,
+`da18f055-d99a-4308-af7a-6aafcd8c9178.json`, from the single session that has been through the
+flow, plus one under `predictions/dev/` from a development run. That is enough to prove the
+*mechanism* — the lock is written on `POST /sessions` before any event is accepted, and
+`scripts/eval.py` recomputes its hash and refuses the build if it does not match — and it is not
+remotely enough to be a panel. No accepted session was ever exported to `data/sessions/anon/`, so
+the lock has nothing to be scored against. One pre-registration that cannot be graded is evidence
+about the harness, not about the personas.
+
+Nor has webcam gaze ever been recorded. Every event in the database is `hover`, `cursor_dwell`,
+`pickup`, `add_to_cart` or a station transition; there is not one `fixation` event, so both
+sessions ran in `cursor_only` mode. The gaze pipeline in `web/src/capture/` is tested and unused.
 
 ### 12.2 Sample bias, when the panel does exist
 
@@ -773,14 +787,58 @@ Three bays, five shelves, 24 SKUs, four brands, four categories, two creatives, 
 Every result is conditional on that planogram. Nothing here says whether the personas transfer to
 a different category, a different fixture or a different country.
 
-### 12.10 Vision ingest was dropped
+### 12.10 Vision ingest reads geometry and colour only, and has never seen a real shelf
 
-PLAN S20 (phone video → planogram, Grounding DINO on a GPU laptop) was dropped under PLAN §5's own
-four-hour CUDA timebox: no aisle clip was recorded, and the available GPU is far below what fp16
-Grounding DINO needs. `vision/` contains only a package stub, `web/src/vision/` is empty, and
-`data/planograms/video_aisle.json` does not exist. The seed planogram carries the demo, and the
-"foundation for AR / spatial" claim rests on the planogram JSON being renderer-agnostic, not on a
-working ingest path.
+**What was dropped, and what replaced it.** PLAN S20 specified phone video → planogram with
+Grounding DINO on a GPU laptop. That detector was dropped under PLAN §5's own four-hour CUDA
+timebox — the available GPU (GeForce MX250) is far below what fp16 Grounding DINO needs, and this
+machine has no CUDA torch. The track was then **rebuilt on classical CV** rather than abandoned:
+`vision/` is seven modules and about 1,450 lines (`frames`, `camera`, `shelves`, `facings`,
+`track`, `planogram`, `pipeline`), `web/src/vision/VisionView.tsx` renders the result at `#/vision`,
+and `vision/tests/` is 115 passing tests. An earlier revision of this section said the package was
+a stub and the screen empty; that has not been true since S30.
+
+**What it reads.** Horizontal edge rows → shelf bands; colour runs within a band → facing boxes;
+each facing's mean colour in CIE Lab. That is deliberately the subset `sim/saliency.py` consumes —
+shelf level, facings, colour contrast — so a shelf read off a video is genuinely simulatable.
+
+**What it cannot read**, because no detector is running: brand, product name, price, promotion,
+and promotional signage. `vision/planogram.py` writes those absences into the document as
+`brand: "unknown"`, `name: "unidentified product N"`, `price: 0`, `promo: false` and emits no ad
+slots at all. `price` feeds `price_sensitivity` and `promo` feeds `promo_sensitivity` in every
+persona policy, so a plausible guess there would not be cosmetic — it would move numbers.
+
+**The limits, as measured.** Two failure modes were found by running the pipeline against its own
+fixture with the degradations a hand-held phone adds, and both were silent before they were fixed:
+
+- **Roll is corrected, within ±6°.** A frame tilted one degree returned *fewer* shelf bands than
+  the bay has rather than refusing, and shelf level is the largest term in the saliency model.
+  `vision/camera.py` searches ±`ROLL_SEARCH_DEGREES` (6.0) in 0.25° steps against the detector's
+  own row profile; on the committed fixture it recovers the true angle to within 0.3°, and
+  deskewing restores the full band count the tilt destroyed without changing the facing count.
+  Past ±6° it reports no angle larger than it searched: the shelf detector then finds nothing and
+  the pipeline refuses the clip rather than emitting a shelf it half-read.
+- **Camera movement is refused, over 1% of frame.** Facings are matched between frames at IoU 0.5,
+  which holds for a phone propped against a shelf and fails for one being carried — a pack that
+  has travelled does not overlap itself and is counted again in every frame, so a pan across three
+  bays reported over a hundred facings for two dozen packs, with confidences attached. `camera_drift`
+  takes the median per-pair phase-correlation displacement and `vision/pipeline.py` raises above
+  `MAX_DRIFT_FRACTION` (0.01). Hand-held jitter measures about 0.15% of frame and an aisle walk
+  about 5%, so the bar sits an order of magnitude clear of both.
+
+**The footage caveat, which subsumes the rest.** The only clip this pipeline has ever been run on
+is `scripts/make_vision_fixture.py`'s rendering of this repository's own seed planogram: even
+lighting, no perspective convergence, no occlusion, no motion blur, no reflections, no price rails.
+It reads that clip correctly — five shelves and eight facings, matching bay 1 — and that is a
+statement about the seven stages composing, **not** a claim about accuracy on a real aisle. No
+number here has been validated against a shop. `data/planograms/video_aisle.json` is still not
+committed, and `#/vision` writes nothing to the database and says so on screen, because a planogram
+derived from a picture this repository drew is not evidence about a shop and would be
+indistinguishable from one that was the moment it became JSON. `requirements-vision.txt` holds the
+GPU upgrade path for the identities half; it has not been run.
+
+The "foundation for AR / spatial" claim still rests on the planogram JSON being renderer-agnostic,
+not on this ingest path being trustworthy on real footage.
 
 ### 12.11 The store shell is procedural
 
@@ -885,3 +943,34 @@ Three limits on what the optimizer's ranking and its price tag can be said to sh
   "what it would be worth if these were your numbers". The value spreads overlap worse than the
   lifts do -- top pick 2,883-6,651 against the current placement's 602-4,150 over seeds 42-46 --
   because the unresolved ordering above propagates straight through the multiplication.
+
+### 12.14 The headline lift's magnitude restates a constant nobody fitted
+
+`docs/SENSITIVITY.md` sweeps every free constant in the purchase model and reports what moves.
+It is generated by `scripts/sweep_purchase_constants.py` and regenerable in about twenty
+seconds; the summary is here because it changes how the headline should be quoted.
+
+The Ad-to-Purchase Lift is produced by about fifteen lines of `sim/simulator.py`, and every
+constant in them was **written, not fitted**. `docs/SPEC.md` M4 mandates most of them, but SPEC
+M4 is a document we wrote; no shopper data was regressed to produce a Gumbel scale of 0.1 or an
+ad coefficient of 0.2. Swept across defensible ranges, the browser lift spans roughly **0.05 to
+0.75** — the committed 0.32 is one point inside it, and it is the point our own two constants
+pick out. The ad coefficient is close to linear in the lift, so the headline's *magnitude* is
+approximately a restatement of that constant.
+
+Three things survive the sweep, and they are what the claims should rest on:
+
+* **The sign.** In all fifteen configurations with a non-zero ad coefficient, the browser lift
+  is positive.
+* **The ordering of personas by ad responsiveness.** `browser` is the most ad-responsive in
+  every one of those fifteen, and `switcher` second in every one. "Target browsers, then
+  switchers" is a recommendation the constants do not overturn, even though "expect +32%" is not
+  a forecast they support.
+* **Every attention-side number.** `AD_1` slot attention spans 0.0813 to 0.0848 across the whole
+  sweep, against a seed-to-seed spread of 0.0033 at fixed constants — inside run-to-run noise.
+  The heatmaps, the Ad Slot Index and the known-effect uplift are untouched by anything in that
+  file, which is what you would expect from a model where purchase reads attention and never
+  writes it.
+
+So: quote the lift as a range with the constant named, quote the direction and the persona
+ordering as findings, and quote the attention numbers without this caveat attached.

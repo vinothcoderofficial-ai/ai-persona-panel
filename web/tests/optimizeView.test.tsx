@@ -23,7 +23,21 @@ import { OptimizeView } from "@/optimize/OptimizeView";
  *  * the placement running **today** is marked, and its rank stated — "best" is
  *    meaningless without "compared to what you are doing now";
  *  * candidates the planogram could not express are **listed**, because a
- *    missing row reads as a move that was tried and lost.
+ *    missing row reads as a move that was tried and lost;
+ *  * **a question that was not asked is not answered "no".** `beats_current`
+ *    is null when the comparison could never be made — nothing in the space
+ *    reproduces today's planogram, or the current placement has no seed range
+ *    for anything to clear. This screen rendered the empty list as "No
+ *    placement clears the current one's spread either", and the server sent
+ *    `[]` for both cases, so on the committed aisle an unanswered question was
+ *    printed as a definite negative for 23 of the 24 focal SKUs;
+ *  * **the number says which estimator produced it.** There are two Brand
+ *    Lifts, they differ several-fold on this aisle, and a percentage with no
+ *    estimator beside it is an unlabelled percentage — so the server's own
+ *    caveat is printed verbatim rather than paraphrased here;
+ *  * **a row whose spread contains no effect says UNRESOLVED**, whatever it
+ *    outranked. Sorting descending is not evidence that the winner does
+ *    anything.
  */
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT =
@@ -34,7 +48,11 @@ const RESPONSE = {
   planogram_id: "demo_aisle",
   creative_id: "AD_1",
   focal_sku_id: null as string | null,
-  objective_name: "ad-to-purchase lift for creative AD_1",
+  objective: "between_arm_lift",
+  objective_name: "between-arm brand lift for creative AD_1",
+  objective_caveat:
+    "Between-arm comparison: each placement's whole synthetic population against a control run of the same shelf with AD_1 taken down.",
+  no_effect_value: 0 as number | null,
   n_synth: 10000,
   seed: 42,
   spread_seeds: [42, 43, 44, 45, 46],
@@ -42,9 +60,9 @@ const RESPONSE = {
   n_candidates: 4,
   current_rank: 3,
   top_pick_is_resolved: false,
-  beats_current: [] as string[],
+  beats_current: [] as string[] | null,
   summary_lines: [
-    "Best of 4 placements on ad-to-purchase lift for creative AD_1 (10000 shoppers, seed 42): AD_1 on B1_TALKER at +12.7%.",
+    "Best of 4 placements on between-arm brand lift for creative AD_1 (10000 shoppers, seed 42): AD_1 on B1_TALKER at +12.7%.",
   ],
   spread_caveat:
     "This range is Monte Carlo run-to-run variability across seeds — the same simulation re-rolled — and is not a confidence interval.",
@@ -78,8 +96,12 @@ const RESPONSE = {
         width: 0.08,
       },
       unresolved_against: ["ad:AD_1@B2_DECAL"],
+      spread_clears_no_effect: true,
     },
     {
+      // Ranked second and not shown to do anything: its range crosses zero.
+      // This is the ordinary case for the honest estimator at 10,000 shoppers,
+      // not a contrived one.
       rank: 2,
       candidate_id: "ad:AD_1@B2_DECAL",
       kind: "ad_placement",
@@ -91,8 +113,16 @@ const RESPONSE = {
       is_current: false,
       variant_id: "wi_2",
       sim_run_id: "sim_2",
-      seed_spread: null,
-      unresolved_against: [],
+      seed_spread: {
+        seeds: [42, 43, 44, 45, 46],
+        values: [0.101, -0.004, 0.05, 0.02, 0.031],
+        low: -0.004,
+        high: 0.101,
+        n_seeds: 5,
+        width: 0.105,
+      },
+      unresolved_against: ["ad:AD_1@B1_TALKER"],
+      spread_clears_no_effect: false,
     },
     {
       rank: 3,
@@ -108,6 +138,9 @@ const RESPONSE = {
       sim_run_id: "sim_3",
       seed_spread: null,
       unresolved_against: [],
+      // Outside spread_top_n: no range at all. "Not measured" is a third
+      // answer, not the same as "measured and overlapping zero".
+      spread_clears_no_effect: null as boolean | null,
     },
     {
       rank: 4,
@@ -123,6 +156,7 @@ const RESPONSE = {
       sim_run_id: "sim_4",
       seed_spread: null,
       unresolved_against: [],
+      spread_clears_no_effect: null as boolean | null,
     },
   ],
 };
@@ -206,7 +240,7 @@ describe("the ranking", () => {
   it("names the metric it ranked on", async () => {
     const harness = await mount();
     try {
-      expect(text(harness, "optimize-objective")).toContain("ad-to-purchase lift");
+      expect(text(harness, "optimize-objective")).toContain("between-arm brand lift");
     } finally {
       harness.unmount();
     }
@@ -401,6 +435,129 @@ describe("the screen is a way back, not a dead end", () => {
     const harness = await mount();
     try {
       expect(node(harness, "optimize-home-link").getAttribute("href")).toBe("#/home");
+    } finally {
+      harness.unmount();
+    }
+  });
+});
+
+
+describe("which estimator produced the number", () => {
+  it("prints the server's own caveat rather than a paraphrase of it", async () => {
+    // There are two Brand Lifts in analytics/lift.py and on this aisle they
+    // differ several-fold. Which one a column came from is not decoration, and
+    // the words come from the library that produced the ranking so the CLI,
+    // RESULTS.md and this screen cannot drift into saying different things.
+    const harness = await mount();
+    try {
+      expect(text(harness, "optimize-caveat")).toContain(RESPONSE.objective_caveat);
+    } finally {
+      harness.unmount();
+    }
+  });
+
+  it("carries the within-run warning through unchanged when that is what ran", async () => {
+    const harness = await mount({
+      objective: "within_run_lift",
+      objective_name: "within-run ad-to-purchase lift for creative AD_1",
+      objective_caveat:
+        "Within-run split: ... That division is a SELECTION and not a randomisation ...",
+    });
+    try {
+      expect(text(harness, "optimize-caveat").toUpperCase()).toContain("SELECTION");
+      expect(text(harness, "optimize-objective")).toContain("within-run");
+    } finally {
+      harness.unmount();
+    }
+  });
+});
+
+describe("a comparison that was never made", () => {
+  it("says the current placement was not compared, rather than that nothing beat it", async () => {
+    // `beats_current` null means the question was not answered: no candidate
+    // reproduces today's planogram, or the current one has no seed range for
+    // anything to clear. Rendering that as "No placement clears the current
+    // one's spread either" turns an unasked question into a finding.
+    const harness = await mount({ beats_current: null });
+    try {
+      const resolution = text(harness, "optimize-resolution");
+      expect(resolution.toLowerCase()).toContain("not compared");
+      expect(resolution).not.toContain("No placement clears the current one");
+    } finally {
+      harness.unmount();
+    }
+  });
+
+  it("still reports the real negative when the comparison WAS made", async () => {
+    // The empty list is a finding — every placement was compared against the
+    // current one's range and none cleared it — and it has to survive the fix
+    // for the null case rather than being softened along with it.
+    const harness = await mount({ beats_current: [] });
+    try {
+      expect(text(harness, "optimize-resolution")).toContain(
+        "No placement clears the current one",
+      );
+    } finally {
+      harness.unmount();
+    }
+  });
+
+  it("claims nothing about clearing the current placement when the top pick IS separated but nothing was compared", async () => {
+    const harness = await mount({ top_pick_is_resolved: true, beats_current: null });
+    try {
+      const resolution = text(harness, "optimize-resolution");
+      expect(resolution.toLowerCase()).toContain("not compared");
+      expect(resolution).not.toContain("also clear the current");
+    } finally {
+      harness.unmount();
+    }
+  });
+
+  it("does not crash when an older server omits the field entirely", async () => {
+    // normalise() coerced anything non-array to [], which is how the honest
+    // null became a definite negative in the first place. Anything that is not
+    // an array now reads as "not compared", which is what a missing field is.
+    const harness = await mount({ beats_current: undefined as never });
+    try {
+      expect(text(harness, "optimize-resolution").toLowerCase()).toContain("not compared");
+    } finally {
+      harness.unmount();
+    }
+  });
+});
+
+describe("what each row admits about itself", () => {
+  it("shows every row's own seed spread, not only the winner's", async () => {
+    const harness = await mount();
+    try {
+      expect(text(harness, "optimize-row-1")).toContain("+6.2%");
+      expect(text(harness, "optimize-row-1")).toContain("+14.2%");
+      expect(text(harness, "optimize-row-2")).toContain("-0.4%");
+    } finally {
+      harness.unmount();
+    }
+  });
+
+  it("marks a row whose spread contains no effect as UNRESOLVED", async () => {
+    // Rank 2 sorted above six other placements and has still not been shown to
+    // do anything: its range runs from -0.4% to +10.1%. Sorting descending is
+    // not evidence.
+    const harness = await mount();
+    try {
+      expect(text(harness, "optimize-row-2")).toContain("UNRESOLVED");
+      expect(text(harness, "optimize-row-1")).not.toContain("UNRESOLVED");
+    } finally {
+      harness.unmount();
+    }
+  });
+
+  it("does not call a row unresolved when it simply has no spread", async () => {
+    // Rank 3 is outside spread_top_n. "Not measured" and "measured and
+    // straddling zero" are different, and only the second is a verdict.
+    const harness = await mount();
+    try {
+      expect(text(harness, "optimize-row-3")).not.toContain("UNRESOLVED");
+      expect(text(harness, "optimize-row-3").toLowerCase()).toContain("no spread");
     } finally {
       harness.unmount();
     }

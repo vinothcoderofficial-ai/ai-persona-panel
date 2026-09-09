@@ -161,14 +161,17 @@ Timings are the outer edge of each shot. Speak under them; the live shots need s
 > be made at all.
 >
 > *(Prompt panel, then policy.)* This is the exact instruction we send it — not a copy, the string
-> the code actually sends, fetched from the server. And this is what it sent back: eleven numbers
-> that become a shopper. Goal categories, brand affinity, price sensitivity, how long they will
-> stay, how likely they are to buy.
+> the code actually sends, fetched from the server. And beside it, the eleven numbers that become
+> a shopper: goal categories, brand affinity, price sensitivity, how long they will stay, how
+> likely they are to buy. **Those four policy files were written by hand**, and the screen says so
+> — the generator is built, it has never authored the ones we simulate, and we are not going to
+> imply it did.
 
 *Option A — the key works:*
 
-> *(Press "Ask the model again".)* And we can ask it again, now. There is the fresh answer beside
-> the one being simulated, with the fields that moved highlighted. **Note what it did not do: it
+> *(Press "Ask the model again".)* And we can put that prompt to the model right now. There is its
+> answer beside the one being simulated, with the fields that moved highlighted. **Note what it did
+> not do: it
 > did not adopt it.** Those cached policies are pre-registered inputs — every prediction lock is
 > hashed against the simulation they drive — so a button that quietly rewrote one would invalidate
 > the evidence. It writes to a preview file and shows you the difference.
@@ -192,8 +195,8 @@ Timings are the outer edge of each shot. Speak under them; the live shots need s
 > on promotion." That is a real sentence from a real call.
 >
 > **One distinction, because it is the one that gets misheard.** Every heatmap in this video comes
-> from a numpy simulator, not from a language model. The model wrote the policies and it wrote
-> these traces. It did not write the heatmap, and we are not going to imply that it did.
+> from a numpy simulator, not from a language model. The model wrote these traces. It did not write
+> the heatmap and it did not write the policies, and we are not going to imply that it did either.
 
 ### 6b — `#/panel`
 
@@ -309,7 +312,8 @@ Kept here so a retake does not drift into them.
 |---|---|
 | "The synthetic panel matches real shoppers" / "…is 87 % accurate" | Nothing has been compared. There is no real panel. |
 | "More accurate than a human panel" | Not a coherent claim — see shot 8 and METHODOLOGY §8. |
-| "Our AI personas reasoned about this shelf" *(over a heatmap)* | The heatmaps are numpy. The model wrote the policies and the traces, and shot 6 shows both — say it there, over the traces, where it is true. |
+| "Our AI personas reasoned about this shelf" *(over a heatmap)* | The heatmaps are numpy. The model wrote the traces and nothing else — shot 6 shows them, so say it there, over the traces, where it is true. |
+| "The model wrote these policies" *(over the policy panel in shot 6a)* | The four committed policies were **hand-written in S2**. The generator is built and the button runs it live, but it has never authored the ones being simulated — METHODOLOGY §5 and §12.8, and the panel itself, all say so. |
 | "We scanned a real aisle" / "this is a phone video of a shop" | The only clip is `make_vision_fixture.py`'s rendering of the seed planogram. No real footage exists. |
 | "The system identified these products from the video" | It did not. Every product reads `unidentified product N`; brand, name, price and promotion are not observable from video and are written as unknown. |
 | "And now that shelf is in the system" *(after shot 3)* | `#/vision` saves nothing, and says so on screen. |

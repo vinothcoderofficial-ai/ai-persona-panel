@@ -34,6 +34,28 @@ subtly wrong and impossible to notice afterwards:
     `check_top_pick_stability` re-ranks at a ladder of run sizes and reports
     whether the same candidate wins at each. A ranking whose winner changes
     when the panel grows was never measuring the winner.
+  * **Which lift the ranking is made on.** This is the newest and the largest
+    of them. `ad_purchase_lift_objective` scores a candidate on
+    `analytics.lift.synth_lift`, the WITHIN-run split: one run, divided by
+    whether each shopper fixated an ad slot. That split is a SELECTION -- the
+    shoppers on the exposed side had already walked to the endcap -- and on
+    this aisle it reports roughly five times what the two-arm comparison does.
+    `between_arm_lift_objective` scores each candidate against that same
+    candidate with the creative taken down, through
+    `analytics.lift.between_variant_lift`, which is the study a client
+    commissions. `test_the_within_run_split_reports_several_times_the_between_arm_lift`
+    measures the gap on the committed aisle and prints both numbers;
+    `test_the_between_arm_control_is_the_candidate_itself_with_the_creative_taken_down`
+    pins the control down, because a control that is merely "the base
+    planogram without the ad" would confound a shelf move with the ad for
+    every `sku:` candidate in a composed space.
+  * **A spread that contains no effect at all.** Separating rank 1 from rank 2
+    is not the only question a spread answers, and it is not the first one.
+    `Scored.spread_clears_no_effect` asks whether the row's own seed range
+    excludes the objective's no-effect value, and on the committed aisle the
+    honest between-arm number does NOT clear zero at 10,000 shoppers. Printing
+    it as a settled positive result would be the same over-claim the
+    within-run split makes, one level down.
 """
 
 from __future__ import annotations
@@ -56,11 +78,13 @@ from analytics.optimizer import (
     LEVELS,
     UNPLACED,
     CandidateSet,
+    Objective,
     SeedSpread,
     Scored,
     Stability,
     ad_placement_candidates,
     ad_purchase_lift_objective,
+    between_arm_lift_objective,
     check_top_pick_stability,
     rank_candidates,
     sku_level_candidates,
@@ -671,7 +695,10 @@ def test_the_full_committed_space_ranks_ad_moves_and_shelf_moves_together():
     ranking = rank_candidates(base, space, ad_purchase_lift_objective("AD_1"))
 
     assert ranking.n_candidates == len(space)
-    assert ranking.objective_name == "ad-to-purchase lift for creative AD_1"
+    # The name says WHICH lift, because there are two and they differ by a
+    # factor of five on this aisle. A ranking labelled only "ad-to-purchase
+    # lift" would not say which of them produced the column.
+    assert ranking.objective_name == "within-run ad-to-purchase lift for creative AD_1"
     assert ranking.current is not None
     assert {e.candidate.kind for e in ranking.entries} == {KIND_AD_PLACEMENT, KIND_SKU_LEVEL}
     # Every entry carries the deterministic run id of the simulation it scored,
@@ -1162,3 +1189,347 @@ def test_the_summary_says_so_when_nothing_clears_the_current_placement():
     lower = summary(ranking).lower()
     assert "no placement clears the current placement" in lower
     assert re.search(r"\bCI\b", summary(ranking)) is None
+
+
+# ---------------------------------------------------------------------------
+# The between-arm objective: a randomisation rather than a selection
+# ---------------------------------------------------------------------------
+#
+# `analytics/lift.py` has carried both estimators since P3.1, and until now
+# every production caller -- POST /optimize, scripts/optimize.py and the
+# #/optimize screen -- ranked on the within-run one. The module docstring of
+# lift.py and docs/PHASE3.md both record why that is wrong and by how much.
+# These tests are what stops it coming back.
+
+
+def _two_arm_bundle(purchase_share: dict, variant_id: str, seed: int) -> SimpleNamespace:
+    """A SimBundle carrying everything `between_variant_lift` reads.
+
+    `_fake_bundle` above is deliberately minimal -- `synth_lift` only needs the
+    two arm vectors -- but a between-arm comparison also reads `purchase_share`
+    off BOTH runs and goes through `_check_comparable`, which needs
+    `variant_id` and `persona_id`. Handing it a bundle without them fails with
+    a KeyError that says nothing about the thing under test.
+    """
+    return SimpleNamespace(
+        per_persona={},
+        population={
+            "sim_run_id": f"{variant_id}:{seed}",
+            "variant_id": variant_id,
+            "persona_id": "population",
+            "purchase_share": dict(purchase_share),
+            "ad_exposed_purchase_share": {},
+            "ad_unexposed_purchase_share": {},
+        },
+    )
+
+
+# The brand AD_1 advertises on the committed aisle, and one of its SKUs.
+CRUNCH_SKU = "SKU_001"
+RIVAL_SKU = "SKU_002"
+
+
+def _ad_sensitive_simulate(record: list | None = None):
+    """A `simulate` whose brand shares depend only on where AD_1 hangs.
+
+    Crunch sells better wherever AD_1 is hanging, and best from the endcap.
+    That is enough structure for a between-arm comparison to be defined and
+    signed, without paying for 10,000 real shoppers in a test that is about
+    which two runs get compared rather than about the simulator.
+    """
+
+    def simulate(resolved, variant_id, *, n_synth, seed):
+        if record is not None:
+            record.append((variant_id, copy.deepcopy(resolved)))
+        ads = _ad_slots(resolved)
+        showing = [slot for slot, ad in ads.items() if ad["creative_id"] == "AD_1"]
+        crunch = 0.20 + (0.10 if "B3_ENDCAP" in showing else 0.0) + (0.04 if showing else 0.0)
+        return _two_arm_bundle({CRUNCH_SKU: crunch, RIVAL_SKU: 1.0 - crunch},
+                               variant_id, seed)
+
+    return simulate
+
+
+def test_the_between_arm_control_is_the_candidate_itself_with_the_creative_taken_down():
+    """The control has to carry every change the candidate made EXCEPT the ad.
+
+    The tempting control is "the base planogram with AD_1 taken down", one run
+    for the whole ranking. It is wrong the moment the space is composed: for
+    `sku:SKU_008@eye` the treated arm carries a shelf move AND the ad, that
+    control carries neither, and the difference between them is not the ad's
+    effect. So the control is derived per candidate -- the candidate's own
+    patches, then the creative cleared off every slot still carrying it -- and
+    for the pure ad space every one of those collapses onto the same planogram,
+    which is the `ad:AD_1@none` arm the space already contains.
+    """
+    base = base_planogram()
+    space = (ad_placement_candidates(base, creative_ids=("AD_1",), include_unplaced=False)
+             + sku_level_candidates(base, FOCAL_SKU))
+    seen: list = []
+
+    rank_candidates(base, space, between_arm_lift_objective("AD_1"),
+                    simulate=_ad_sensitive_simulate(seen), spread_seeds=())
+
+    controls = [resolved for variant_id, resolved in seen if variant_id.startswith("opt_ctl_")]
+    assert controls, "a between-arm ranking that simulated no control arm compared nothing"
+
+    # Not one of them advertises AD_1 anywhere. A control that still carries
+    # the creative is the treated arm under another name.
+    for control in controls:
+        assert all(ad["creative_id"] != "AD_1" for ad in _ad_slots(control).values())
+
+    # And exactly one of them carries the eye-level move, which is the whole
+    # argument above: the shelf candidate's control is that shelf, unadvertised.
+    moved = [c for c in controls if _slots(c)[B1_EYE_EMPTY]["sku_id"] == FOCAL_SKU]
+    assert len(moved) == 1
+
+
+def test_the_whole_ad_space_shares_one_control_arm_rather_than_re_running_it():
+    """Every ad placement of AD_1 controls against the same unadvertised aisle.
+
+    Not an optimisation for its own sake. `sim.simulator.run` seeds on `seed`
+    alone, so N separately-keyed controls would be N identical simulations --
+    but they would also be N chances for a later change to give one candidate a
+    different bar from another, which is the one thing a comparison cannot
+    survive. The control is keyed on its resolved CONTENT, so identical control
+    planograms are the same run by construction.
+    """
+    base = base_planogram()
+    space = ad_placement_candidates(base, creative_ids=("AD_1",))
+    seen: list = []
+
+    rank_candidates(base, space, between_arm_lift_objective("AD_1"),
+                    simulate=_ad_sensitive_simulate(seen), spread_seeds=())
+
+    control_ids = {variant_id for variant_id, _ in seen if variant_id.startswith("opt_ctl_")}
+    assert len(control_ids) == 1, f"expected one control arm, ran {sorted(control_ids)}"
+
+
+def test_the_between_arm_lift_is_undefined_where_the_candidate_runs_no_campaign():
+    """A configuration that hangs AD_1 nowhere has no AD_1 lift to report.
+
+    Two of them exist in the default space and they are different mistakes to
+    make. `ad:AD_1@none` is the campaign withdrawn; `ad:AD_2@B3_ENDCAP` hangs
+    the other creative on the only slot AD_1 occupies and takes it down as a
+    side effect. Both would otherwise be compared against a control identical
+    to themselves -- lift.py's own same-variant guard would raise -- and both
+    are correctly reported as undefined rather than as a lift of zero, which is
+    a measured value and would sort among the real ones.
+    """
+    base = base_planogram()
+    space = ad_placement_candidates(base)
+
+    ranking = rank_candidates(base, space, between_arm_lift_objective("AD_1"),
+                              simulate=_ad_sensitive_simulate(), spread_seeds=())
+    by_id = {e.candidate.candidate_id: e for e in ranking.entries}
+
+    assert by_id[f"ad:AD_1@{UNPLACED}"].objective is None
+    assert by_id["ad:AD_2@B3_ENDCAP"].objective is None
+    # AD_2 hangs nowhere on the seed aisle, so "AD_2 unplaced" IS today's
+    # planogram: AD_1 is still on the endcap and its lift is answerable.
+    assert by_id[f"ad:AD_2@{UNPLACED}"].objective is not None
+    assert by_id["ad:AD_1@B3_ENDCAP"].objective is not None
+
+    undefined_ranks = [e.rank for e in ranking.entries if e.objective is None]
+    defined_ranks = [e.rank for e in ranking.entries if e.objective is not None]
+    assert min(undefined_ranks) > max(defined_ranks)
+
+
+def test_the_between_arm_score_is_analytics_lift_s_own_function_over_the_same_two_runs():
+    """No second implementation of the maths, the way S24 pinned the first one.
+
+    `test_the_same_configuration_scores_the_same_as_a_direct_simulator_call`
+    does this for the within-run objective. This is its twin: the number on a
+    row is `analytics.lift.between_variant_lift` over the population SimResult
+    of the candidate and the population SimResult of the candidate with AD_1
+    taken down, both from `api.app.simcache.population` -- the call a
+    prediction lock is built from.
+    """
+    from analytics.lift import between_variant_lift, creative_brand, sku_brands
+    from analytics.optimizer import variant_id_for
+    from api.app import simcache
+    from api.app.resolve import resolve
+
+    base = base_planogram()
+    space = ad_placement_candidates(base, creative_ids=("AD_1",),
+                                    ad_slot_ids=(BASELINE_AD_SLOT,), include_unplaced=False)
+    ranking = rank_candidates(base, space, between_arm_lift_objective("AD_1"), spread_seeds=())
+    entry = ranking.entries[0]
+
+    def population(patches):
+        variant_id = variant_id_for(base, tuple(patches))
+        resolved = resolve(base, {"variant_id": variant_id, "name": "check",
+                                  "base_planogram_id": base["planogram_id"],
+                                  "patches": list(patches)})
+        return simcache.population(resolved, variant_id, n_synth=ranking.n_synth,
+                                   seed=ranking.seed).population, resolved
+
+    treated, resolved = population(entry.candidate.patches)
+    control, _ = population(list(entry.candidate.patches)
+                            + [{"op": "set_ad_creative", "ad_slot_id": BASELINE_AD_SLOT,
+                                "creative_id": None}])
+    direct = between_variant_lift(treated, control, brand_of_sku=sku_brands(resolved),
+                                  brand=creative_brand(resolved, "AD_1"))
+
+    assert direct is not None
+    assert entry.objective == direct
+
+
+def test_the_within_run_split_reports_several_times_the_between_arm_lift():
+    """The measurement this whole change exists for, on the committed aisle.
+
+    Both numbers are for the SAME placement -- AD_1 on B3_ENDCAP, which is what
+    the store is running -- at the same run size and the same seed, so nothing
+    but the estimator differs. The within-run split says the ad is worth
+    several times what the two-arm comparison says, because the shoppers on its
+    exposed side had already walked to the endcap. docs/PHASE3.md records
+    +4.5 % against +0.9 % for exactly this pair; the printed output below is
+    that measurement, made again.
+    """
+    base = base_planogram()
+    space = ad_placement_candidates(base, creative_ids=("AD_1",),
+                                    ad_slot_ids=(BASELINE_AD_SLOT,), include_unplaced=False)
+
+    within = rank_candidates(base, space, ad_purchase_lift_objective("AD_1"), spread_seeds=())
+    between = rank_candidates(base, space, between_arm_lift_objective("AD_1"), spread_seeds=())
+
+    within_value = within.entries[0].objective
+    between_value = between.entries[0].objective
+    assert within_value is not None and between_value is not None
+
+    print(f"\nAD_1 on {BASELINE_AD_SLOT}, n_synth={within.n_synth}, seed={within.seed}")
+    print(f"  within-run split (exposed vs unexposed shoppers) {within_value:+.4f}")
+    print(f"  between-arm      (this aisle vs AD_1 taken down) {between_value:+.4f}")
+
+    assert within_value > between_value
+    # Several-fold, not a rounding difference. Measured at 4.9x here; the
+    # margin below is deliberately loose because the ratio moves with the seed
+    # while the direction does not.
+    assert within_value > 3.0 * between_value
+
+
+def test_the_two_lifts_do_not_share_a_name_and_each_says_what_its_number_is():
+    """A ranking is only meaningful with its metric, and these two metrics
+    disagree by a factor of five. Sharing a name -- or leaving either without a
+    caveat a screen can print -- is how the wrong one gets quoted."""
+    within = ad_purchase_lift_objective("AD_1")
+    between = between_arm_lift_objective("AD_1")
+    share = sku_purchase_share_objective(FOCAL_SKU)
+
+    assert within.name != between.name
+    assert "between-arm" in between.name
+    assert "AD_1" in between.name
+
+    assert "selection" in within.caveat.lower()
+    assert "control" in between.caveat.lower()
+    assert share.caveat, "an objective with no caveat is a number with no units"
+    assert len({within.caveat, between.caveat, share.caveat}) == 3
+
+
+# ---------------------------------------------------------------------------
+# A spread that contains no effect at all
+# ---------------------------------------------------------------------------
+
+
+def _scripted_lift_objective(by_slot: dict) -> Objective:
+    """A lift-shaped objective read straight off a table of (slot, seed).
+
+    Hand-built rather than borrowed from `sku_purchase_share_objective`,
+    because the values under test are NEGATIVE over part of the range and a
+    purchase share cannot be. Its `no_effect_value` is 0.0, the same as both
+    real lift objectives'.
+    """
+
+    def score(population, resolved, control):
+        showing = [slot for slot, ad in _ad_slots(resolved).items()
+                   if ad["creative_id"] == "AD_1"]
+        return by_slot[showing[0]][population["seed"]]
+
+    return Objective(
+        name="a scripted lift, for a test",
+        score=score,
+        format_value=lambda value: f"{value:+.1%}",
+        caveat="scripted; measures nothing",
+        no_effect_value=0.0,
+    )
+
+
+def _seed_carrying_simulate():
+    """A `simulate` whose population carries the seed it was run at, so a
+    scripted objective can be a pure function of (placement, seed)."""
+
+    def simulate(resolved, variant_id, *, n_synth, seed):
+        bundle = _two_arm_bundle({}, variant_id, seed)
+        bundle.population["seed"] = seed
+        return bundle
+
+    return simulate
+
+
+def test_a_row_whose_seed_spread_contains_no_effect_is_reported_as_unresolved():
+    """Rank 1 versus rank 2 is not the first question a spread answers.
+
+    A placement whose seed range runs from -0.02 to +0.06 has not been shown to
+    do anything at all, whatever its rank. That is not hypothetical here: the
+    honest between-arm lift for AD_1 on B2_DECAL runs from -0.4 % to +0.7 %
+    across the five default seeds at 10,000 shoppers. Printing it as a positive
+    result because it sorted above something else would repeat, one level down,
+    exactly the over-claim the within-run split makes.
+    """
+    base = base_planogram()
+    space = ad_placement_candidates(base, creative_ids=("AD_1",),
+                                    ad_slot_ids=("B1_TALKER", "B2_DECAL"),
+                                    include_unplaced=False)
+    by_slot = {
+        "B1_TALKER": {42: 0.06, 43: -0.02},   # straddles zero: not shown to work
+        "B2_DECAL": {42: 0.05, 43: 0.03},     # entirely above it
+    }
+
+    ranking = rank_candidates(base, space, _scripted_lift_objective(by_slot),
+                              simulate=_seed_carrying_simulate(), seed=42,
+                              spread_seeds=(43,), spread_top_n=2)
+    by_id = {e.candidate.candidate_id: e for e in ranking.entries}
+
+    assert by_id["ad:AD_1@B1_TALKER"].spread_clears_no_effect is False
+    assert by_id["ad:AD_1@B2_DECAL"].spread_clears_no_effect is True
+    # The top pick is the one that has not been shown to work, and the summary
+    # a screen prints has to lead with that rather than with its rank.
+    assert ranking.best.candidate.candidate_id == "ad:AD_1@B1_TALKER"
+    assert "no effect" in summary(ranking).lower()
+
+
+def test_a_row_with_no_spread_at_all_says_unknown_rather_than_unresolved():
+    """Outside `spread_top_n` there is no range, and "not measured" is a third
+    answer -- not the same as "measured and overlapping"."""
+    base = base_planogram()
+    space = ad_placement_candidates(base, creative_ids=("AD_1",),
+                                    ad_slot_ids=("B1_TALKER", "B2_DECAL"),
+                                    include_unplaced=False)
+    by_slot = {"B1_TALKER": {42: 0.06, 43: 0.05}, "B2_DECAL": {42: 0.05, 43: 0.03}}
+
+    ranking = rank_candidates(base, space, _scripted_lift_objective(by_slot),
+                              simulate=_seed_carrying_simulate(), seed=42,
+                              spread_seeds=(43,), spread_top_n=1)
+
+    assert ranking.entries[0].spread_clears_no_effect is True
+    assert ranking.entries[1].seed_spread is None
+    assert ranking.entries[1].spread_clears_no_effect is None
+
+
+def test_a_share_objective_has_no_no_effect_value_so_no_row_claims_to_clear_one():
+    """Zero is not a null for a purchase share -- it is "sold nothing" -- so
+    "does this row clear no effect" is a question that does not exist for it,
+    and None is this module's word for a question it has not answered."""
+    base = base_planogram()
+    space = ad_placement_candidates(base, creative_ids=("AD_1",))
+    ranking = rank_candidates(base, space, sku_purchase_share_objective(FOCAL_SKU),
+                              simulate=_scripted_simulate(lambda variant_id, seed: 0.25),
+                              seed=42, spread_seeds=(43,), spread_top_n=4)
+
+    assert sku_purchase_share_objective(FOCAL_SKU).no_effect_value is None
+    assert all(entry.spread_clears_no_effect is None for entry in ranking.entries)
+
+
+def test_both_lift_objectives_treat_zero_as_no_effect():
+    assert ad_purchase_lift_objective("AD_1").no_effect_value == 0.0
+    assert between_arm_lift_objective("AD_1").no_effect_value == 0.0

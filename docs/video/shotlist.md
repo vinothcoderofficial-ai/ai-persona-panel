@@ -284,7 +284,9 @@ Verified against a running instance:
 1. Point at the **model name**, large, top of screen.
 2. Point at the **prompt** panel — the actual string `sim/policy.py` sends, fetched from the
    server, not a copy.
-3. Point at the **policy** beside it — the eleven numbers the model returned.
+3. Point at the **policy** beside it — the eleven numbers the simulator is running. Say that they
+   were **written by hand in S2**, which is what the line under them says. The prompt is what the
+   button sends; it did not produce these.
 4. **The button**, per your chosen option A / B / C above.
 5. Scroll to **the trace**. Pick `mission`, shopper 1, and read one turn aloud. The first is:
    *"Need chips; this one is cheap and on promotion."* — a real sentence from a real model call,
@@ -292,7 +294,7 @@ Verified against a running instance:
 
 Say the distinction plainly, because it is the one an audience will otherwise get wrong: the
 heatmaps everywhere else in this video come from a **numpy simulator**, not from a language model.
-The model wrote the policies and these traces. It did not write the heatmap.
+The model wrote these traces. It did not write the heatmap, and it did not write the policies.
 
 #### 6b — `#/panel` (about 15 s)
 
@@ -419,7 +421,9 @@ Then the repo URL and QR.
 - **Saying "we scanned a real aisle".** The clip in shot 3 is a rendering of the seed planogram.
 - **Letting shot 6's button fail without having chosen to.** See the warning at the top.
 - **Implying the heatmap was reasoned by the language model.** It is numpy. The model wrote the
-  policies and the traces, and shot 6 shows both.
+  traces, and shot 6 shows them.
+- **Implying the model wrote the policies.** It did not — they were hand-written in S2. Shot 6a
+  points at them; the sentence that goes with them is "written by hand", not "what it answered".
 - **Implying `#/vision` saved anything.** It does not, and the screen says so.
 - Recording the shopper window with the spectator overlay visible on it. The shopper must never
   see their own gaze dot, on camera or off.

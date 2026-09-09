@@ -216,3 +216,230 @@ def test_reading_a_long_clip_does_not_freeze_the_rest_of_the_api(
         release.set()
         assert response.status_code == 200
         assert upload.result(timeout=30).status_code == 200
+
+
+# ---------------------------------------------------------------------------
+# The vocabulary an operator has to label a reading with
+# ---------------------------------------------------------------------------
+#
+# `vision/planogram.py` writes every SKU as brand "unknown", category
+# "unknown", price 0 - correctly, because a classical pipeline cannot read any
+# of the four. The cost of that honesty is that the synthetic panel does
+# nothing at all on a video store, and this was measured rather than assumed:
+# running the four committed policies in `data/cache/policies/` against a
+# nine-facing reading gives `path.stations_mean` 0.0 for loyalist, mission and
+# switcher - they never take a single step, because `sim/simulator.py` keeps a
+# shopper active only while `goals` is non-empty and every goal category is
+# matched against the store's category list, which here holds the one string
+# "unknown". Browser walks the bay (it is the one archetype allowed to shop
+# without goals) and buys nothing, because a purchase needs `goal_match` too.
+# After the same nine facings are given categories from those policies, all
+# four walk and all four buy.
+#
+# So the fix is a person typing the eight rows they already have in their ERP,
+# and for that the screen needs the vocabulary the personas actually shop. That
+# vocabulary is a server-side fact - it is the union of `goal_categories` over
+# the committed policy of every persona on disk - so it is reported here,
+# beside the notes about what the camera could not see. It is the same
+# sentence: this is what was not observed, and this is what a person would have
+# to supply instead.
+
+
+def test_the_reading_offers_the_categories_the_personas_actually_shop(
+    client: TestClient, aisle_clip: bytes
+) -> None:
+    """A category outside this set is a category no persona will ever walk to."""
+    offered = _post(client, aisle_clip).json()["shoppable_categories"]
+
+    assert "chips" in offered
+    assert "cola" in offered
+
+
+def test_the_offered_categories_never_include_the_unknown_the_pipeline_wrote(
+    client: TestClient, aisle_clip: bytes
+) -> None:
+    """"unknown" is what the camera failed to read, not something to choose."""
+    assert "unknown" not in _post(client, aisle_clip).json()["shoppable_categories"]
+
+
+def test_the_categories_are_read_off_the_personas_rather_than_hardcoded(
+    client: TestClient,
+    aisle_clip: bytes,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Add a persona who shops something new and it becomes choosable.
+
+    A list written into this router would agree with the personas on the day it
+    was typed and silently disagree after the next `make seed`. The endpoint
+    reads `data/personas/` for who exists and `data/cache/policies/` for what
+    each of them is going after, so the screen can never offer a category the
+    simulator would ignore, nor hide one it would honour.
+    """
+    personas = tmp_path / "personas"
+    policies = tmp_path / "policies"
+    personas.mkdir()
+    policies.mkdir()
+    (personas / "gardener.json").write_text(
+        '{"persona_id": "gardener", "archetype": "browser"}', encoding="utf-8"
+    )
+    (policies / "gardener_demo_aisle.json").write_text(
+        '{"persona_id": "gardener", "goal_categories": ["compost", "seeds"]}',
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(vision_router, "PERSONAS_DIR", personas)
+    monkeypatch.setattr(vision_router, "POLICIES_DIR", policies)
+
+    assert _post(client, aisle_clip).json()["shoppable_categories"] == [
+        "compost",
+        "seeds",
+    ]
+
+
+def test_a_persona_with_no_committed_policy_does_not_break_the_reading(
+    client: TestClient,
+    aisle_clip: bytes,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A fresh checkout that has not run the policy step still uploads a clip.
+
+    The vocabulary is a convenience on top of the reading. Losing it must cost
+    the operator a dropdown, not the whole feature - so an empty list comes
+    back and the 200 stands.
+    """
+    personas = tmp_path / "personas"
+    personas.mkdir()
+    (personas / "gardener.json").write_text(
+        '{"persona_id": "gardener", "archetype": "browser"}', encoding="utf-8"
+    )
+    monkeypatch.setattr(vision_router, "PERSONAS_DIR", personas)
+    monkeypatch.setattr(vision_router, "POLICIES_DIR", tmp_path / "policies")
+
+    response = _post(client, aisle_clip)
+
+    assert response.status_code == 200
+    assert response.json()["shoppable_categories"] == []
+
+
+def test_the_reading_still_says_it_was_not_saved(
+    client: TestClient, aisle_clip: bytes
+) -> None:
+    """Offering the labelling vocabulary is not the same as saving anything.
+
+    The endpoint gained a field about what an operator could type; it did not
+    gain a write. `saved` stays false and the document stays out of the
+    database until a person deliberately POSTs it to /planograms.
+    """
+    assert _post(client, aisle_clip).json()["saved"] is False
+
+
+# ---------------------------------------------------------------------------
+# Keeping a reading: the round trip `#/vision` performs
+# ---------------------------------------------------------------------------
+#
+# The screen holds the reading, applies the operator's labels to it, and posts
+# the result to the endpoints that already exist for storing a store. This
+# router takes no part in that and gains no write - but nothing else in the
+# suite proves that what the screen assembles is a document `/planograms` will
+# actually accept, and a shape error there would surface as a 422 in front of
+# an operator with a labelled shelf they cannot keep. So the round trip is
+# asserted here, in Python, against the real validator: relabel, save, wrap in
+# a zero-patch variant, resolve.
+
+
+def _label(planogram: dict, planogram_id: str) -> dict:
+    """What the operator does on `#/vision`, in one function.
+
+    Only the fields a person typed are overwritten. The second SKU is left
+    exactly as the camera left it, because that asymmetry is the whole point:
+    a reader has to be able to tell the two apart in the stored document.
+    """
+    document = dict(planogram)
+    document["planogram_id"] = planogram_id
+    document["name"] = (
+        "Aisle read from video, 1 of N products labelled by an operator - positions, "
+        "sizes and colours measured from the clip; brand, category, price and "
+        "promotion typed by hand"
+    )
+    skus = [dict(sku) for sku in document["skus"]]
+    skus[0].update(
+        {
+            "name": skus[0]["name"].replace("unidentified", "operator-labelled"),
+            "brand": "Crunch",
+            "category": "chips",
+            "price": 2.49,
+            "promo": True,
+        }
+    )
+    document["skus"] = skus
+    return document
+
+
+def test_a_labelled_reading_is_a_document_planograms_accepts(
+    client: TestClient, aisle_clip: bytes
+) -> None:
+    """The shape `#/vision` assembles has to survive planogram.schema.json.
+
+    `additionalProperties: false` runs the length of that schema, so there is
+    nowhere to hang an "operator supplied" flag and the provenance has to live
+    in fields the schema already has - the document name, and each SKU's name.
+    This asserts the assembled document validates, which is what stops the save
+    button 422-ing in front of somebody holding a labelled shelf.
+    """
+    reading = _post(client, aisle_clip).json()["planogram"]
+
+    response = client.post(
+        "/planograms", json=_label(reading, "video_aisle_20260101120000_ab12")
+    )
+
+    assert response.status_code == 201, response.text
+
+
+def test_a_kept_reading_is_shoppable_through_a_variant_that_changes_nothing(
+    client: TestClient, aisle_clip: bytes
+) -> None:
+    """The store route resolves variants, never planograms.
+
+    A zero-patch variant is the shortest honest bridge from "this is what was
+    read and labelled" to "shop it": what gets shopped is exactly the document
+    that was saved, with nothing moved on top of it.
+    """
+    reading = _post(client, aisle_clip).json()["planogram"]
+    planogram_id = "video_aisle_20260101120000_ab12"
+    client.post("/planograms", json=_label(reading, planogram_id))
+
+    created = client.post(
+        "/variants",
+        json={
+            "variant_id": f"{planogram_id}_asread",
+            "base_planogram_id": planogram_id,
+            "name": "As read from video - nothing moved",
+            "patches": [],
+        },
+    )
+    assert created.status_code == 201, created.text
+
+    resolved = client.get(f"/variants/{planogram_id}_asread/resolved").json()
+    assert resolved["source"] == "video"
+    assert resolved["skus"][0]["category"] == "chips"
+    # The facing nobody described still says so, in the stored document, beside
+    # the one that was labelled.
+    assert resolved["skus"][1]["category"] == "unknown"
+    assert resolved["skus"][1]["name"].startswith("unidentified")
+
+
+def test_a_kept_reading_does_not_displace_the_hand_authored_store(
+    client: TestClient, aisle_clip: bytes
+) -> None:
+    """`POST /planograms` upserts on the id. A video reading must never land on
+    one that somebody measured by hand, which is why the screen generates a
+    `video_`-prefixed, run-stamped id rather than reusing the pipeline's
+    `video_aisle`."""
+    reading = _post(client, aisle_clip).json()["planogram"]
+    client.post("/planograms", json=_label(reading, "video_aisle_20260101120000_ab12"))
+
+    listed = client.get("/planograms").json()
+
+    assert "video_aisle_20260101120000_ab12" in listed
+    assert "video_aisle" not in listed

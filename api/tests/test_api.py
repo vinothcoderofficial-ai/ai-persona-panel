@@ -11,8 +11,10 @@ from pathlib import Path
 
 from sqlmodel import Session, select
 
+from api.app import prediction
 from api.app.db import EventRecord
 from api.app.resolve import resolve
+from api.app.routers import sessions as sessions_router
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -293,6 +295,40 @@ def _event(t_ms: int, type_: str = "station_enter"):
     return {"t_ms": t_ms, "type": type_, "station_id": "B1", "payload": {}}
 
 
+def _lock_is_not_after(created_at: str, first_event_at: str) -> bool:
+    """The ordering the two tests below assert: the lock, then the stamp.
+
+    `<=`, not `<`, and the equal case is the whole reason this helper exists.
+    Both moments are milliseconds -- `created_at` through
+    `prediction.utc_now_iso`, whose three decimal places are fixed by SPEC 4.6
+    and, worse, are hashed into the lock's own `sha256`, so it cannot simply be
+    given more digits; `first_event_at` through
+    `datetime.isoformat(timespec="milliseconds")`. In this process nothing
+    separates the two writes but one validated event batch, and measuring the
+    flow 300 times put the gap at 0-22 ms with 4 runs at exactly 0. The strict
+    version passed alone and failed under the full suite, both stamps reading
+    `2026-09-09T01:53:24.028Z`.
+
+    Allowing the tie is not a weakening, because the guarantee being defended
+    is program order, not clock arithmetic: `POST /sessions` writes the lock
+    and returns before `POST /sessions/{id}/events` can be called at all, so a
+    tie is a millisecond clock failing to resolve two writes and never
+    evidence that the event came first. The thing that must never be tolerated
+    -- the lock landing *after* the event that it claims to have predicted --
+    still fails here.
+
+    `scripts/eval.py` keeps the strict `<` for committed sessions, and should:
+    there the two moments are separated by a browser round trip and a human
+    being walking up to a shelf, so a tie really would mean something is
+    wrong.
+    """
+
+    def parse(value: str) -> datetime:
+        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+
+    return parse(created_at) <= parse(first_event_at)
+
+
 def test_a_new_session_has_no_first_event_time(client):
     """Absent until an event arrives - never a fabricated timestamp for a
     session nobody has shopped yet."""
@@ -334,9 +370,10 @@ def test_the_stamp_is_after_the_prediction_lock(client):
     browser's clock and a server's. Reconstructing the event time as
     `started_at + t_ms` instead understates it by the POST /sessions round
     trip, and failed a real session whose ordering was correct.
-    """
-    from datetime import datetime
 
+    See `_lock_is_not_after` for why a same-millisecond tie is allowed and a
+    lock stamped after the event is still a failure.
+    """
     session_id = "44444444-4444-4444-8444-444444444444"
     _open_session(client, session_id)
     client.post(f"/sessions/{session_id}/events", json=[_event(0)])
@@ -344,10 +381,50 @@ def test_the_stamp_is_after_the_prediction_lock(client):
     lock = client.get(f"/sessions/{session_id}/prediction").json()
     stamp = client.get(f"/sessions/{session_id}").json()["first_event_at"]
 
-    def parse(value: str) -> datetime:
-        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    assert _lock_is_not_after(lock["created_at"], stamp)
 
-    assert parse(lock["created_at"]) < parse(stamp)
+
+def test_a_lock_and_a_stamp_in_the_same_millisecond_are_still_in_order(
+    client, monkeypatch
+):
+    """A tie, made deterministic instead of waited for.
+
+    Both stamps have millisecond resolution and both are written by this
+    process inside one request pair, so they can land in the same millisecond.
+    Driving this exact flow 300 times measured gaps of 0-22 ms with 4 of the
+    300 exactly zero -- which is why the strict `<` the test above used to
+    assert failed about one full-suite run in seventy-five while passing every
+    time that test was run alone. Freezing both clocks on one instant makes
+    the tie the test rather than an accident of scheduling.
+    """
+    frozen_iso = "2026-09-09T01:53:24.028Z"
+    frozen = datetime(2026, 9, 9, 1, 53, 24, 28000, tzinfo=timezone.utc)
+
+    class FrozenClock(datetime):
+        """`datetime` with `now()` pinned, so the rest of the class still works."""
+
+        @classmethod
+        def now(cls, tz=None):
+            return frozen
+
+    monkeypatch.setattr(prediction, "utc_now_iso", lambda: frozen_iso)
+    monkeypatch.setattr(sessions_router, "datetime", FrozenClock)
+
+    session_id = "77777777-7777-4777-8777-777777777777"
+    _open_session(client, session_id)
+    client.post(f"/sessions/{session_id}/events", json=[_event(0)])
+
+    lock = client.get(f"/sessions/{session_id}/prediction").json()
+    stamp = client.get(f"/sessions/{session_id}").json()["first_event_at"]
+
+    assert lock["created_at"] == frozen_iso
+    assert stamp == frozen_iso
+    assert _lock_is_not_after(lock["created_at"], stamp)
+
+    # And the tie is as far as the tolerance goes: a lock stamped after the
+    # event it claims to have predicted is still a failure, which is the
+    # assertion this whole section exists to make.
+    assert not _lock_is_not_after("2026-09-09T01:53:24.029Z", stamp)
 
 
 def test_a_rejected_batch_does_not_stamp_the_session(client):

@@ -19,9 +19,15 @@ import { VisionView } from "@/vision/VisionView";
  *    brands, names or prices, and the screen must not let a viewer forget it;
  *  * per-slot confidence is visible, because a slot seen once and a slot seen
  *    twenty times must not look alike;
- *  * "this was not saved" is stated, not implied;
+ *  * "this was not saved" is stated, not implied, and stays stated until a
+ *    person deliberately saves it;
  *  * a clip with no shelves in it produces the server's refusal, never an
  *    empty store.
+ *
+ * The labelling step and the save that follows it live in
+ * `visionSave.test.tsx`. This file stays about the reading itself: what the
+ * screen draws, what it refuses to claim about it, and what it does when the
+ * server says no.
  */
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT =
@@ -257,14 +263,39 @@ describe("after a clip is read", () => {
     }
   });
 
-  it("states that nothing was saved", async () => {
+  it("states that nothing was saved, and points at the button that would save it", async () => {
     // Reading a video is not committing a store. Left implicit, a viewer would
     // reasonably assume the shelf they are looking at is now in the product.
+    //
+    // This used to end by telling the operator to go and run
+    // `python -m vision.pipeline` in a terminal, which was true and useless:
+    // the screen had read the clip already, and the only thing standing between
+    // that reading and a shoppable store was a person deciding to keep it. The
+    // caution now names the act and the id it would land under, and it stays
+    // on screen until that act succeeds — `visionSave.test.tsx` holds the rest.
     const harness = await mount();
     await chooseFile(harness);
     try {
       expect(text(harness, "vision-not-saved").toLowerCase()).toContain("not");
-      expect(text(harness, "vision-not-saved")).toContain("vision.pipeline");
+      expect(text(harness, "vision-not-saved")).toContain("Keep this reading");
+      expect(text(harness, "vision-not-saved")).toContain("video_");
+    } finally {
+      harness.unmount();
+    }
+  });
+
+  it("still labels and saves against an API that has no category vocabulary", async () => {
+    // `shoppable_categories` arrived with the labelling step; the fixture above
+    // deliberately does not carry it. An older API answers a reading this
+    // screen can still draw, still label by brand and price, and still keep.
+    // Losing the dropdown's options must cost the operator the dropdown, not
+    // the feature.
+    const harness = await mount();
+    await chooseFile(harness);
+    try {
+      const select = node(harness, "vision-category-V_001") as HTMLSelectElement;
+      expect(Array.from(select.options).map((option) => option.value)).toEqual([""]);
+      expect(node(harness, "vision-keep")).not.toBeNull();
     } finally {
       harness.unmount();
     }

@@ -17,14 +17,20 @@ exists, and the events endpoint refuses a session with no lock. This script
 re-enforces it from the committed files, because a structural guarantee at
 capture time says nothing about what happened to the files afterwards.
 
+For every committed lock, whether or not a session names it, its `sha256`
+recomputes from its own stored fields, using
+`api/app/prediction.compute_sha256` -- the production recipe, called, not
+re-implemented, so a second slightly-different recipe cannot quietly bless a
+tampered file. That check used to sit in the per-session loop, where it ran
+zero times on a repository that has locks and no sessions yet, while the
+report claimed the hashes had been verified anyway. It happens on load now,
+and the reported count is the count of digests actually recomputed and
+matched.
+
 For every accepted session:
 
   * the lock exists, and its `session_id`, `variant_id` and `prediction_id`
     agree with the session document;
-  * its `sha256` recomputes from its own stored fields, using
-    `api/app/prediction.compute_sha256` -- the production recipe, called, not
-    re-implemented, so a second slightly-different recipe cannot quietly
-    bless a tampered file;
   * `created_at` strictly precedes the arrival of the session's first event.
 
 That last one needs care. Events carry `t_ms`, an offset from the start of
@@ -209,6 +215,21 @@ class LoadedSession:
 
 
 @dataclass(frozen=True)
+class LoadedLocks:
+    """The committed prediction locks, and what was verified about them.
+
+    `documents` is every well-formed lock, keyed by session id. `verified` is
+    the subset whose `sha256` recomputed from its own stored fields and
+    matched -- the number RESULTS.md prints as "`sha256` recomputed and
+    matched", which must be a count of work done and never of files found.
+    """
+
+    documents: dict
+    verified: tuple
+    failures: tuple
+
+
+@dataclass(frozen=True)
 class EvalOutcome:
     """Everything a caller (or a test) needs to know about one run."""
 
@@ -297,16 +318,32 @@ def load_sessions(sessions_dir: Path) -> tuple[list, list]:
     return loaded, failures
 
 
-def load_locks(predictions_dir: Path) -> tuple[dict, list]:
-    """Every committed prediction lock, keyed by session id.
+def load_locks(predictions_dir: Path) -> LoadedLocks:
+    """Every committed prediction lock, keyed by session id, each one rehashed.
 
     A lock whose file name and `session_id` disagree is a failure: the events
     endpoint looks the lock up by file name, so the two disagreeing means the
     gate at capture time was checking a different document from the one this
     script is about to verify.
+
+    The digest is recomputed here rather than in `check_session_integrity`,
+    where it used to live. `compute_sha256` reads nothing but the lock's own
+    `population_fixation_prob`, `sim_run_id` and `created_at`, so it never
+    needed a session -- but sitting inside the per-session loop meant it ran
+    once per session, which on today's repository (one committed lock, no
+    anonymised sessions until S21) is not at all, while RESULTS.md reported
+    "`sha256` recomputed and matched: 1" taken from `len(locks)`. A lock is
+    committed evidence from the day it lands, and it is verified from that day.
+
+    A lock whose digest does not match is a failure, never a silent skip. Its
+    document is still returned, so the session that names it is checked for
+    variant agreement and ordering as well and one run tells the operator
+    everything wrong with the evidence -- but its id is kept out of
+    `verified`, because nothing about that file was confirmed.
     """
     lock_validator = _validator("prediction.schema.json")
     locks: dict = {}
+    verified: list = []
     failures: list = []
 
     for path in sorted(predictions_dir.glob("*.json")):
@@ -330,9 +367,25 @@ def load_locks(predictions_dir: Path) -> tuple[dict, list]:
             )
             continue
 
+        expected = prediction.compute_sha256(
+            document["population_fixation_prob"],
+            document["sim_run_id"],
+            document["created_at"],
+        )
+        if expected == document["sha256"]:
+            verified.append(document["session_id"])
+        else:
+            failures.append(
+                f"{path.stem}: lock sha256 does not match its contents "
+                f"(stored {document['sha256'][:12]}..., recomputed {expected[:12]}...). "
+                "The prediction was changed after it was hashed."
+            )
+
         locks[document["session_id"]] = document
 
-    return locks, failures
+    return LoadedLocks(
+        documents=locks, verified=tuple(verified), failures=tuple(failures)
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -400,7 +453,11 @@ def first_event_arrival(
 
 
 def check_session_integrity(loaded: LoadedSession, lock: Optional[Mapping]) -> list:
-    """Every reason this session's evidence cannot be trusted."""
+    """Every reason this session's evidence cannot be trusted.
+
+    The lock's `sha256` is not rechecked here: `load_locks` recomputes it for
+    every committed lock, session or none, and reports a mismatch itself.
+    """
     failures: list = []
     session = loaded.session
     session_id = loaded.session_id
@@ -425,16 +482,6 @@ def check_session_integrity(loaded: LoadedSession, lock: Optional[Mapping]) -> l
         failures.append(
             f"{session_id}: session names prediction_id {session_prediction_id!r} but its "
             f"lock is {lock['prediction_id']!r}"
-        )
-
-    expected = prediction.compute_sha256(
-        lock["population_fixation_prob"], lock["sim_run_id"], lock["created_at"]
-    )
-    if expected != lock["sha256"]:
-        failures.append(
-            f"{session_id}: lock sha256 does not match its contents "
-            f"(stored {lock['sha256'][:12]}..., recomputed {expected[:12]}...). "
-            "The prediction was changed after it was hashed."
         )
 
     failures.extend(_check_ordering(loaded, lock))
@@ -584,11 +631,17 @@ def run_eval(
     predictions_dir = Path(predictions_dir)
 
     sessions, failures = load_sessions(sessions_dir) if sessions_dir.is_dir() else ([], [])
-    locks, lock_failures = load_locks(predictions_dir) if predictions_dir.is_dir() else ({}, [])
-    failures = list(failures) + list(lock_failures)
+    locks = (
+        load_locks(predictions_dir)
+        if predictions_dir.is_dir()
+        else LoadedLocks(documents={}, verified=(), failures=())
+    )
+    failures = list(failures) + list(locks.failures)
 
     for loaded in sessions:
-        failures.extend(check_session_integrity(loaded, locks.get(loaded.session_id)))
+        failures.extend(
+            check_session_integrity(loaded, locks.documents.get(loaded.session_id))
+        )
 
     if failures:
         return EvalOutcome(
@@ -652,7 +705,7 @@ def run_eval(
 def _analyse(
     *,
     sessions: Sequence[LoadedSession],
-    locks: Mapping[str, Mapping],
+    locks: LoadedLocks,
     sessions_dir: Path,
     planograms_dir: Path,
     variants_dir: Path,
@@ -1084,16 +1137,24 @@ def _lift_block(
     }
 
 
-def _pre_registration_block(sessions: Sequence[LoadedSession], locks: Mapping) -> dict:
-    """What was verified, counted -- the evidence the honesty claim rests on."""
+def _pre_registration_block(sessions: Sequence[LoadedSession], locks: LoadedLocks) -> dict:
+    """What was verified, counted -- the evidence the honesty claim rests on.
+
+    `n_locks_verified` counts the digests `load_locks` recomputed and matched,
+    not the files it found. The two are equal on any run that reaches this
+    function, because a mismatch is a failure and a failing run writes no
+    report -- but reading the number off `len(locks)` was how RESULTS.md came
+    to claim a hash had been verified on a repository where the recomputation
+    had never run.
+    """
     notes: list = []
-    with_lock = [loaded for loaded in sessions if loaded.session_id in locks]
+    with_lock = [loaded for loaded in sessions if loaded.session_id in locks.documents]
     checkable = [loaded for loaded in with_lock if ordering_checkable(loaded)]
 
     unlockable = [
         loaded.session_id
         for loaded in sessions
-        if loaded.session_id not in locks and not loaded.accepted
+        if loaded.session_id not in locks.documents and not loaded.accepted
     ]
     if unlockable:
         notes.append(
@@ -1112,8 +1173,8 @@ def _pre_registration_block(sessions: Sequence[LoadedSession], locks: Mapping) -
         )
 
     return {
-        "n_locks_found": len(locks),
-        "n_locks_verified": len(locks),
+        "n_locks_found": len(locks.documents),
+        "n_locks_verified": len(locks.verified),
         "n_ordering_checked": len(checkable),
         "notes": notes,
     }

@@ -308,8 +308,15 @@ export function Launcher({ readStoredSession = readLastSession }: LauncherProps)
       <div style={gridStyle}>
         {/* First of the four, deliberately. "Where is the AI?" is the question
             a first-time viewer asks before any other, and it was the one thing
-            this launcher could not answer: the model's policies and traces were
-            committed under data/cache/ and rendered by no screen at all. */}
+            this launcher could not answer: the model's traces were committed
+            under data/cache/ and rendered by no screen at all.
+
+            This card said the prompt "turned each archetype into a numeric
+            policy". It has not — the committed policies were written by hand in
+            S2 (METHODOLOGY §5, §12.8), and the prompt is what the panel's button
+            sends when you ask for one live. The trips are the model's; the
+            eleven numbers are not, and a launcher blurb is exactly where that
+            distinction gets lost. */}
         <Destination
           testId="launcher-ai"
           linkTestId="launcher-ai-link"
@@ -317,10 +324,11 @@ export function Launcher({ readStoredSession = readLastSession }: LauncherProps)
           title="The model"
           action="Open the AI panel"
         >
-          Which model is configured and whether it can be called right now, the exact prompt
-          that turned each archetype into a numeric policy, a button that asks the model
-          again, and the twenty shopping trips it reasoned through per persona — every turn
-          with the reason it gave. Asking again never changes what the simulator runs.
+          Which model is configured and whether it can be called right now, the twenty
+          shopping trips it reasoned through per persona — every turn with the reason it
+          gave — and the exact prompt that would turn an archetype into a numeric policy,
+          beside a button that sends it live. The committed policies were written by hand;
+          the button diffs the model&apos;s answer against them and adopts nothing.
         </Destination>
 
         <Destination

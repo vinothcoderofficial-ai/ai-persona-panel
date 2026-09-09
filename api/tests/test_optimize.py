@@ -26,11 +26,26 @@ quietly drop:
 3. **Skipped candidates are reported.** A shelf level the planogram cannot
    express is not a placement that scored badly, and silently omitting it turns
    "there was no move to try" into "we tried it and it lost".
+4. **A question that was not asked is not a negative answer.**
+   `Ranking.beats_current` is None when the comparison could not be made at
+   all, and this route flattened that to `[]` -- which the screen renders as
+   "No placement clears the current one's spread either." On the committed
+   aisle the current placement falls outside `spread_top_n` for 23 of the 24
+   focal SKUs, so an unanswered question printed as a definite negative nearly
+   every time. It is serialised as JSON null now, and the tests below hold both
+   answers apart.
+5. **The ranking says which estimator produced it.** There are two Brand Lifts
+   in `analytics/lift.py`, they disagree several-fold on this aisle, and this
+   endpoint hardcoded the confounded one with no way to ask for the other.
 """
+import json
+from pathlib import Path
 from typing import Any, Dict, List
 
 import pytest
 from fastapi.testclient import TestClient
+
+ROOT = Path(__file__).resolve().parents[2]
 
 
 def post(client: TestClient, **body: Any) -> Dict[str, Any]:
@@ -144,9 +159,13 @@ def test_says_whether_the_top_pick_is_actually_separated(client: TestClient) -> 
 
 
 def test_says_which_placements_clear_the_current_one(client: TestClient) -> None:
+    """Three answers, not two: a list of ids, an empty list (everything was
+    compared, nothing cleared it), or null (the comparison was never made).
+    `isinstance(..., list)` was the assertion here, and it passed against a
+    serialiser that turned the third answer into the second."""
     body = post(client, **FAST)
 
-    assert isinstance(body["beats_current"], list)
+    assert body["beats_current"] is None or isinstance(body["beats_current"], list)
 
 
 def test_reports_skipped_candidates_rather_than_dropping_them(client: TestClient) -> None:
@@ -249,3 +268,226 @@ def test_the_same_request_twice_gives_the_same_ranking(client: TestClient) -> No
     assert [e["objective"] for e in first["entries"]] == [
         e["objective"] for e in second["entries"]
     ]
+
+
+# ---------------------------------------------------------------------------
+# Which estimator produced the column
+# ---------------------------------------------------------------------------
+#
+# `analytics/lift.py` carries two Brand Lifts and docs/PHASE3.md P3.1 records
+# that on this aisle they disagree several-fold: the within-run split says
+# +4.5 % where the between-arm comparison says +0.9 %, because within one run
+# "ad exposed" is a selection and not a randomisation. This endpoint ranked on
+# the within-run one, with no way to ask for the other, from the day it shipped
+# until now. These tests are what stops that returning.
+
+
+def test_the_default_objective_is_the_between_arm_comparison(client: TestClient) -> None:
+    """The default is the estimator a client's own study would produce.
+
+    Not backwards compatibility: a caller who names no objective gets the one
+    whose two arms are identical by construction, because a default is what
+    almost everybody reads.
+    """
+    body = post(client, **FAST)
+
+    assert "between-arm" in body["objective_name"]
+    assert "AD_1" in body["objective_name"]
+    assert body["objective"] == "between_arm_lift"
+
+
+def test_the_within_run_split_can_be_asked_for_and_is_labelled_as_a_selection(
+    client: TestClient,
+) -> None:
+    """It still has to be reachable -- it is the only estimator a REAL panel can
+    produce, since a real panel shops one store -- but it arrives carrying the
+    sentence that says why its number is bigger."""
+    body = post(client, objective="within_run_lift", **FAST)
+
+    assert "within-run" in body["objective_name"]
+    assert "selection" in body["objective_caveat"].lower()
+
+
+def test_every_ranking_carries_the_sentence_that_says_what_its_number_is(
+    client: TestClient,
+) -> None:
+    """A percentage on a screen with no estimator beside it is an unlabelled
+    percentage, and these two estimators differ by a factor of five."""
+    for objective in ("between_arm_lift", "within_run_lift"):
+        body = post(client, objective=objective, **FAST)
+        assert body["objective_caveat"], objective
+        assert body["objective_caveat"] in "\n".join(body["summary_lines"])
+
+
+def test_the_two_estimators_are_not_the_same_measurement(client: TestClient) -> None:
+    """Same space, same run size, same seed, same rows -- and different numbers,
+    because the difference is the estimator and nothing else."""
+    between = post(client, objective="between_arm_lift", **FAST)
+    within = post(client, objective="within_run_lift", **FAST)
+
+    assert between["objective_name"] != within["objective_name"]
+
+    def scored(body: Dict[str, Any]) -> Dict[str, Any]:
+        return {e["candidate_id"]: e["objective"] for e in body["entries"]}
+
+    assert set(scored(between)) == set(scored(within))
+    assert scored(between) != scored(within)
+
+
+def test_the_purchase_share_objective_needs_no_creative_at_all(client: TestClient) -> None:
+    """The objective for a shelf whose advertising is unknown.
+
+    `sku_purchase_share_objective` names no creative, which makes it the only
+    one that can rank a planogram reconstructed by `vision/` -- products
+    identified, campaigns on the wall not. It had no production caller at all
+    before this, so from the running product it did not exist.
+    """
+    response = client.post(
+        "/optimize",
+        json={"objective": "sku_purchase_share", "focal_sku_id": "SKU_008", **FAST},
+    )
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["objective_name"] == "population purchase share of SKU_008"
+    assert body["creative_id"] is None
+    assert any(entry["kind"] == "sku_shelf_level" for entry in body["entries"])
+
+
+def test_the_purchase_share_objective_without_a_focal_sku_is_refused(
+    client: TestClient,
+) -> None:
+    """Not a silent fallback to the lift. "Which SKU's share?" has no default
+    that would not be an invention."""
+    response = client.post("/optimize", json={"objective": "sku_purchase_share", **FAST})
+
+    assert response.status_code == 422
+    assert "focal_sku_id" in response.json()["detail"]
+
+
+def test_a_lift_objective_without_a_creative_is_refused(client: TestClient) -> None:
+    response = client.post("/optimize", json={"objective": "between_arm_lift", **FAST})
+
+    assert response.status_code == 422
+    assert "creative_id" in response.json()["detail"]
+
+
+def test_an_unknown_objective_is_refused_rather_than_defaulted(client: TestClient) -> None:
+    """A misspelled objective that fell back to the default would hand back a
+    ranking on a metric the caller did not ask for -- the same failure the
+    `extra="forbid"` on this model exists to prevent."""
+    response = client.post(
+        "/optimize", json={"creative_id": "AD_1", "objective": "vibes", **FAST}
+    )
+
+    assert response.status_code == 422
+
+
+def test_each_row_says_whether_its_spread_clears_no_effect(client: TestClient) -> None:
+    """The question that comes before the ranking: does this placement do
+    anything at all? A row whose seed range contains zero has not been shown
+    to, whatever it outranked."""
+    body = post(client, **FAST)
+
+    for entry in body["entries"]:
+        assert entry["spread_clears_no_effect"] in (True, False, None)
+        if entry["seed_spread"] is None:
+            assert entry["spread_clears_no_effect"] is None
+
+
+def test_a_share_ranking_asks_no_row_to_clear_no_effect(client: TestClient) -> None:
+    """A purchase share of 0 means "sold nothing", not "did nothing", so the
+    question does not exist for that objective and every row answers null."""
+    body = post(client, objective="sku_purchase_share", focal_sku_id="SKU_008", **FAST)
+
+    assert all(entry["spread_clears_no_effect"] is None for entry in body["entries"])
+
+
+# ---------------------------------------------------------------------------
+# A question that was not asked is not a negative answer
+# ---------------------------------------------------------------------------
+#
+# `Ranking.beats_current` is None when the comparison could not be made -- no
+# candidate reproduces the input planogram, or the current placement fell
+# outside `spread_top_n` and so has no range for anything to clear. This route
+# used to serialise that as `[]`, and the screen renders `[]` as "No placement
+# clears the current one's spread either." On the committed aisle at the
+# endpoint's own defaults the current placement ranks 5th to 8th, so it lands
+# outside the top five for 23 of the 24 focal SKUs: an unanswered question
+# printed as a definite negative, nearly every time.
+
+
+def test_an_unanswered_beats_current_comparison_is_null_not_an_empty_list(
+    client: TestClient,
+) -> None:
+    body = post(client, spread_top_n=0, **{**FAST, "spread_seeds": [42, 43]})
+
+    assert all(entry["seed_spread"] is None for entry in body["entries"])
+    assert body["beats_current"] is None, (
+        "with no spreads there is no bar to clear, and [] would read as "
+        "'every placement was compared and none cleared it'"
+    )
+
+
+def test_a_beats_current_comparison_that_was_made_comes_back_as_a_list(
+    client: TestClient,
+) -> None:
+    """The other answer, and the reason null has to be distinguishable from it:
+    an empty list here is a finding -- everything was compared, nothing won."""
+    body = post(client, spread_top_n=50, **FAST)
+
+    current = [entry for entry in body["entries"] if entry["is_current"]]
+    assert current and current[0]["seed_spread"] is not None
+    assert isinstance(body["beats_current"], list)
+
+
+# ---------------------------------------------------------------------------
+# A planogram the simulator cannot run
+# ---------------------------------------------------------------------------
+
+
+def _planogram_without_a_cached_policy(client: TestClient) -> str:
+    """Store a copy of the seed aisle under a new id, and a variant on it.
+
+    `data/cache/policies/` is keyed `{persona_id}_{planogram_id}.json`, so a
+    planogram id that has never been through `make seed` has no policy for any
+    persona and `api.app.simcache.load_policy` raises FileNotFoundError on the
+    first candidate simulated.
+    """
+    planogram = json.loads(
+        (ROOT / "data" / "planograms" / "demo_aisle.json").read_text(encoding="utf-8")
+    )
+    planogram["planogram_id"] = "unpolicied_aisle"
+    assert client.post("/planograms", json=planogram).status_code == 201
+
+    variant = {
+        "variant_id": "UNPOLICIED",
+        "base_planogram_id": "unpolicied_aisle",
+        "name": "an aisle nothing has a policy for",
+        "patches": [],
+    }
+    assert client.post("/variants", json=variant).status_code == 201
+    return "UNPOLICIED"
+
+
+def test_a_planogram_with_no_cached_policy_is_404_and_names_the_missing_file(
+    client: TestClient,
+) -> None:
+    """POST /whatif has handled this since S15; this route did not, so the same
+    input that gives one endpoint a 404 gave this one a 500 and a traceback.
+
+    A 500 says "this server is broken". The truth is that the caller asked for
+    a planogram nobody has generated persona policies for, which is a thing
+    they can fix, and the response has to say which file is missing.
+    """
+    variant_id = _planogram_without_a_cached_policy(client)
+
+    response = client.post(
+        "/optimize", json={"creative_id": "AD_1", "variant_id": variant_id, **FAST}
+    )
+
+    assert response.status_code == 404, response.text
+    detail = response.json()["detail"]
+    assert "unpolicied_aisle" in detail
+    assert "data/cache/policies/" in detail
+    assert ".json" in detail
