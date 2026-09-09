@@ -3,9 +3,11 @@
     python -m vision.pipeline --video aisle.mp4 --out data/planograms/video_aisle.json
     python -m vision.pipeline --video aisle.mp4 --overlays data/vision/overlay_frames
 
-Five stages, one per module, in the order PLAN S20 lays out:
+Six stages, one per module, in the order PLAN S20 lays out:
 
     extract_frames  -> vision/frames.py     sample the clip at 2 fps
+    camera_drift    -> vision/camera.py     refuse a clip the camera walked
+    estimate_roll   -> vision/camera.py     measure the tilt, turn it back
     shelf_bands     -> vision/shelves.py    horizontal edges -> product bands
     facing_boxes    -> vision/facings.py    colour runs within a band -> facings
     merge_across_frames -> vision/track.py  IoU 0.5 dedupe + corroboration
@@ -31,6 +33,18 @@ match under IoU - the tracking stage saw the same pack as a different facing in
 every frame and confidence collapsed. Sharpest by Laplacian variance, because
 a blurred frame gives blurred edges and one bad reading would set the geometry
 for the whole clip.
+
+**The camera is checked before the shelves are.** Both of the stages that came
+from `vision/camera.py` were added after running this pipeline against its own
+fixture with the degradations a phone adds, and both failures were silent. A
+frame tilted a degree returned *fewer* shelves than the bay had rather than
+refusing, and shelf level is the largest term in `sim/saliency.py`. A clip
+panned across three bays of nine products returned over a hundred facings,
+because a pack that has moved does not overlap itself at IoU 0.5, and it
+returned them with confidences attached. Tilt is measured and undone, because
+it can be; drift is measured and refused, because correcting it means
+registering the frames into a mosaic and reading the shelf once across the
+whole strip, which is a larger pipeline than this one.
 """
 from __future__ import annotations
 
@@ -48,6 +62,12 @@ ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from vision.camera import (  # noqa: E402
+    MAX_DRIFT_FRACTION,
+    camera_drift,
+    deskew,
+    estimate_roll,
+)
 from vision.facings import Facing, facing_boxes  # noqa: E402
 from vision.frames import Frame, VideoUnreadable, extract_frames  # noqa: E402
 from vision.planogram import build_planogram  # noqa: E402
@@ -70,6 +90,13 @@ class Result:
     tracks_by_band: Dict[Tuple[int, int], List[Track]]
     frames_sampled: int
     notes: List[str]
+    # How far off level the clip was, and therefore how far every frame was
+    # turned before anything was measured. Carried rather than discarded
+    # because `bands` and every track box are in the *corrected* frame, so an
+    # overlay drawn on a raw frame would not line up with the reading - and
+    # because a shelf that needed four degrees of correction is not the same
+    # evidence as one that needed none.
+    roll_degrees: float
 
 
 def sharpest(frames: Sequence[Frame]) -> Frame:
@@ -110,7 +137,40 @@ def run(
         f"{len(frames)} frames sampled at {fps} fps from {Path(video_path).name}",
     ]
 
+    # Before anything is measured: did the camera stay put? Every stage after
+    # this assumes it did, and none of them can tell that it did not.
+    drift = camera_drift([frame.image for frame in frames])
+    if drift > MAX_DRIFT_FRACTION:
+        raise ValueError(
+            f"the camera moves about {drift * 100:.1f}% of the frame between "
+            f"sampled frames, and this pipeline reads a fixed shot (under "
+            f"{MAX_DRIFT_FRACTION * 100:.0f}%). Facings are matched between "
+            "frames by overlap, so a pack that travels does not overlap itself "
+            "and the same product is counted again in every frame it appears "
+            "in - a pan across an aisle reports several times the stock that is "
+            "actually on it. Film each bay as a separate clip from a fixed "
+            "position rather than walking the aisle."
+        )
+
     reference = sharpest(frames)
+    roll_degrees = estimate_roll(reference.image)
+    if roll_degrees != 0.0:
+        # Every frame, by the one angle measured on the sharpest: the bands
+        # come from that frame and are applied to all the others, so correcting
+        # them individually would put each frame in its own geometry.
+        frames = [
+            Frame(index=frame.index, time_s=frame.time_s,
+                  image=deskew(frame.image, roll_degrees))
+            for frame in frames
+        ]
+        reference = next(
+            frame for frame in frames if frame.index == reference.index
+        )
+        notes.append(
+            f"the camera was {roll_degrees:+.2f} degrees off level; every frame "
+            "was turned back by that before the shelves were looked for"
+        )
+
     bands = shelf_bands(reference.image)
     notes.append(
         f"{len(bands)} shelf band(s) read from frame {reference.index}, "
@@ -161,6 +221,7 @@ def run(
         tracks_by_band=tracks_by_band,
         frames_sampled=len(frames),
         notes=notes,
+        roll_degrees=roll_degrees,
     )
 
 
@@ -193,14 +254,22 @@ def draw_overlay(frame: np.ndarray, result: Result) -> np.ndarray:
 
 
 def write_overlays(video_path: str | Path, result: Result, out_dir: str | Path) -> List[Path]:
-    """Draw the reading over the sampled frames and write them as PNGs."""
+    """Draw the reading over the sampled frames and write them as PNGs.
+
+    The frames are turned back by the same angle `run` measured before they are
+    drawn on. `result.bands` and every track box are in the corrected frame, so
+    drawing them over the raw footage would put every box a few degrees away
+    from the pack it belongs to - and these images exist precisely so somebody
+    can check the reading against the picture.
+    """
     directory = Path(out_dir)
     directory.mkdir(parents=True, exist_ok=True)
 
     written: List[Path] = []
     for frame in extract_frames(video_path, fps=2.0, max_frames=result.frames_sampled):
         path = directory / f"frame_{frame.index:05d}.png"
-        cv2.imwrite(str(path), draw_overlay(frame.image, result))
+        levelled = deskew(frame.image, result.roll_degrees)
+        cv2.imwrite(str(path), draw_overlay(levelled, result))
         written.append(path)
     return written
 

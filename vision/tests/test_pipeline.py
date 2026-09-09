@@ -197,6 +197,104 @@ class TestRefusals:
         assert "front-on" in str(excinfo.value)
 
 
+class TestCamera:
+    """The two things a clip filmed by a person has that a rendering does not.
+
+    Both were found by running the pipeline against its own fixture after
+    degrading it the way a phone degrades it, and both were silent: the tilt
+    returned fewer shelves than the bay had, and the walk returned five times
+    as many products as the aisle held. Neither raised anything.
+    """
+
+    def _write(self, path: Path, frames) -> Path:
+        writer = cv2.VideoWriter(
+            str(path), cv2.VideoWriter_fourcc(*"mp4v"), 10.0, (WIDTH, HEIGHT)
+        )
+        assert writer.isOpened()
+        try:
+            for frame in frames:
+                writer.write(np.ascontiguousarray(frame))
+        finally:
+            writer.release()
+        return path
+
+    def _tilted(self, path: Path, degrees: float) -> Path:
+        matrix = cv2.getRotationMatrix2D((WIDTH / 2, HEIGHT / 2), degrees, 1.0)
+        return self._write(
+            path,
+            (
+                cv2.warpAffine(
+                    aisle_frame(jitter=n % 2),
+                    matrix,
+                    (WIDTH, HEIGHT),
+                    borderValue=(175, 175, 175),
+                )
+                for n in range(30)
+            ),
+        )
+
+    def _walking(self, path: Path) -> Path:
+        """A pan across three bays, which is what filming an aisle looks like.
+
+        The three bays are the same shelf drawn three times, so the number of
+        products that exist is known exactly: nine.
+        """
+        strip = np.hstack([aisle_frame(), aisle_frame(), aisle_frame()])
+        travel = strip.shape[1] - WIDTH
+        return self._write(
+            path,
+            (strip[:, (travel * n) // 29 : (travel * n) // 29 + WIDTH] for n in range(30)),
+        )
+
+    def test_reads_a_tilted_clip_that_the_detector_alone_refuses(
+        self, tmp_path: Path
+    ) -> None:
+        """Nobody holds a phone level. Four degrees is a steady pair of hands."""
+        tilted = self._tilted(tmp_path / "tilted.mp4", 4.0)
+
+        result = run(tilted)
+
+        assert len(result.planogram["bays"][0]["shelves"]) == len(SHELF_EDGES)
+
+    def test_says_how_far_off_level_the_camera_was(self, tmp_path: Path) -> None:
+        """A reading corrected by four degrees is not the same evidence as one
+        that needed no correcting, and the notes are where that is said."""
+        result = run(self._tilted(tmp_path / "tilted.mp4", 4.0))
+
+        assert abs(result.roll_degrees - 4.0) <= 0.5
+        assert any("level" in note for note in result.notes)
+
+    def test_a_level_clip_is_not_rotated(self, clip: Path) -> None:
+        assert run(clip).roll_degrees == 0.0
+
+    def test_a_walking_shot_is_refused_rather_than_multiplied(
+        self, tmp_path: Path
+    ) -> None:
+        """The worst failure this pipeline had.
+
+        Panning across three bays of nine products reported over a hundred
+        facings, because a pack that has moved does not overlap itself at IoU
+        0.5 and every appearance was counted as a new product. It reported them
+        with confidences, and once the document is JSON nothing downstream can
+        see that the camera was moving.
+        """
+        walking = self._walking(tmp_path / "walking.mp4")
+
+        with pytest.raises(ValueError, match="camera"):
+            run(walking)
+
+    def test_the_movement_refusal_says_what_it_would_have_got_wrong(
+        self, tmp_path: Path
+    ) -> None:
+        walking = self._walking(tmp_path / "walking.mp4")
+
+        with pytest.raises(ValueError) as excinfo:
+            run(walking)
+
+        message = str(excinfo.value)
+        assert "same product" in message and "fixed" in message
+
+
 class TestOverlays:
     def test_draws_the_reading_over_the_frame(self, clip: Path) -> None:
         """The only way anybody can audit a computer-vision step after the

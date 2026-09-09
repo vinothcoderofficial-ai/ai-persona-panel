@@ -108,14 +108,43 @@ def _column_lab(strip: np.ndarray) -> np.ndarray:
 
 
 def _raw_runs(profile: np.ndarray) -> List[Tuple[int, int]]:
-    """Column ranges between colour breaks, as (start, end_exclusive)."""
+    """Column ranges between colour breaks, as (start, end_exclusive).
+
+    A column breaks from the run it is in when it has drifted `COLOUR_BREAK`
+    from that run's **mean so far**, not from the single column before it.
+
+    The difference is the whole behaviour of this function on anything filmed.
+    A drawn rectangle has a one-pixel edge and either test finds it. Nothing
+    filmed does: depth of field, the shelf's own shadow, motion blur and any
+    resampling on the way in all spread a pack's edge over a band of columns.
+    Compared column-to-column, a boundary that arrives over twenty columns
+    never shows a single step of twelve, so no break is recorded at all and two
+    packs read as one - or, once background suppression sees a band that is one
+    run from end to end, as none. That was measured, not supposed: a band of
+    three packs with a twenty-four column ramp between them read as zero
+    facings before this changed.
+
+    Against the run's mean, a ramp is caught partway up, where the colour has
+    genuinely left the pack it started in; `_absorb_slivers` then folds the
+    leftover strip of the ramp into whichever neighbour it resembles. The mean
+    rather than the run's first column because a single column carries the
+    frame's noise, and on a compressed clip that noise is what would decide
+    where a facing starts.
+    """
     if profile.shape[0] == 0:
         return []
 
     breaks: List[int] = [0]
+    total = profile[0].astype(np.float64).copy()
+    count = 1
     for column in range(1, profile.shape[0]):
-        if float(np.linalg.norm(profile[column] - profile[column - 1])) >= COLOUR_BREAK:
+        if float(np.linalg.norm(profile[column] - total / count)) >= COLOUR_BREAK:
             breaks.append(column)
+            total = profile[column].astype(np.float64).copy()
+            count = 1
+        else:
+            total += profile[column]
+            count += 1
     breaks.append(profile.shape[0])
     return [(breaks[i], breaks[i + 1]) for i in range(len(breaks) - 1)]
 

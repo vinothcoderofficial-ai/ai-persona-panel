@@ -153,3 +153,50 @@ def test_a_band_outside_the_frame_yields_nothing_rather_than_raising():
     frame = band_frame([BLUE, RED])
 
     assert facing_boxes(frame, Band(top=5000, bottom=6000)) == []
+
+
+def soft_edged_band_frame(colours, *, ramp: int, top: int = 50, bottom: int = 250) -> np.ndarray:
+    """`colours` as blocks, but blending into each other over `ramp` columns.
+
+    A drawn rectangle has an edge one pixel wide. Nothing filmed does: depth of
+    field, motion blur, the shelf's own shadow and any resampling on the way in
+    all spread a pack's edge over a band of columns instead.
+    """
+    frame = np.full((HEIGHT, WIDTH, 3), 150, dtype=np.float32)
+    span = WIDTH // len(colours)
+    for index, colour in enumerate(colours):
+        frame[top:bottom, index * span : (index + 1) * span] = colour
+
+    blurred = frame.copy()
+    for index in range(1, len(colours)):
+        edge = index * span
+        left = frame[top:bottom, edge - 1].astype(np.float32)
+        right = frame[top:bottom, edge].astype(np.float32)
+        for step in range(-ramp // 2, ramp // 2 + 1):
+            weight = (step + ramp / 2) / ramp
+            blurred[top:bottom, edge + step] = left * (1 - weight) + right * weight
+
+    return blurred.astype(np.uint8)
+
+
+def test_a_soft_edge_between_two_packs_is_still_two_facings():
+    """The break test has to survive an edge that arrives gradually.
+
+    `_raw_runs` compares each column against the one before it, so a boundary
+    that ramps over twenty columns never shows a single step big enough to
+    count - the two packs merge into one run and the shelf reads as holding
+    half the stock it holds. Rotating a frame produces exactly this ramp, and
+    so does any real lens, which is why this is not a synthetic worry: the
+    committed fixture reads eight facings level and ten once it has been turned
+    and turned back, because merges like this one shift where the runs fall.
+    """
+    frame = soft_edged_band_frame([BLUE, RED], ramp=24)
+
+    assert len(facing_boxes(frame, BAND)) == 2
+
+
+def test_a_soft_edged_shelf_reads_the_same_count_as_a_sharp_one():
+    sharp = facing_boxes(band_frame([BLUE, RED, GREEN]), BAND)
+    soft = facing_boxes(soft_edged_band_frame([BLUE, RED, GREEN], ramp=24), BAND)
+
+    assert len(soft) == len(sharp) == 3
