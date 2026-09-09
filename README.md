@@ -38,11 +38,16 @@ Three outputs, in increasing value (PLAN §1):
 3. **Placement optimizer** — search every slot × creative and recommend the best. *Built*
    (S24), with a slot-value layer that prices the winner (S25). This is the jump from an A/B tool
    to a recommendation engine. It scores all 13 placements on this aisle in ~6 s at the default
-   run size — and the honest headline is that **that run size is too small to rank them**. The
-   leader changes with `n_synth`: `AD_1 on B1_TALKER` at 10k, a `SKU_008` move at 50k, while the
-   current placement climbs from 5th to 2nd. At 250k one claim does settle, and it is not the one
-   you would guess: **moving `SKU_008` to the top shelf** beats today's placement. No *ad* move
-   clears it below 500k. See METHODOLOGY §12.13 before quoting any of this.
+   run size, ranked on the **between-arm** lift — each placement's whole population against a
+   control run of the same shelf with the creative taken down. That is a randomisation rather than
+   the within-run exposed/unexposed selection, and it is several times smaller: `AD_1 on
+   B1_TALKER` leads at **+2.5 %**, with today's placement 4th of 13 at **+0.9 %**.
+
+   The honest headline is that **the run size is still too small to rank them**: the leader's seed
+   spread overlaps four rivals, the screen names them, and no placement clears today's spread in
+   either direction. What it is *not* any more is a run-size artefact — the same leader and the
+   same 4th place hold at 10k and 50k, and the spread narrows. See METHODOLOGY §12.13 before
+   quoting any of this.
 
 ---
 
@@ -56,9 +61,9 @@ owns what and which process it runs in, [`docs/working-diagram.mermaid`](docs/wo
 flowchart TD
     subgraph IN["1 · Store ingestion"]
         MAN["Seed planogram (data/planograms/demo_aisle.json)"]
-        DET["Aisle clip → shelf edges + colour runs<br/>vision/pipeline.py (CPU, no detector)"]
+        DET["Aisle clip → shelf edges + colour runs<br/>vision/pipeline.py (CPU, no detector)<br/>roll corrected ±6°, moving camera refused"]
         MAN --> PG["Planogram JSON<br/>bays · shelves · slots · ad slots"]
-        DET -. not built .-> PG
+        DET -- "geometry + colour only<br/>identities typed in by an operator" --> PG
     end
 
     PG --> VAR["2 · Variants A / B / C<br/>A baseline · B focal SKU to eye level · C ad to bay-1 shelf talker"]
@@ -98,7 +103,6 @@ flowchart TD
     style LIVE fill:#e7f5ff,stroke:#1c7ed6,stroke-width:2px
     style NC fill:#e6fcf5,stroke:#0ca678,stroke-width:2px
     style REAL fill:#f8f9fa,stroke:#adb5bd,stroke-dasharray: 5 5
-    style DET fill:#f8f9fa,stroke:#adb5bd,stroke-dasharray: 5 5
 ```
 
 Three architecture facts that are load-bearing and easy to get wrong:
@@ -389,7 +393,7 @@ PLAN §12's table, with an honest status against each row.
 | AI personas autonomously navigating and buying | **S13** + S2 | **Met** | S2's simulator runs 40,000 shopper-trips in ~175–205 ms, deterministic per seed. S13's agent loop has now been run against a real model: 80 trips, 973 turns, 1 rejection, committed in `data/cache/traces/`. The four archetypes are distinguishable from their own reasoning — `mission` never changes station, `browser` uses every `look` action in the corpus, and `loyalist` names its brand in 245 of 245 reasons. `loyalist` completes only 6 of 20 trips: it buys its brand at every station and the 70 s budget beats it, which is reported rather than tuned away. |
 | Identical experiments, both panels | Shared resolved variant JSON; S14 lock | **Built, unexercised** | Both panels read the same server-resolved planogram, and `POST /sessions` writes the lock before the session row exists while the events endpoint and the ingest socket both refuse a session without one. With no sessions there are no locks, so the ordering has been verified by tests, never by evidence. |
 | Defined accuracy metrics, benchmarked | S16, S17, S19 | **Built, unexercised** | Spearman, KL, purchase-share MAE, Ad Slot Index, decision agreement, the 200-split noise ceiling, and the known-effect check are implemented and unit-tested; the calibration recovery test recovers a known persona mix to 0.05. Every one of them needs a real panel, and the only *measured* result is the synthetic side of the known effect. |
-| Automated actionable insights | S18 lift, S19 report, **S24 optimizer** | **Partial** | `make eval` regenerates `RESULTS.md` and the figures from committed evidence, refuses to write a report if the integrity checks fail, and lets a language model write only the headline sentence. Ad-to-Purchase Lift is computed for the synthetic panel. S24, the optimizer that turns this from an A/B tool into a recommendation engine, **is built** — and it is honest about the fact that its default ranking does not hold. The leader changes with run size (`AD_1@B1_TALKER` at 10k, a `SKU_008` move at 50k); only one claim settles, at 250k, and it is a **SKU move rather than an ad move**. More seeds cannot fix this and larger runs can: `check_top_pick_stability()` is the check that shows it (METHODOLOGY §12.13). |
+| Automated actionable insights | S18 lift, S19 report, **S24 optimizer** | **Partial** | `make eval` regenerates `RESULTS.md` and the figures from committed evidence, refuses to write a report if the integrity checks fail, and lets a language model write only the headline sentence. Ad-to-Purchase Lift is computed for the synthetic panel. S24, the optimizer that turns this from an A/B tool into a recommendation engine, **is built**, and it now ranks on the **between-arm** lift — a randomisation against a control run of the same shelf with the creative taken down — rather than the within-run exposed/unexposed selection. That cost roughly five-fold in headline magnitude (`AD_1@B1_TALKER` reads +2.5 % where the old estimator read +12.7 %) and bought back the stability: the same leader and the same 4th place for today's placement at both 10k and 50k, with the seed spread narrowing. It is still honest that the order is **not resolved** — the leader's spread overlaps four rivals, which the screen names, and no placement clears today's spread. More seeds cannot fix that and larger runs can: `check_top_pick_stability()` is the check that shows it (METHODOLOGY §12.13). |
 | Reduce time and cost | SPEC §8 table | **Partial** | PLAN required SPEC §8's table recomputed on Day 8. Done, cell by cell, and it splits in two. The **95 % CI row is arithmetic and checks out exactly** — a normal-approximation interval on p = 0.30 gives ±12.70 pp at n = 50, ±14.20 pp at n = 40 and ±0.90 pp at n = 10,000, matching the ±13 / ±14 / ±0.9 printed there; n = 10,000 is this repo's actual `N_SYNTH`. The **compute row is measured and better than claimed**: a full 10,000-shopper population per persona in ~175–205 ms and a what-if answer at p95 under 11 ms warm, so "minutes for a what-if" overstates the cost by orders of magnitude. The **cost and calendar-time cells cannot be recomputed here** — $100K+ physical stores and $10–30K surveys are external market figures cited from the proposal, and no study of any kind has been commissioned by this project. SPEC.md is left unedited as the historical brief; this row is the recompute. |
 | Roadmap for Brand Lift / CPS | **S22** — [`docs/integration.md`](docs/integration.md) + `sim/persona_survey.py` | **Partial** | Delivered as a written artifact plus code, not a slide: the survey instrument, the per-persona and population roll-up, and the design for seeding persona shares from CPS demographics. But **no CPS data has been obtained or used**, no Brand Lift study has been run, and no survey answer has been produced — that needs an LLM key, and the survey module refuses to write a cache without one, exactly as `slow_agent.py` does. |
 | Foundation for AR / spatial / AI shopping | Planogram JSON renderer-agnostic; S20 video ingest | **Yes** | The planogram is a plain JSON document with metric bay dimensions and per-slot geometry; the React renderer is one consumer of it and the API never assumes a renderer. The video-ingest path is built: `vision/pipeline.py` reads a clip into that same document on a CPU, `POST /vision/planogram` and `#/vision` put it behind an upload. It reads geometry and colour, not product identities, and says so in every field it could not observe. |

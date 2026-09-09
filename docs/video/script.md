@@ -39,16 +39,26 @@ Timings are the outer edge of each shot. Speak under them; the live shots need s
 
 > Before anything else, this is the state of the project, live, on the screen that runs it.
 >
-> *(Point at the figures.)* **Zero accepted.** One person has shopped a recorded session, and it
-> was rejected — the reason is right there: **too short**. A session has to run forty-five seconds
-> across at least two bays with at least one interaction, and that one was twenty-nine seconds. It
-> is not in the committed corpus, so the real panel is empty.
+> *(Point at the figures.)* **One accepted, zero rejected.** One person has shopped a recorded
+> session and it passed the gate — twenty-nine seconds, three bays, three products carted, checked
+> out.
 >
-> I am going to show you a working synthetic panel, a store two panels can shop identically, and a
-> pre-registration mechanism I think is the interesting part. **What I am not going to show you is
-> a comparison between real and synthetic shoppers, because that comparison does not exist yet.**
-> This screen will keep saying zero until sixty people have sat down, and everywhere a real number
-> would go, this project prints "not yet collected" rather than a zero.
+> **And I want to tell you why it passed, because it did not at first.** The gate used to require
+> forty-five seconds, and this session was thrown out for being sixteen seconds short. Then we
+> looked at who that rule removes: a shopper with a list, who knows the brand, is *done* in half a
+> minute. A duration floor does not filter noise, it filters out the mission archetype — and
+> mission is one of the four personas we are validating against. So the rule now asks whether
+> enough shelf was actually seen, and this session cleared it at exactly the threshold: six slots,
+> minimum six.
+>
+> That is a rule changed *after* seeing the data it applied to, which is the most criticisable
+> thing in this project, so it is written down in the methodology with the commit that did it
+> rather than left for you to find.
+>
+> One accepted session is not a panel. **What I am not going to show you is a comparison between
+> real and synthetic shoppers, because that comparison does not exist yet** — the corpus needs
+> sixty, and everywhere a real number would go, this project prints "not yet collected" rather
+> than a zero.
 >
 > *(Scroll the destination cards once.)* Eight screens. Here is where the next four minutes go.
 
@@ -75,8 +85,24 @@ Timings are the outer edge of each shot. Speak under them; the live shots need s
 > would look exactly like a real one.
 >
 > *(Point at the confidence figures, then the caution box.)* What it does give you is a confidence
-> per facing — how distinct that block was, times how many of the eight frames agreed. And it
-> saved nothing. Reading a video is not committing a store.
+> per facing — how distinct that block was, times how many of the eight frames agreed. And it has
+> saved nothing yet. Reading a video is not committing a store.
+>
+> *(Type into two or three of the label rows — a category, a brand, a price. Do not fill all
+> eight on camera; do two and say the rest are the same.)* So here is the division of labour. The
+> camera reads the geometry — which shelf, how wide, what colour, how many facings — and that is
+> the part a planogram file usually has wrong, because somebody reset the shelf in March and
+> nobody updated the spreadsheet. It does **not** read brands, prices or signage, and it refuses
+> to guess them. A retailer already knows those. They are eight rows out of their own system.
+>
+> *(Click **keep this reading**, then follow the link into the store.)* And now it is a shelf you
+> can walk into and a shelf four synthetic personas will shop. Before those fields were filled,
+> three of the four never moved — every category read "unknown", and none of them shop a category
+> called unknown.
+
+**If shot 3 runs long, this is the cut.** The labelling beat is ~15 s and it is the beat that
+makes the chain end-to-end, so cut the extended-cut material at the end of the file first. What
+must not be cut is the "rendering, not footage" caveat above it.
 
 ## Shot 4 — the store · 1:10–1:45 · LIVE, one take
 
@@ -263,9 +289,11 @@ Timings are the outer edge of each shot. Speak under them; the live shots need s
 > would read as a measured zero, so the script names them and the reason instead.
 >
 > *(Pre-registration block.)* And this is my favourite line in the file. One prediction lock
-> exists. Its hash recomputes and matches. And **zero locks are verified to predate their
-> session's first event** — because that session was rejected and is not in the corpus, so there
-> is nothing to check it against. The report will not round that off.
+> exists. Its hash is recomputed from the file and matches. And **zero locks are verified to
+> predate their session's first event** — because the ordering check needs the session's events,
+> and that session has never been exported into the committed corpus. The session was accepted;
+> it is simply not in `data/sessions/anon/`, which is why the panel above still reads n equals
+> zero. Two different zeroes, and the report will not round either off.
 >
 > There is a story behind that line worth thirty seconds. When we first tried to file a real
 > session, the check failed on a session whose ordering was *correct*. The evaluation script was
@@ -316,8 +344,9 @@ Kept here so a retake does not drift into them.
 | "The model wrote these policies" *(over the policy panel in shot 6a)* | The four committed policies were **hand-written in S2**. The generator is built and the button runs it live, but it has never authored the ones being simulated — METHODOLOGY §5 and §12.8, and the panel itself, all say so. |
 | "We scanned a real aisle" / "this is a phone video of a shop" | The only clip is `make_vision_fixture.py`'s rendering of the seed planogram. No real footage exists. |
 | "The system identified these products from the video" | It did not. Every product reads `unidentified product N`; brand, name, price and promotion are not observable from video and are written as unknown. |
-| "And now that shelf is in the system" *(after shot 3)* | `#/vision` saves nothing, and says so on screen. |
-| "The optimizer recommends moving the creative" | At the run size on screen the order is explicitly unsettled. The claim that settles is a SKU move at 250k. |
+| "And now that shelf is in the system" *(immediately after the upload in shot 3)* | Reading a clip still saves nothing — the screen says so until you act. There is now a deliberate **keep this reading** step, but it comes *after* you have typed in the categories, brands and prices the camera cannot read. Say it in that order, or the shot claims the pipeline identified products it did not. |
+| "The camera worked out what these products are" | It read geometry and colour. A **person** typed the identities in, on camera, and the payload marks them operator-supplied. That division of labour is the point of the shot, not an apology for it. |
+| "The optimizer recommends moving the creative" | **At the run size on screen the order is explicitly unsettled** — say that, not the recommendation. It does settle at 250k, off-camera, and it settles *in favour of* the ad move (`AD_1` to the bay-1 shelf talker, +2.1 % against the current +1.0 %, seed ranges not overlapping). That is 25× the run size on screen, so it is a footnote you may answer a question with, never a line you narrate over a 10k screen. |
 | "Validated" / "proven" | Reserve both words for after the panel is collected. |
 | Any number not visible on screen at the moment it is spoken | The whole point of the live takes. |
 

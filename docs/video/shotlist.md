@@ -76,12 +76,12 @@ SPEC M8 specifies seven shots. One is now recordable that was not, and one is st
 | # | t | Shot | Live? | Screen |
 |---|---|---|---|---|
 | 1 | 0:00–0:15 | Problem: physical test stores are slow and expensive; surveys measure what people *say*; attention vendors sell heatmaps and stop before purchase | slides | — |
-| 2 | 0:15–0:40 | **What exists.** `#/home`: every screen in the product, and the collection panel showing the real panel is empty — 0 accepted, 1 rejected, and why | **live** | operator window |
+| 2 | 0:15–0:40 | **What exists.** `#/home`: every screen in the product, and the collection panel: 1 accepted, 0 rejected — and the committed corpus still empty, which is why RESULTS.md reads n = 0 | **live** | operator window |
 | 3 | 0:40–1:10 | **A shelf, read from video.** `#/vision`, drop the fixture clip, watch it become a planogram with per-slot confidence | **live** | operator window |
 | 4 | 1:10–1:45 | **The store.** Arrow-key between the three shelf stations; hover, pick up, add to cart; point at the empty eye-level slot | **live, one take** | shopper window |
 | 5 | 1:45–2:50 | **A person, against a locked prediction.** Consent → intake → "Continue without the camera" → shop. Spectator shows the hash *before* the first event, then the heatmap building beside the locked prediction | **live, one take** | both windows |
 | 6 | 2:50–3:30 | **The model, and a synthetic shopper.** `#/ai`: the model, the prompt, the policy, the traces. Then `#/panel`: one persona's trip replayed over the same shelf | **live** | operator window |
-| 7 | 3:30–4:15 | **What-if, then the recommendation.** `#/whatif`: move the focal SKU to eye level, read `elapsed_ms`. Then `#/optimize`: 13 placements ranked, today's 5th, and the screen saying the order is not settled | **live** | operator window |
+| 7 | 3:30–4:15 | **What-if, then the recommendation.** `#/whatif`: move the focal SKU to eye level, read `elapsed_ms`. Then `#/optimize`: 13 placements ranked on between-arm lift, today's 4th, and the screen saying the order is not settled | **live** | operator window |
 | 8 | 4:15–4:55 | **The honesty panel, and what is missing.** `RESULTS.md` in the terminal; noise-ceiling slide; what is not built; repo URL | terminal + slides | — |
 
 Total **4:55**, inside SPEC's assumed five-minute limit. SPEC §1 says "assume ≤ 5 min; **confirm
@@ -334,24 +334,46 @@ Verified, with `SKU_008`:
 
 | | |
 |---|---|
+| objective | **between-arm brand lift** — the screen names it |
 | placements scored | **13** |
-| top pick | `AD_1 on B1_TALKER (shelf_talker, bay B1)` at **+12.7 %** |
-| today's placement | **5th of 13**, at +4.5 % |
+| top pick | `AD_1 on B1_TALKER (shelf_talker, bay B1)` at **+2.5 %** |
+| today's placement | **4th of 13**, at +0.9 % |
 | order settled? | **no** — the panel says so, and names the rows it is not ranked against |
 | placements clearing today's spread | **none** |
 | wall time | ~2 s warm, ~8 s cold |
 
+Re-measured after the optimizer was moved onto the randomised estimator. **The old numbers in
+this table were +12.7 % and 5th of 13**, from the within-run exposed-versus-unexposed split. If
+you have rehearsed those, unlearn them: the screen now says +2.5 % and 4th, and the gap between
+those two pairs is the entire point of shot 7c.
+
 Point at exactly two things:
 
-* today's placement sitting **5th of 13**, and
+* today's placement sitting **4th of 13**, and
 * the amber box that begins **"This order is not settled."**
 
 Say the second one on camera. It is the difference between a recommendation engine and a slot
-machine, and it is a stronger claim than "the ranking is noisy": at 10,000 shoppers the leader is
-`AD_1 on B1_TALKER`; at 50,000 it is a `SKU_008` move and today's placement has climbed to 2nd.
-The ordering is a **run-size artefact**, not a close call. The one claim that does settle — at
-250,000 shoppers, off-camera — is that moving `SKU_008` to the top shelf beats today's placement.
-**No ad move clears it below 500k.**
+machine: the panel names the four rows whose seed spreads overlap the leader's, so it is telling
+you what it has *not* established. And no placement clears today's spread either, so "moving beats
+where it is now" is not a claim this run size supports in any direction.
+
+**Do not say the ordering is a run-size artefact.** That was true of the old estimator and is not
+true of this one — measured on the committed aisle, `AD_1 on B1_TALKER` leads at both 10,000
+(+2.5 %) and 50,000 (+2.0 %), today's placement holds 4th at both, and the leader's seed spread
+*narrows* from +1.3…+2.5 to +1.9…+2.3. The within-run split moved its leader around because its
+numerator came from the ad-exposed arm, roughly one purchase event in 42; the between-arm
+comparison divides by two whole populations and does not have that problem. Stable is not the same
+as resolved, and the amber box is still the honest thing to point at.
+
+**If a judge asks whether it ever settles:** yes, at 250,000 shoppers, off-camera — and it settles
+*for* the ad move, `AD_1` to the bay-1 shelf talker at +2.1 % against today's +1.0 %, seed ranges not
+overlapping. Under the old within-run estimator no ad move cleared today's placement below 500k and
+the only settled claim was a SKU move, so this reversed when the estimator did. One aisle, one
+creative, 25× the run size on screen. Answer the question with it; do not narrate it over a 10k screen.
+
+Say "beats where it is now", not "is the best placement". Even at 250k the order *among the
+leaders* is still unsettled — the only pair the code calls settled is the top pick against today's
+placement, and it says so in those words.
 
 So do not say "so we should move the creative to the shelf talker".
 

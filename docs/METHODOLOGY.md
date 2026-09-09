@@ -887,21 +887,43 @@ in increasing value" now describes three built outputs. What follows is what the
 
 Three limits on what the optimizer's ranking and its price tag can be said to show:
 
-* **The default ranking is a run-size artefact, not a close call.** At `n_synth = 10,000` the
-  optimizer reports `AD_1 on B1_TALKER` at +12.7% with the current placement 5th of 13 at +4.5%.
-  That is not a lead needing more precision -- it is a *different candidate at every run size*.
-  Measured on the committed aisle, `AD_1@B1_TALKER` goes rank 1 → 10 → 9 → 5 → 4 as `n_synth`
-  grows from 10k to 500k, and the current placement climbs from 5th to 2nd between 10k and 50k:
+* **The ranking is unresolved, but — since the default changed — no longer a run-size artefact.**
+  This bullet used to say the opposite, and the correction is instructive rather than
+  embarrassing, so both halves are kept.
+
+  Under the **within-run** objective, which was the default until the optimizer was moved onto
+  `between_variant_lift`, the ranking was a different candidate at almost every run size:
 
   ```
+  within-run split (the old default)
   n =  10,000   top = AD_1 on B1_TALKER  +0.1268   current 5th of 13
   n =  50,000   top = SKU_008 to top     +0.0970   current 2nd of 13
   ```
 
-  The cause is where the noise lives: the objective's numerator comes from the ad-**exposed** arm,
-  which holds roughly one purchase event in 42 (about 1,010 exposed against 41,790 unexposed at
-  10k), so σ(lift) ≈ 3.0/√n_synth — three whole points at 10k. The 8-point gap the default run
-  reports is very largely that noise.
+  The cause was where the noise lived: that objective's numerator comes from the ad-**exposed**
+  arm, which holds roughly one purchase event in 42 (about 1,010 exposed against 41,790 unexposed
+  at 10k), so σ(lift) ≈ 3.0/√n_synth — three whole points at 10k. The 8-point gap it reported was
+  very largely that noise.
+
+  Under the **between-arm** default the same ladder is stable, because the comparison divides two
+  whole populations rather than a small selected arm:
+
+  ```
+  between-arm comparison (today's default)
+  n =  10,000   top = AD_1 on B1_TALKER  +2.5%   current 4th of 13   seeds +1.3%..+2.5%
+  n =  50,000   top = AD_1 on B1_TALKER  +2.0%   current 4th of 13   seeds +1.9%..+2.3%
+  n = 250,000   top = AD_1 on B1_TALKER  +2.1%   current 3rd of 13   seeds +1.9%..+2.2%
+  ```
+
+  Same leader, same rank for the current placement, and a seed spread that *narrows* with run size
+  rather than reshuffling. **Stable is not resolved**: at both sizes the leader's spread still
+  overlaps several rivals, the screen names them, and no placement clears the current placement's
+  spread — so "moving beats where it is now" remains unsupported. What changed is that the
+  ordering is no longer being driven by the estimator's own variance, so more shoppers would now
+  be expected to settle it rather than merely rearrange it.
+
+  The honest summary of the change: swapping to the randomised estimator cost roughly five-fold in
+  headline magnitude and bought most of the stability back.
 
 * **More seeds cannot fix it; only more shoppers can.** `SeedSpread` reports a min–max range, and
   the expected range of K draws *widens* with K (1.13σ, 2.33σ, 3.74σ at K = 2, 5, 20 — observed
@@ -912,15 +934,53 @@ Three limits on what the optimizer's ranking and its price tag can be said to sh
   which is the check a seed spread structurally cannot make, because every seed it re-rolls is
   drawn at the same size.
 
-* **Two different claims, and only one of them is buyable.** Top pick versus runner-up is not
-  separable at any feasible size: the gap is ~0.4 points and separating it would need `n_synth`
-  ≈ 3.7 million (~1.8 h per ranking). Top pick versus **the current placement** is separable at
-  `n_synth = 250,000`, where the winner clears it by +1.47 points at all five seeds.
+* **Two different claims, and only one of them is buyable.** Everything in this bullet was
+  measured on the **within-run** objective, when it was the default. It has not been re-measured
+  at 250k and 500k against the between-arm default, and it should not be quoted as though it had.
 
-  **The settled recommendation is a SKU move, not an ad move.** No ad placement clears the current
-  placement below 500k. So "moving the creative beats where it is now" is *not* supported by this
-  data; "moving `SKU_008` to the top shelf beats where it is now" is, at 250k. `Ranking.beats_current`
-  names that pair explicitly and returns `None` — not `()` — when the question was not answered.
+  Top pick versus runner-up was not separable at any feasible size: the gap is ~0.4 points and
+  separating it would need `n_synth` ≈ 3.7 million (~1.8 h per ranking). Top pick versus **the
+  current placement** was separable at `n_synth = 250,000`, where the winner cleared it by +1.47
+  points at all five seeds.
+
+  **The settled recommendation was a SKU move, not an ad move.** No ad placement cleared the
+  current placement below 500k. So "moving the creative beats where it is now" was *not* supported
+  by that data; "moving `SKU_008` to the top shelf beats where it is now" was, at 250k.
+  `Ranking.beats_current` names that pair explicitly and returns `None` — not `()` — when the
+  question was not answered.
+
+  **Under the between-arm default both claims come out differently, and the reversal is the
+  interesting part.** Re-measured at `n_synth = 250,000` on the committed aisle:
+
+  ```
+  1. AD_1 on B1_TALKER    +2.1%   seeds +1.9%..+2.2%
+  2. SKU_008 to above_eye +1.0%   seeds +0.8%..+1.0%
+  3. AD_1 on B3_ENDCAP    +1.0%   seeds +0.8%..+1.0%   <- current
+  ```
+
+  `Ranking.beats_current` returns exactly one row — `ad:AD_1@B1_TALKER` — and the run prints:
+
+  > 1 placement(s) clear the current placement's seed spread entirely: ad:AD_1@B1_TALKER. That
+  > pair is settled at this n_synth even where the order among the leaders is not.
+
+  So at 250k the settled recommendation is an **ad move**, `AD_1` from the bay-3 endcap to the
+  bay-1 shelf talker — where the within-run estimator said no ad move cleared the current
+  placement below 500k, and that the only settled claim was a SKU move.
+
+  **Top pick versus runner-up is still not settled**, and the trailing rows are why: several
+  candidates report no spread at all, so they cannot be excluded, and the ranking refuses to call
+  an order it has not established. Only the pair against the current placement is settled. That is
+  a narrower claim than "we found the best placement", and it is the one the code makes.
+
+  Both reversals have the same cause. The within-run numerator is drawn from the ad-exposed arm
+  alone, about one purchase event in 42; the between-arm comparison divides two whole populations,
+  so its σ falls much faster in `n_synth`. The old estimator was not finding a SKU move because
+  SKU moves are better — it was failing to resolve the ad moves at all.
+
+  Two cautions before this is quoted. It is one aisle and one creative, so it is a fact about this
+  planogram rather than a general finding about shelf talkers. And 250k is 25× the default run
+  size: **at the 10k the screens use, none of this is separated**, which is what the amber box on
+  `#/optimize` says and why it stays there.
 
   One trap worth recording: at 250k the rank-1 slot is still decided by a coin flip between two
   near-identical SKU moves, so a check that compares only rank 1 against the current placement

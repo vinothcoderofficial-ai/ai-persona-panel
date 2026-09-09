@@ -90,6 +90,16 @@ structurally cannot make, because every seed it re-rolls is drawn at the same si
 
 The last point changed what the demo may claim. See METHODOLOGY §12.13.
 
+> **Read this section as dated.** Every measurement above was taken with the **within-run** split
+> as the optimizer's objective, which is what it ranked on at the time. The optimizer has since
+> been moved onto `between_variant_lift` — the estimator P3.2 above argued for — and under that
+> default the first bullet no longer holds: `AD_1@B1_TALKER` leads at both 10k (+2.5 %) and 50k
+> (+2.0 %), the current placement holds 4th at both, and the seed spread narrows rather than
+> reshuffling. The ordering was a run-size artefact **of the within-run estimator's small exposed
+> arm**, and swapping estimators took most of it away. The 250k and 500k rows have not been
+> re-measured. METHODOLOGY §12.13 carries the current ladder; this file is kept as the record of
+> what Phase 3 found, not as a description of today's default.
+
 ---
 
 ## P3.4 — Make `.env` real
