@@ -25,7 +25,7 @@ NIQ Innovation Council hackathon · team Media Mavericks.
 > `sim/slow_agent.py` still refuses to write a trace produced by a test double, and a guard test
 > checks every committed trace names the model that produced it.
 >
-> [What is built and what is not](#what-is-built-and-what-is-not) · [Limitations](docs/METHODOLOGY.md#12-limitations)
+> [What is built and what is not](#what-is-built-and-what-is-not) · [Limitations](docs/METHODOLOGY.md#12-limitations) · [What is left](docs/WHATS_LEFT.md) · [Sensitivity of the headline](docs/SENSITIVITY.md)
 
 ## What it produces
 

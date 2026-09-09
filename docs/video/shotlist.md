@@ -422,20 +422,49 @@ Then the repo URL and QR.
 
 ## Pre-flight checklist
 
-- [ ] Decided **A, B or C** for the LLM key (top of this file) and applied it
+Every threshold below was read out of the code while this was written, not remembered. Where a
+number is a gate the recording can fail, the file it lives in is named.
+
+**State of this machine, checked:** `LLM_OFFLINE=1` is already set in `.env`, which is **option C** —
+shot 6's button is disabled and the panel says why. `data/vision/demo_aisle.mp4` exists, 32 textures
+are built, and `docs/figures/` holds four heatmaps and the what-if GIF.
+
+### Build
+
+- [ ] Decided **A, B or C** for the LLM key (top of this file). Currently **C** — change `.env` only
+      if you have a working key and want option A
 - [ ] `python scripts/make_vision_fixture.py` has run — `data/vision/demo_aisle.mp4` exists
-- [ ] `make seed` has run — `web/public/textures/*.png` exist (they are gitignored)
+- [ ] `make seed` has run — `web/public/textures/*.png` exist (gitignored, 32 files)
 - [ ] `make validate` → **13 files, 0 errors**
-- [ ] `make test` → green, both suites
+- [ ] `make test` → green: **999 python, 681 web**
 - [ ] `make eval` → `RESULTS.md` and `docs/figures/heatmap_*.png` regenerated today
 - [ ] `make api` and `make web` both up
-- [ ] **One warm-up what-if and one warm-up optimize already fired** — cold calls are 410 ms and
-      8 s respectively, warm are 1 ms and 2 s, and the difference is visible on camera
+
+### Warm up before rolling
+
+- [ ] **One warm-up what-if and one warm-up optimize already fired.** Cold calls are ~410 ms and
+      ~8 s; warm are ~1 ms and ~2 s, and the difference is visible on camera
+- [ ] **Type `SKU_008` into the optimize focal-SKU box** before the take, or the space is 8
+      placements and the narration says 13
+
+### The two gates a live take can fail
+
+- [ ] **Shot 5 needs six distinct slots across two bays, plus one interaction.** That is the whole
+      gate — `web/src/capture/SessionGate.ts`: `MIN_OBSERVED_SLOTS = 6`, `MIN_STATIONS = 2`,
+      `MIN_INTERACTIONS = 1`. **There is no duration floor any more.** An earlier version of this
+      checklist said "a session over 45 seconds"; that rule was removed because it discarded the
+      mission archetype preferentially. Hover six *different* packs and use two bays — a long
+      session that lingers on four packs is rejected and a brisk one that sees six is not
+- [ ] **The agreement meter needs 15 pieces of evidence before it shows a number** —
+      `api/app/live.py: MEANINGFUL_MIN_EVIDENCE = 15`. Below that it renders "warming up" rather
+      than a greyed-out figure. In cursor-only mode the evidence is cursor dwells, and a dwell
+      needs 300 ms held on one slot, so budget roughly fifteen deliberate hovers
+
+### Room
+
 - [ ] Two browser windows placed; spectator on the second monitor with the clock visible
 - [ ] Shopper window shows no dashboard, no gaze dot, no metrics, no `#/home`
 - [ ] Notifications, badges and any personal browser profile off screen
-- [ ] A stopwatch on the desk — shot 5 needs a session over 45 seconds, and fifteen separate pack
-      hovers before the agreement meter comes off grey
 - [ ] Team names on the closing slide
 
 ## Things that will ruin a take
@@ -444,9 +473,18 @@ Then the repo URL and QR.
 - **Letting shot 6's button fail without having chosen to.** See the warning at the top.
 - **Implying the heatmap was reasoned by the language model.** It is numpy. The model wrote the
   traces, and shot 6 shows them.
-- **Implying the model wrote the policies.** It did not — they were hand-written in S2. Shot 6a
-  points at them; the sentence that goes with them is "written by hand", not "what it answered".
-- **Implying `#/vision` saved anything.** It does not, and the screen says so.
+- **Implying the model wrote the policies.** It did not — they were hand-written in S2. The panel
+  heading now reads "The policy being simulated"; the sentence that goes with it is "written by
+  hand", never "what it answered".
+- **Quoting the old optimizer numbers.** +12.7 % and 5th of 13 came from the within-run split.
+  The screen now reads +2.5 % and 4th of 13 on the between-arm lift.
+- **Saying "the best placement".** Even at 250k only the pair against today's placement is
+  settled. Say "beats where it is now".
+- **Implying `#/vision` saved anything before you clicked.** Reading a clip saves nothing and the
+  screen says so; there is now a deliberate **keep this reading** step, and it comes *after* the
+  labelling. Claim the save only once it is on screen.
+- **Implying the camera identified the products.** It read geometry and colour. A person typed
+  the brands, prices and categories in, and the payload marks them operator-supplied.
 - Recording the shopper window with the spectator overlay visible on it. The shopper must never
   see their own gaze dot, on camera or off.
 - Cutting inside a live take. The clock and the badge are continuous or the shot is worth nothing.
