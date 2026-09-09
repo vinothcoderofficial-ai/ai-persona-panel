@@ -109,12 +109,19 @@ interface Sku {
   color_lab: number[];
 }
 
+interface Creative {
+  creative_id: string;
+  brand: string;
+  texture_url: string;
+}
+
 interface Planogram {
   planogram_id: string;
   name: string;
   source: string;
   bays: Array<{ bay_id: string; shelves: Shelf[] }>;
   skus: Sku[];
+  creatives: Creative[];
 }
 
 interface Reading {
@@ -342,6 +349,7 @@ function labelledPlanogram(
   reading: Reading,
   labels: Record<string, Label>,
   planogramId: string,
+  advert: Advert = NO_ADVERT,
 ): Planogram {
   const skus = reading.planogram.skus.map((sku) => {
     const label = labels[sku.sku_id] ?? BLANK;
@@ -372,7 +380,86 @@ function labelledPlanogram(
         "operator — positions, sizes and colours measured from the clip; brand, category, " +
         "price and promotion typed by hand";
 
-  return { ...reading.planogram, planogram_id: planogramId, name, skus };
+  // No pack shot was filmed and none is invented, exactly as for the SKUs.
+  // `texture_url: ""` is what `ProductSlot`/`AdSlot` read as "draw this as a
+  // plain fixture", so an unillustrated creative renders rather than throwing.
+  const creatives = advertised(advert)
+    ? [
+        {
+          creative_id: OPERATOR_CREATIVE_ID,
+          brand: advert.brand.trim(),
+          texture_url: "",
+        },
+      ]
+    : reading.planogram.creatives;
+
+  return { ...reading.planogram, planogram_id: planogramId, name, skus, creatives };
+}
+
+/**
+ * The advertising half of "what only you can say".
+ *
+ * `vision/planogram.py` emits `creatives: []` beside `ad_slots: []` and is
+ * right to: it detects no signage, and placing a creative nobody filmed would
+ * fabricate the exact variable the whole experiment manipulates. The variant
+ * schema's `add_ad_slot` can build the fixture, but `set_ad_creative` books it
+ * against a `creative_id` the planogram must already carry — and nothing here
+ * could put one there, so an ad lift on a video-read shelf needed a creative
+ * pasted into the document by hand.
+ *
+ * `brand` alone is a creative and no fixture: the store carries a poster
+ * nobody hung, which is a legitimate thing to save and simulate against later.
+ * `brand` **and** `shelf` is a creative plus a talker on that shelf, booked.
+ * `shelf` alone books nothing, because a fixture carrying nothing is a
+ * measurable object with no creative in it and the screen has no way to know
+ * which brand was meant.
+ */
+interface Advert {
+  brand: string;
+  shelf: string;
+}
+
+const NO_ADVERT: Advert = { brand: "", shelf: "" };
+
+/** The operator named a brand, so there is a creative to save. */
+function advertised(advert: Advert): boolean {
+  return advert.brand.trim() !== "";
+}
+
+const OPERATOR_CREATIVE_ID = "V_AD_1";
+const OPERATOR_AD_SLOT_ID = "V_TALKER_1";
+
+/**
+ * The patches that install the operator's fixture and book it.
+ *
+ * Two patches rather than one, in that order, because that is what the ops
+ * mean: `add_ad_slot` hangs an empty holder and `set_ad_creative` puts a
+ * poster in it. Splitting them keeps one validation path for "is this a
+ * creative the planogram carries" — `api/app/resolve.py` already refuses a
+ * creative_id the document does not have, and it refuses it the same way
+ * whether the variant came from this screen or from `data/variants/`.
+ */
+function advertPatches(advert: Advert): Array<Record<string, unknown>> {
+  if (!advertised(advert) || advert.shelf === "") return [];
+  return [
+    {
+      op: "add_ad_slot",
+      ad_slot_id: OPERATOR_AD_SLOT_ID,
+      type: "shelf_talker",
+      attached_to: advert.shelf,
+      // A talker runs along the front of the shelf it is attached to. Left
+      // edge, and a width the bay can hold: `vision/planogram.py` fixes the
+      // bay at 1.2 m, and this is the only ad geometry nobody measured, so it
+      // is a stated default rather than a reading.
+      x_m: 0.1,
+      width_m: 0.4,
+    },
+    {
+      op: "set_ad_creative",
+      ad_slot_id: OPERATOR_AD_SLOT_ID,
+      creative_id: OPERATOR_CREATIVE_ID,
+    },
+  ];
 }
 
 type Save =
@@ -407,6 +494,7 @@ function Result({
   fetchImpl: FetchLike;
 }) {
   const [labels, setLabels] = useState<Record<string, Label>>({});
+  const [advert, setAdvert] = useState<Advert>(NO_ADVERT);
   const [save, setSave] = useState<Save>({ status: "unsaved" });
   // The id is drawn once for this reading rather than per render, so what is
   // shown on screen is what will be POSTed.
@@ -432,6 +520,17 @@ function Result({
     [shelves],
   );
 
+  /**
+   * The shelves a talker can hang on: the ones the camera actually found.
+   *
+   * Offered as a list rather than typed, because `add_ad_slot` resolves the
+   * owning bay from `attached_to` and refuses an id no bay or shelf carries -
+   * so a typo here would come back as a rejected variant after the planogram
+   * had already been saved, which is the one failure state this flow cannot
+   * cleanly undo.
+   */
+  const shelfIds = useMemo(() => shelves.map((shelf) => shelf.shelf_id), [shelves]);
+
   const anyCategory = Object.values(labels).some((label) => label.category !== "");
 
   const setLabel = (skuId: string, patch: Partial<Label>) =>
@@ -447,7 +546,8 @@ function Result({
     inFlight.current = true;
     setSave({ status: "saving" });
 
-    const document = labelledPlanogram(reading, labels, planogramId);
+    const document = labelledPlanogram(reading, labels, planogramId, advert);
+    const patches = advertPatches(advert);
     const variantId = `${planogramId}_asread`;
 
     try {
@@ -468,8 +568,12 @@ function Result({
         body: JSON.stringify({
           variant_id: variantId,
           base_planogram_id: planogramId,
-          name: "As read from video — nothing moved",
-          patches: [],
+          name:
+            patches.length === 0
+              ? "As read from video — nothing moved"
+              : `As read from video, with a shelf talker for ${advert.brand.trim()} placed ` +
+                "by the operator — no signage was detected in the clip",
+          patches,
         }),
       });
       if (!variant.ok) {
@@ -603,6 +707,62 @@ function Result({
             );
           })}
         </div>
+      </div>
+
+      <div style={style.panel}>
+        <div style={style.panelHeading}>Advertising, if you are testing any</div>
+        <div data-testid="vision-ad-note" style={{ ...style.note, marginBottom: 12, maxWidth: 900 }}>
+          The camera detected <strong>no signage</strong>, and the pipeline will not invent any —
+          placing a creative nobody filmed would fabricate the exact thing an ad test measures.
+          So this is the other half of what only you can say: name the brand being advertised and
+          the shelf its talker hangs on. Both are recorded as <em>operator-placed</em>, in the
+          variant's own name, and the store is saved with a creative you declared rather than one
+          anybody read off the clip. Leave the brand blank and nothing is added: the shelf is saved
+          exactly as read, with no fixture and no ad lift to compute.
+        </div>
+
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end" }}>
+          <label style={{ display: "grid", gap: 4 }}>
+            <span style={style.note}>Brand advertised</span>
+            <input
+              data-testid="vision-ad-brand"
+              style={{ ...style.tab, flex: "0 0 170px" }}
+              value={advert.brand}
+              placeholder="Crunch"
+              disabled={save.status === "saving" || save.status === "saved"}
+              onChange={(event) =>
+                setAdvert((current) => ({ ...current, brand: event.target.value }))
+              }
+            />
+          </label>
+          <label style={{ display: "grid", gap: 4 }}>
+            <span style={style.note}>Shelf talker on</span>
+            <select
+              data-testid="vision-ad-shelf"
+              style={{ ...style.tab, flex: "0 0 170px" }}
+              value={advert.shelf}
+              disabled={save.status === "saving" || save.status === "saved"}
+              onChange={(event) =>
+                setAdvert((current) => ({ ...current, shelf: event.target.value }))
+              }
+            >
+              <option value="">nowhere — save the creative only</option>
+              {shelfIds.map((shelfId) => (
+                <option key={shelfId} value={shelfId}>
+                  {shelfId}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        {advert.shelf !== "" && !advertised(advert) && (
+          <div data-testid="vision-ad-nobrand" style={{ ...style.cautionBox, marginTop: 12 }}>
+            A fixture with nothing in it is a holder, not an advertisement, and this screen has no
+            way to know which brand you meant. Name the brand and the talker is installed and
+            booked; leave it blank and neither is saved.
+          </div>
+        )}
       </div>
 
       {(save.status === "unsaved" ||

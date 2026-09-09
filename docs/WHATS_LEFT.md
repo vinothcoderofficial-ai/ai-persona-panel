@@ -68,39 +68,39 @@ capture pipeline in `web/src/capture/` is tested and has never seen a camera.
 
 ## 2. Real, and visible if a judge pushes on the video track
 
-### Ad-to-lift on a video-read shelf: the fixture is solved, the creative is not
+### Ad-to-lift on a video-read shelf — done
 
-**This was listed here as structurally impossible. Half of it no longer is.**
+**This section listed the whole thing as structurally impossible, then as half solved. It is now
+closed, and the entry is kept so the shape of the gap is on the record.**
 
-`schemas/variant.schema.json` now carries a fifth patch op, `add_ad_slot`, which hangs an empty
-fixture on a shelf or a bay; `set_ad_creative` then books it. The owning bay is derived from
-`attached_to` rather than passed alongside it, so a fixture cannot be scored against a bay it is
-not on. Measured end to end on a shelf read from `data/vision/demo_aisle_60s.mp4`, labelled, then
-patched:
+Two changes, in order. `schemas/variant.schema.json` gained `add_ad_slot`, which hangs an empty
+fixture on a shelf or a bay — the owning bay derived from `attached_to` rather than passed beside
+it, so a fixture cannot be scored against a bay it is not on. Then `#/vision` gained the other
+half: the operator names the brand being advertised and the shelf its talker hangs on, and the
+save writes a creative onto the planogram and the two patches — install, then book — onto the
+variant.
+
+Measured end to end on `data/vision/demo_aisle_60s.mp4`, with **nothing hand-edited** — the
+planogram and the variant are exactly what the screen posts, and both validate against their
+schemas:
 
 ```
-treated  ad_slots=1  ad_slot_attention={'V1_TALKER': 0.0683}  exposed purchases=185
-control  ad_slots=0  ad_slot_attention={}                     exposed purchases=0
-
-within-run lift on the treated arm  : 0.87
-between-arm lift, treated vs control: 0.48
+ad_slot_attention : {'V_TALKER_1': 0.0683}
+exposed purchases : 185
+within-run lift   : 0.867
+between-arm lift  : 0.483
 ```
 
-So a shelf read from video can now carry an ad, be shopped, and produce a lift on both estimators.
-(Note the within-run figure is again the larger one, on a shelf nobody tuned.)
+Note the within-run figure is again the larger one, on a shelf nobody tuned.
 
-**What is still missing is the creative, not the fixture.** `vision/planogram.py` emits
-`creatives: []` alongside `ad_slots: []`, and `set_ad_creative` refuses a `creative_id` the
-planogram does not carry — correctly, since booking a poster nobody supplied is exactly the
-fabrication the pipeline refuses everywhere else. The end-to-end run above works because the
-creative was added to the planogram document by hand before patching.
+Both halves are operator-supplied and both say so: the variant's name records that a person placed
+the ad, and the note above the fields says the camera detected no signage and the pipeline will not
+invent any. That is the same division of labour as the labels — a retailer knows where their own
+fixtures hang — and it is the only honest way to get an ad onto a shelf nobody filmed a sign on.
 
-- **What it needs:** the operator step on `#/vision` already collects category, brand, price and
-  promo per facing. It does not collect a creative, and `web/src/vision/VisionView.tsx` contains
-  no reference to one. Letting the operator name a brand and a headline at save time — the same
-  shape as the labelling rows — would close it. An hour or two.
-- **Until then:** a video-read shelf is one hand-edited field away from an ad lift, and the
-  fixture, the exposure and both estimators are all real.
+Leaving the brand blank saves the shelf exactly as read, with no fixture and no creative. Naming a
+shelf without a brand books nothing and the screen says why: a holder with nothing in it is not an
+advertisement, and the screen has no way to know which brand was meant.
 
 ### The pipeline has still never seen a real shelf
 
@@ -117,22 +117,23 @@ collapse a shelf to zero facings.
 
 ## 3. Measured partially — quote with the caveat
 
-### The run-size ladder is done to 250k, not 500k
+### The run-size ladder — done, 10k to 500k
 
-Re-measured on the between-arm default:
+Re-measured on the between-arm default, all four rows:
 
 ```
-n =  10,000   top AD_1 on B1_TALKER  +2.5%   current 4th of 13
-n =  50,000   top AD_1 on B1_TALKER  +2.0%   current 4th of 13
-n = 250,000   top AD_1 on B1_TALKER  +2.1%   current 3rd of 13   <- top pick clears current
+n =  10,000   top AD_1 on B1_TALKER  +2.5%   current 4th of 13   seeds +1.3%..+2.5%
+n =  50,000   top AD_1 on B1_TALKER  +2.0%   current 4th of 13   seeds +1.9%..+2.3%
+n = 250,000   top AD_1 on B1_TALKER  +2.1%   current 3rd of 13   seeds +1.9%..+2.2%
+n = 500,000   top AD_1 on B1_TALKER  +2.0%   current 5th of 13   seeds +1.8%..+2.0%
 ```
 
-At 250k the optimizer prints *"1 placement(s) clear the current placement's seed spread entirely:
-ad:AD_1@B1_TALKER"*. The 500k row has not been re-measured, and **top pick versus runner-up is
-still not settled at any size measured** — only the pair against today's placement is.
+Same leader at every size, with the spread tightening from 1.2 points wide to 0.2. At 250k one
+placement clears today's; at 500k two do — the ad move and a SKU move. Top pick versus runner-up is
+still not settled anywhere, and METHODOLOGY §12.13 carries the reading.
 
-- **What it needs:** one 500k run (~40 min unattended) if anyone wants to close the ladder.
-- **Not a blocker.** METHODOLOGY §12.13 already says which rows exist.
+**Nothing left to run here.** The only thing this ladder cannot tell you is whether any of it
+describes real shoppers, which is section 1.
 
 ### `sim/persona_survey.py` has never been run
 

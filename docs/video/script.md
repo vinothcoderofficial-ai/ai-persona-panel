@@ -95,10 +95,16 @@ Timings are the outer edge of each shot. Speak under them; the live shots need s
 > nobody updated the spreadsheet. It does **not** read brands, prices or signage, and it refuses
 > to guess them. A retailer already knows those. They are eight rows out of their own system.
 >
+> *(Point at the advertising panel.)* And the same division of labour for the ad. The camera found
+> no signage and the pipeline will not invent any — putting a poster on a shelf nobody filmed one
+> on would fabricate the exact thing an ad test measures. So you tell it: this brand, on that
+> shelf. It is recorded as operator-placed, in the variant's own name.
+>
 > *(Click **keep this reading**, then follow the link into the store.)* And now it is a shelf you
-> can walk into and a shelf four synthetic personas will shop. Before those fields were filled,
-> three of the four never moved — every category read "unknown", and none of them shop a category
-> called unknown.
+> can walk into, a shelf four synthetic personas will shop, and a shelf that can carry an ad
+> lift — 185 exposed purchases on ten thousand shoppers, off a clip, with nothing hand-edited.
+> Before those fields were filled, three of the four personas never moved: every category read
+> "unknown", and none of them shop a category called unknown.
 
 **If shot 3 runs long, this is the cut.** The labelling beat is ~15 s and it is the beat that
 makes the chain end-to-end, so cut the extended-cut material at the end of the file first. What

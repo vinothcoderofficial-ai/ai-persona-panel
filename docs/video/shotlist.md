@@ -485,6 +485,8 @@ are built, and `docs/figures/` holds four heatmaps and the what-if GIF.
   labelling. Claim the save only once it is on screen.
 - **Implying the camera identified the products.** It read geometry and colour. A person typed
   the brands, prices and categories in, and the payload marks them operator-supplied.
+- **Implying the camera found the ad.** It detected no signage and emits none. The operator
+  names the brand and the shelf, and the variant's name records that a person placed it.
 - Recording the shopper window with the spectator overlay visible on it. The shopper must never
   see their own gaze dot, on camera or off.
 - Cutting inside a live take. The clock and the badge are continuous or the shot is worth nothing.

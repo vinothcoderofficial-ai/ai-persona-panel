@@ -677,3 +677,131 @@ describe("what the screen says about saving", () => {
     }
   });
 });
+
+// ---------------------------------------------------------------------------
+// The creative, and the fixture that carries it
+//
+// The labelling step closed the gap that stopped a video-read shelf being
+// shopped. It left a second one: the shelf could be shopped and could sell
+// things, and still could not produce an *ad* lift, because
+// `vision/planogram.py` emits `creatives: []` next to `ad_slots: []` and
+// refuses to invent either. `schemas/variant.schema.json` gained `add_ad_slot`,
+// which builds the fixture — but `set_ad_creative` books it against a
+// `creative_id` the planogram has to already carry, and nothing on this screen
+// could put one there. So the end-to-end run needed a creative pasted into the
+// document by hand, which is not a product.
+//
+// Both halves are operator-supplied and both say so. The camera detected no
+// signage; a person said "there is a shelf talker here and it advertises
+// Crunch". That is the same division of labour as the labels, and it is the
+// honest one: a retailer knows where their own fixtures hang.
+// ---------------------------------------------------------------------------
+
+interface SavedCreative {
+  creative_id: string;
+  brand: string;
+  texture_url: string;
+}
+
+function creatives(harness: Harness): SavedCreative[] {
+  return (posted(harness, "/planograms").body as { creatives: SavedCreative[] }).creatives;
+}
+
+function patches(harness: Harness): Array<Record<string, unknown>> {
+  return (posted(harness, "/variants").body as { patches: Array<Record<string, unknown>> })
+    .patches;
+}
+
+/** Label as usual, then declare a creative and hang it on a shelf. */
+async function labelAdvertiseAndSave(harness: Harness, shelf = "V1S1"): Promise<void> {
+  await chooseFile(harness);
+  await fill(harness, "vision-category-V_001", "chips");
+  await fill(harness, "vision-brand-V_001", "Crunch");
+  await fill(harness, "vision-ad-brand", "Crunch");
+  await fill(harness, "vision-ad-shelf", shelf);
+  await click(harness, "vision-keep");
+}
+
+describe("declaring a creative", () => {
+  it("saves no creative and no fixture when the operator names neither", async () => {
+    const harness = await mount();
+    await labelAndSave(harness);
+    try {
+      expect(creatives(harness)).toEqual([]);
+      expect(patches(harness)).toEqual([]);
+    } finally {
+      harness.unmount();
+    }
+  });
+
+  it("puts the named brand on the planogram as a creative", async () => {
+    const harness = await mount();
+    await labelAdvertiseAndSave(harness);
+    try {
+      const [only, ...rest] = creatives(harness);
+      expect(rest).toEqual([]);
+      expect(only.brand).toBe("Crunch");
+      expect(only.creative_id).toBeTruthy();
+      // No pack shot was filmed and none is invented, exactly as for the SKUs.
+      expect(only.texture_url).toBe("");
+    } finally {
+      harness.unmount();
+    }
+  });
+
+  it("installs the fixture and books it, in that order", async () => {
+    const harness = await mount();
+    await labelAdvertiseAndSave(harness, "V1S2");
+    try {
+      const [install, book, ...rest] = patches(harness);
+      expect(rest).toEqual([]);
+      expect(install.op).toBe("add_ad_slot");
+      expect(install.attached_to).toBe("V1S2");
+      expect(install.type).toBe("shelf_talker");
+      expect(book.op).toBe("set_ad_creative");
+      expect(book.ad_slot_id).toBe(install.ad_slot_id);
+      expect(book.creative_id).toBe(creatives(harness)[0].creative_id);
+    } finally {
+      harness.unmount();
+    }
+  });
+
+  it("offers every shelf the camera actually found, and no others", async () => {
+    const harness = await mount();
+    await chooseFile(harness);
+    try {
+      const options = Array.from(
+        node(harness, "vision-ad-shelf").querySelectorAll("option"),
+      )
+        .map((o) => (o as HTMLOptionElement).value)
+        .filter((v) => v !== "");
+      expect(options).toEqual(["V1S1", "V1S2"]);
+    } finally {
+      harness.unmount();
+    }
+  });
+
+  it("declares in the variant's name that a person placed the ad", async () => {
+    const harness = await mount();
+    await labelAdvertiseAndSave(harness);
+    try {
+      const name = (posted(harness, "/variants").body as { name: string }).name;
+      expect(name.toLowerCase()).toContain("operator");
+    } finally {
+      harness.unmount();
+    }
+  });
+
+  it("will not book a fixture the operator did not name a brand for", async () => {
+    const harness = await mount();
+    await chooseFile(harness);
+    await fill(harness, "vision-ad-shelf", "V1S1");
+    await click(harness, "vision-keep");
+    try {
+      expect(creatives(harness)).toEqual([]);
+      expect(patches(harness)).toEqual([]);
+    } finally {
+      harness.unmount();
+    }
+  });
+});

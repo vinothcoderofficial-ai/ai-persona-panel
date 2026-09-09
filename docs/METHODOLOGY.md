@@ -913,7 +913,15 @@ Three limits on what the optimizer's ranking and its price tag can be said to sh
   n =  10,000   top = AD_1 on B1_TALKER  +2.5%   current 4th of 13   seeds +1.3%..+2.5%
   n =  50,000   top = AD_1 on B1_TALKER  +2.0%   current 4th of 13   seeds +1.9%..+2.3%
   n = 250,000   top = AD_1 on B1_TALKER  +2.1%   current 3rd of 13   seeds +1.9%..+2.2%
+  n = 500,000   top = AD_1 on B1_TALKER  +2.0%   current 5th of 13   seeds +1.8%..+2.0%
   ```
+
+  **The top pick is the same candidate at all four sizes** and its seed spread tightens
+  monotonically, from 1.2 points wide at 10k to 0.2 at 500k. The current placement's *rank* moves
+  between 3rd and 5th, and that is not a contradiction: its value sits at +0.9% to +1.0% at every
+  size, inside a cluster of rows within a point of each other that the ranking explicitly refuses
+  to order. A rank that wobbles among rows declared unresolved is the report working, not
+  drifting.
 
   Same leader, same rank for the current placement, and a seed spread that *narrows* with run size
   rather than reshuffling. **Stable is not resolved**: at both sizes the leader's spread still
@@ -967,10 +975,17 @@ Three limits on what the optimizer's ranking and its price tag can be said to sh
   bay-1 shelf talker — where the within-run estimator said no ad move cleared the current
   placement below 500k, and that the only settled claim was a SKU move.
 
-  **Top pick versus runner-up is still not settled**, and the trailing rows are why: several
-  candidates report no spread at all, so they cannot be excluded, and the ranking refuses to call
-  an order it has not established. Only the pair against the current placement is settled. That is
-  a narrower claim than "we found the best placement", and it is the one the code makes.
+  At 500,000 a second candidate joins it — the run prints *"2 placement(s) clear the current
+  placement's seed spread entirely: ad:AD_1@B1_TALKER, sku:SKU_008@top"* — so the ad move and the
+  SKU move both beat today's placement once there are enough shoppers to see it. The within-run
+  estimator found only the SKU move, and only at 250k, because it could not resolve the ad moves
+  at all.
+
+  **Top pick versus runner-up is still not settled at any size measured**, and the trailing rows
+  are why: several candidates report no spread at all, so they cannot be excluded, and the ranking
+  refuses to call an order it has not established. Only the pairs against the current placement
+  are settled. That is a narrower claim than "we found the best placement", and it is the one the
+  code makes.
 
   Both reversals have the same cause. The within-run numerator is drawn from the ad-exposed arm
   alone, about one purchase event in 42; the between-arm comparison divides two whole populations,
