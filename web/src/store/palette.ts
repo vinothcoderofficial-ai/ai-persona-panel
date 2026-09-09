@@ -32,3 +32,38 @@ export const BOARD_COLOR = "#eceef2";
 
 /** Deliberately empty: an unfilled shelf position, an unbooked ad fixture. */
 export const EMPTY_SPACE_COLOR = "#565b63";
+
+/**
+ * A CIE Lab triple as a CSS colour.
+ *
+ * `schemas/planogram.schema.json` carries every SKU's colour as `color_lab`,
+ * and `sim/saliency.py` reads that triple directly for its colour-contrast
+ * term. For a SKU read off a video it is the *only* thing about the product
+ * that was measured - `vision/planogram.py` writes brand, name, price and
+ * promo as unknown on purpose - so it is what the scene draws when there is no
+ * pack shot to draw instead.
+ *
+ * Lives here rather than in a screen because two places need the same answer:
+ * `#/vision`'s swatch list and `ProductSlot`'s material. Two conversions would
+ * eventually disagree, and the shelf and the table beside it would then be
+ * showing different colours for the same product.
+ */
+export function labToCss(lab: readonly number[]): string {
+  const [l = 50, a = 0, b = 0] = lab;
+  const y = (l + 16) / 116;
+  const x = a / 500 + y;
+  const z = y - b / 200;
+
+  const expand = (t: number): number => (t ** 3 > 0.008856 ? t ** 3 : (t - 16 / 116) / 7.787);
+  const [xr, yr, zr] = [expand(x) * 95.047, expand(y) * 100.0, expand(z) * 108.883];
+
+  const clamp = (v: number): number => Math.max(0, Math.min(255, Math.round(v)));
+  const gamma = (v: number): number =>
+    v > 0.0031308 ? 1.055 * v ** (1 / 2.4) - 0.055 : 12.92 * v;
+
+  const r = gamma((xr * 3.2406 - yr * 1.5372 - zr * 0.4986) / 100);
+  const g = gamma((-xr * 0.9689 + yr * 1.8758 + zr * 0.0415) / 100);
+  const bl = gamma((xr * 0.0557 - yr * 0.204 + zr * 1.057) / 100);
+
+  return `rgb(${clamp(r * 255)}, ${clamp(g * 255)}, ${clamp(bl * 255)})`;
+}

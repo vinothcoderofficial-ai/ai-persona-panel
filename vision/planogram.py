@@ -164,8 +164,25 @@ def build_planogram(
         shelves.append(
             {
                 "shelf_id": shelf_id,
+                # How high the shelf *sits*, not how tall its band is. Nothing
+                # in planogram.schema.json says which of the two this field
+                # means - it types it as a number and stops - so the meaning
+                # lives in the code that reads it: `web/src/store/geometry.ts`
+                # places a slot at `shelf.height_m + slot.height_m / 2` and the
+                # shelf board at `shelf.height_m - board / 2`, and the seed
+                # planogram descends 1.7, 1.45, 1.2, 0.85, 0.4 down the bay.
+                #
+                # The band's own thickness is not lost: it is `slot.height_m`
+                # below, which is what it always meant. Writing it here as well
+                # put all five shelves of a video-read bay within four
+                # centimetres of each other, and the only reason that never
+                # showed is that the reading has no route into the scene.
+                #
+                # Measured to the shelf's front lip - the bottom of the band -
+                # because that is the surface a pack stands on, and from the
+                # bottom of the frame because that is where the floor is.
                 "height_m": round(
-                    max(bottom - top, 1) / frame_height * BAY_HEIGHT_M, 4
+                    max(frame_height - bottom, 0) / frame_height * BAY_HEIGHT_M, 4
                 ),
                 "level": _level_for(shelf_index, len(ordered)),
                 "slots": slots,

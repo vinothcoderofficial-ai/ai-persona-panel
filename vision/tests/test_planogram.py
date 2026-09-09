@@ -207,3 +207,47 @@ class TestReproducibility:
         number derived from it unreproducible, which is what `scripts/eval.py`
         exists to prevent."""
         assert build() == build()
+
+
+def test_shelf_height_is_elevation_above_the_floor_not_band_thickness():
+    """`shelf.height_m` means how high the shelf sits, not how tall it is.
+
+    Nothing in `schemas/planogram.schema.json` says which - it types the field
+    as a number and stops - so the meaning lives in the two places that read
+    it. `web/src/store/geometry.ts` puts a slot at `shelf.height_m +
+    slot.height_m / 2` and the shelf board at `shelf.height_m -
+    SHELF_BOARD_THICKNESS_M / 2`, both of which are elevations, and the seed
+    planogram descends 1.7, 1.45, 1.2, 0.85, 0.4 down the bay.
+
+    Writing the band's thickness here instead put every shelf of a video-read
+    bay at roughly the same height - five shelves inside one 0.35 m blob - and
+    it would have been found on stage rather than here, because the vision
+    reading has no route into the scene yet.
+    """
+    bands = {
+        (0, 140): [track(10, 60, 0, 10)],
+        (140, 300): [track(10, 60, 0, 10)],
+        (300, 480): [track(10, 60, 0, 10)],
+    }
+
+    document = build_planogram(bands, frame_width=960, frame_height=720)
+
+    heights = [shelf["height_m"] for shelf in document["bays"][0]["shelves"]]
+    assert heights == sorted(heights, reverse=True), heights
+    assert all(height >= 0 for height in heights)
+
+
+def test_the_lowest_shelf_sits_near_the_floor_and_the_highest_near_the_top():
+    """The bay is 1.8 m tall, so the elevations have to span most of it.
+
+    A reading whose shelves all landed in the bottom tenth would still descend
+    and still pass the ordering test above, while rendering as a heap.
+    """
+    bands = {(0, 180): [track(10, 60, 0, 10)], (180, 700): [track(10, 60, 0, 10)]}
+
+    document = build_planogram(bands, frame_width=960, frame_height=720)
+
+    top, bottom = [shelf["height_m"] for shelf in document["bays"][0]["shelves"]]
+    bay_height = document["bays"][0]["height_m"]
+    assert top > bay_height * 0.6, top
+    assert bottom < bay_height * 0.15, bottom
