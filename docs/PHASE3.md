@@ -79,6 +79,10 @@ loosening the criterion is a failure, not a pass.
 `check_top_pick_stability()`, which re-ranks across run sizes — the check a seed spread
 structurally cannot make, because every seed it re-rolls is drawn at the same size.
 
+> **The four bullets below are what the *within-run* estimator found and are kept as that record.
+> Two of them no longer describe today's default** — read the dated note after them before
+> quoting any of it, and METHODOLOGY §12.13 for the current ladder.
+
 * The default ranking is a **run-size artefact**. `AD_1@B1_TALKER` goes rank 1 → 10 → 9 → 5 → 4 as
   `n_synth` grows from 10k to 500k.
 * **More seeds cannot help.** The reported spread is a min–max range and widens with the number of
@@ -93,12 +97,14 @@ The last point changed what the demo may claim. See METHODOLOGY §12.13.
 > **Read this section as dated.** Every measurement above was taken with the **within-run** split
 > as the optimizer's objective, which is what it ranked on at the time. The optimizer has since
 > been moved onto `between_variant_lift` — the estimator P3.2 above argued for — and under that
-> default the first bullet no longer holds: `AD_1@B1_TALKER` leads at both 10k (+2.5 %) and 50k
-> (+2.0 %), the current placement holds 4th at both, and the seed spread narrows rather than
-> reshuffling. The ordering was a run-size artefact **of the within-run estimator's small exposed
-> arm**, and swapping estimators took most of it away. The 250k and 500k rows have not been
-> re-measured. METHODOLOGY §12.13 carries the current ladder; this file is kept as the record of
-> what Phase 3 found, not as a description of today's default.
+> default neither the first bullet nor the last one survives. The whole ladder has now been
+> re-measured on the new default: `AD_1@B1_TALKER` leads at **10k (+2.5 %), 50k (+2.0 %), 250k
+> (+2.1 %) and 500k (+2.0 %)**, and the seed spread narrows from 1.2 points wide to 0.2 rather
+> than reshuffling. The ordering was a run-size artefact **of the within-run estimator's small
+> exposed arm**, and swapping estimators took it away. The settled recommendation reversed with
+> it: the pair that clears the current placement is an **ad move** and it clears from **50k**
+> upward, not a SKU move at 250k. METHODOLOGY §12.13 carries the current ladder; this file is kept
+> as the record of what Phase 3 found, not as a description of today's default.
 
 ---
 
@@ -139,9 +145,12 @@ opt-in behind `--llm-headline` (see below).
   other three personas have near-flat affinities and claiming loyalty for them would put a
   falsehood in the prompt.
 
-  The symptom was visible in the aggregate too: `loyalist` completed 4 of 20 trips, the other 16
-  running out of time while picking up items it had no reason to choose between. `mission`,
-  `browser` and `switcher` completed 20 of 20.
+  The symptom is visible in the aggregate too, and in the committed corpus it has not gone away:
+  `data/cache/traces/loyalist_demo_aisle.json` reports `end_reasons {'out_of_time': 14,
+  'checkout': 6}` — `loyalist` completes 6 of 20 trips and the other 14 run out of their 70 s
+  budget while picking up items they have no reason to choose between. `mission`, `browser` and
+  `switcher` complete 20 of 20. That is reported rather than tuned away; README's persona row
+  quotes the same 6.
 
 * **`eval.py` determinism restored.** Loading `.env` gave the process a key, so the headline came
   from a live model — a non-reproducible string in a committed file. It stayed stable only while
@@ -155,5 +164,9 @@ opt-in behind `--llm-headline` (see below).
 * **Real CPS data.** PLAN §8 lists it under *not building*, and nothing here widens that.
   `docs/integration.md` remains a design plus code, with no data behind it.
 * **The real panel.** Still the only thing code cannot supply.
-* **S20 vision and the S6 GLB shell.** Dropped under PLAN §5's timebox and PLAN §9's drop order
-  respectively; both remain dropped.
+* **The S20 detector and the S6 GLB shell.** Dropped under PLAN §5's four-hour CUDA timebox and
+  PLAN §9's drop order respectively, and both still are. **The vision track itself is not**, and
+  this line used to imply otherwise: S30 rebuilt it on classical CV after Phase 3, so `vision/`
+  reads a clip into a schema-valid planogram on a CPU and `#/vision` puts that behind an upload.
+  What stays dropped is the Grounding-DINO half — brand, name, price, promotion and signage — and
+  with it every product identity. METHODOLOGY §12.10 is the current statement.

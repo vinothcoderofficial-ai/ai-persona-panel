@@ -81,7 +81,15 @@ interface Entry {
   candidate_id: string;
   kind: string;
   label: string;
-  patches: Array<Record<string, unknown>>;
+  /*
+   * `patches` is deliberately not declared. The server sends one per entry and
+   * nothing here can act on it: the only place that could is `#/whatif`, which
+   * `main.tsx` renders as a bare `<WhatIfPanel />` and which reads no query
+   * string, no hash and no props — its selection starts empty, whatever the
+   * address bar says. Typing a field this screen cannot use was what made a
+   * per-row "Try it" button look implementable when it was not, so the field
+   * is left off the interface until the panel can receive it.
+   */
   /** Null when the metric does not exist for this configuration. Never 0. */
   objective: number | null;
   objective_text: string | null;
@@ -336,6 +344,26 @@ function Result({ ranking }: { ranking: Ranking }) {
             {ranking.n_candidates}. &ldquo;Best&rdquo; is only worth reading against that.
           </div>
         )}
+        {/*
+          One link, and the sentence that keeps it honest. Every row named its
+          own move and every row's button went to the same place; this says
+          where that place is and what it will and will not have done for you
+          when you get there.
+        */}
+        <div data-testid="optimize-whatif" style={{ ...style.note, marginTop: 6 }}>
+          To try one of these,{" "}
+          <a
+            data-testid="optimize-whatif-link"
+            style={{ color: style.ACCENT, fontWeight: 600 }}
+            href="#/whatif"
+          >
+            open the what-if panel
+          </a>{" "}
+          and set the move named in the row you want. That link{" "}
+          <strong>does not carry the placement</strong>: the panel opens on the
+          unpatched baseline and takes its move from its own dropdowns, because nothing
+          on that screen reads a placement out of the address bar.
+        </div>
       </div>
 
       {ranking.skipped.length > 0 && (
@@ -496,14 +524,16 @@ function Row({ entry }: { entry: Entry }) {
         {/* Never 0%. The metric does not exist for this configuration. */}
         {entry.objective_text ?? "undefined"}
       </div>
-      <a
-        data-testid={`optimize-try-${entry.rank}`}
-        style={{ ...style.linkButton, fontSize: 12, padding: "5px 10px" }}
-        href="#/whatif"
-        title="Open the what-if panel to try this move"
-      >
-        Try it
-      </a>
+      {/*
+        No "Try it" button. There was one, on every row, and it was the same
+        constant `#/whatif` on all of them — so pressing it on rank 1 and on
+        rank 4 opened the same unpatched panel, and the recommendation it was
+        offering to try was not carried anywhere. It cannot be carried from
+        here either: `main.tsx` renders `<WhatIfPanel />` with no props and
+        nothing under `web/src/whatif/` reads the URL, so a candidate in the
+        hash would be read by nobody. The honest route to that screen is stated
+        once below the table instead, where it can say what it actually does.
+      */}
     </div>
   );
 }

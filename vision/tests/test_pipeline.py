@@ -315,6 +315,29 @@ class TestOverlays:
         assert len(written) == result.frames_sampled
         assert all(path.exists() and path.stat().st_size > 0 for path in written)
 
+    def test_the_overlays_are_the_frames_the_reading_was_taken_from(
+        self, clip: Path, tmp_path: Path
+    ) -> None:
+        """Sampled at the rate `run` sampled at, not at a rate of their own.
+
+        These images exist so a reader can check the JSON against the picture,
+        which they can only do if the picture is the one the JSON was read off.
+        `write_overlays` used to re-sample at a hardcoded 2 fps while `run`
+        threads `--fps` through, so `--fps 5 --overlays` drew boxes from the
+        5 fps reading over frames 0, 5, 10... of a 2 fps sampling: different
+        frames of the clip, silently, with the boxes still drawn confidently.
+        The filenames carry the source frame index, so this compares them.
+        """
+        result = run(clip, fps=5.0)
+
+        written = write_overlays(clip, result, tmp_path / "overlays")
+
+        expected = [
+            frame.index
+            for frame in extract_frames(clip, fps=5.0, max_frames=result.frames_sampled)
+        ]
+        assert [int(path.stem.split("_")[1]) for path in written] == expected
+
 
 class TestRollSaturation:
     """A clip tilted past what the search can bracket is refused.

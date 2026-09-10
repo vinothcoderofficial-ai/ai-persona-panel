@@ -122,7 +122,39 @@ export interface AisleDisplayProps {
   planogram: Planogram;
 }
 
+/**
+ * A store with one bay has no gap to stand a display in, and this is the only
+ * honest thing to do about it.
+ *
+ * `aisleDisplayPlacement` puts the plinth at `gapCenterX(planogram, 0)`, and
+ * every argument in geometry.ts for that spot rests on there being a gondola on
+ * *both* sides of it: it belongs to no bay, holds no slot, and reads as store
+ * furniture standing in a run rather than as part of either neighbour. Take the
+ * second bay away and the arithmetic still returns a number — half a bay-gap
+ * past the right edge of the only bay — but it now names open aisle. Measured
+ * on a 1.2 m bay: the bay's right edge is at x = 0.60 m and the deck's left
+ * edge lands at 0.62 m, so a 1.55 m plinth stands 2 cm off the carcass, in
+ * front of the top-shelf facings, which is precisely the "it reads as shelf
+ * stock" failure the placement note is written to avoid. A video-read bay can
+ * carry a facing running the full 1.2 m to that same edge.
+ *
+ * That is not an edge case. `vision/planogram.py` emits exactly one bay for
+ * every clip, and `#/vision` links straight into the store on the variant it
+ * saves, so every video reading anybody shops arrives here.
+ *
+ * The bottle is decoration — `SlotMapper` builds its rectangles from the
+ * planogram document alone, so nothing about it is measured either way — and a
+ * decoration in the wrong place costs more than a missing one. The seed store
+ * has three bays and keeps its display, which is what `data/models/README.md`
+ * and the portal's sample-model requirement rest on.
+ */
+function hasAisleGap(planogram: Planogram): boolean {
+  return planogram.bays.length >= 2;
+}
+
 export function AisleDisplay({ planogram }: AisleDisplayProps) {
+  if (!hasAisleGap(planogram)) return null;
+
   const place = aisleDisplayPlacement(planogram);
 
   return (

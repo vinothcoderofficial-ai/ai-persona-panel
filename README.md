@@ -37,25 +37,32 @@ Three outputs, in increasing value (PLAN §1):
    because they do not model purchase. *Built, and computed for the synthetic panel.*
 3. **Placement optimizer** — search every slot × creative and recommend the best. *Built*
    (S24), with a slot-value layer that prices the winner (S25). This is the jump from an A/B tool
-   to a recommendation engine. It scores all 13 placements on this aisle in ~6 s at the default
-   run size, ranked on the **between-arm** lift — each placement's whole population against a
-   control run of the same shelf with the creative taken down. That is a randomisation rather than
-   the within-run exposed/unexposed selection, and it is several times smaller: `AD_1 on
-   B1_TALKER` leads at **+2.5 %**, with today's placement 4th of 13 at **+0.9 %**.
+   to a recommendation engine. It scores all 13 placements on this aisle in **7–11 s cold** at the
+   default run size (measured on this laptop over four fresh processes; the repeat of an identical
+   ranking is ~50 ms, because the simulation cache already holds every arm), ranked on the
+   **between-arm** lift — each placement's whole population against a control run of the same
+   shelf with the creative taken down. That is a randomisation rather than the within-run
+   exposed/unexposed selection, and it is several times smaller: `AD_1 on B1_TALKER` leads at
+   **+2.5 %**, with today's placement 4th of 13 at **+0.9 %**.
 
-   The honest headline is that **the run size is still too small to rank them**: the leader's seed
-   spread overlaps four rivals, the screen names them, and no placement clears today's spread in
-   either direction. What it is *not* any more is a run-size artefact — the same leader and the
-   same 4th place hold at 10k and 50k, and the spread narrows. See METHODOLOGY §12.13 before
-   quoting any of this.
+   The honest headline is that **at the default run size it is still too small to rank them**: the
+   leader's seed spread overlaps four rivals, the screen names them, and no placement clears
+   today's spread in either direction. What it is *not* any more is a run-size artefact — the same
+   leader holds at 10k, 50k, 250k and 500k and the spread narrows the whole way. Raising the run
+   size settles one of the two questions: from 50k up, `AD_1 on B1_TALKER` clears today's placement
+   outright, though top pick against runner-up stays unsettled at every size. See METHODOLOGY
+   §12.13 before quoting any of this.
 
 ---
 
 ## Architecture
 
-The study pipeline. (Both diagrams also live as standalone files:
-[`docs/flow-diagram.mermaid`](docs/flow-diagram.mermaid) and, for the module-level view of who
-owns what and which process it runs in, [`docs/working-diagram.mermaid`](docs/working-diagram.mermaid).)
+The study pipeline. The version below is the maintained one. Two standalone files exist beside it —
+[`docs/flow-diagram.mermaid`](docs/flow-diagram.mermaid) and, for the module-level view of who owns
+what and which process it runs in, [`docs/working-diagram.mermaid`](docs/working-diagram.mermaid) —
+but the flow diagram is the **S0 original and has not been kept in step**: it still shows Grounding
+DINO reading the shelf and an LLM authoring the persona policies, neither of which is what happens.
+Read this one; treat that one as the sketch the project started from.
 
 ```mermaid
 flowchart TD
@@ -66,7 +73,7 @@ flowchart TD
         DET -- "geometry + colour only<br/>identities typed in by an operator" --> PG
     end
 
-    PG --> VAR["2 · Variants A / B / C<br/>A baseline · B focal SKU to eye level · C ad to bay-1 shelf talker"]
+    PG --> VAR["2 · Variants A / B / C / D<br/>A baseline · B focal SKU to eye level · C ad to bay-1 shelf talker · D no creative anywhere (control)"]
 
     VAR --> STORE["3 · 3D shelf-station store<br/>fixed camera per bay"]
     VAR --> SAL["Saliency per slot<br/>shelf level · centre · facings · colour · ad · size"]
@@ -90,7 +97,7 @@ flowchart TD
     subgraph VAL["6 · Validation — machinery built, never run on real data"]
         FUSE --> CAL["Calibrate on A only<br/>4 persona shares, grid step 0.05"]
         SIM --> CAL
-        CAL --> HOLD["Evaluate B and C (holdout)"]
+        CAL --> HOLD["Evaluate B, C and D (holdout)"]
         FUSE --> NC["Noise ceiling<br/>200 split-halves of the real panel"]
         HOLD --> MET["Metrics<br/>Spearman · KL · purchase MAE<br/>decision agreement · known effect · lift"]
         NC --> MET
@@ -170,7 +177,7 @@ the store will render.
 | `make validate` | Check every data file against `schemas/` — currently **13 files, 0 errors** (variant D added a fourth variant) |
 | `make gen-types` | Regenerate `web/src/contracts/` and `api/app/schemas.py` from `schemas/` |
 | `make api` / `make web` | FastAPI on `:8000` / Vite on `:5173` |
-| `make test` | `pytest` + `vitest` — **685 Python tests and 315 web tests across 30 files, all green** at the time of writing |
+| `make test` | `pytest` + `vitest` — **1,067 Python tests across 46 files and 699 web tests across 61 files, all green** at the time of writing (`1067 passed in 437.72s`, `699 passed (699)`). Both suites grow most weeks; run it rather than trusting this cell |
 | `make eval` | Regenerate `RESULTS.md` and `docs/figures/*.png` from committed evidence |
 | `make collect` | Export the live database into `data/sessions/anon/`, then regenerate `RESULTS.md` from it — the whole collection loop. `#/home` says whether it is needed. |
 
@@ -195,7 +202,7 @@ Parameters may be written on either side of the `#`; on a collision the hash win
 | `…/#/spectator` | The same, following the last session started in this browser. It says on screen that it is doing so. |
 | `…/#/spectator?session=demo&fake=1` | The server's synthetic demo stream, for when no session is running. It draws itself with a yellow border and a banner so a fake frame can never be mistaken for a real one. |
 | `…/#/ai` | The language model: which one is configured and whether a call is even possible, the exact prompt that turned each archetype into a numeric policy, a button that asks it again, and the twenty shopping trips it reasoned through per persona — every turn with the reason it gave. Asking again writes to `data/cache/policies/preview/` and never touches the committed policy. |
-| `…/#/vision` | Drop in a front-on clip of a shelf bay and see the planogram it supports: shelf edges, product facings, the measured colour of each, and how many frames agreed. Reads geometry and colour, not products — brands, names and prices are written as unknown rather than guessed, and nothing is saved. |
+| `…/#/vision` | Drop in a front-on clip of a shelf bay and see the planogram it supports: shelf edges, product facings, the measured colour of each, and how many frames agreed. Reads geometry and colour, not products — brands, names and prices are written as unknown rather than guessed. The read itself saves nothing (`saved: false`); a separate **keep this reading** step, taken after you have typed in the identities the camera cannot see, writes a `video_`-prefixed planogram and a zero-patch variant on it so the shelf can be shopped. You may also name the brand being advertised and the shelf its talker hangs on — the camera detects no signage and will not invent any, so an ad on a video-read shelf is operator-placed and the variant's name says so. |
 | `…/#/optimize` | Where *should* the creative go? Every placement scored against the synthetic panel and ranked, with the one running today marked. Says when the order is not settled rather than printing a clean winner. |
 | `…/#/panel` | One persona's committed shopping trip replayed over the same shelf a person shops — the bay it is at, the product it is looking at, the reason it gave, the cart filling. |
 | `…/#/whatif` | Move a SKU or a creative, re-run the population, read the lift. |
@@ -233,10 +240,15 @@ Copy `.env.example` to `.env` and add an LLM key before generating persona polic
 ## Headline results
 
 Copied from [`RESULTS.md`](RESULTS.md), which `make eval` regenerates from committed evidence and
-which may not be edited by hand. Experiment `eval-0029dcf1332c`; synthetic panel 10,000 shoppers
+which may not be edited by hand. Experiment `eval-9746db230bd9`; synthetic panel 10,000 shoppers
 per variant across 4 personas at seed 42; synthetic attention fused in `cursor_only` mode.
 
-**Real panel: n = 0 accepted, 0 rejected. Prediction locks found: 0.**
+**Real panel: n = 0 accepted, 0 rejected. Prediction locks found: 1; `sha256` recomputed and
+matched: 1; locks verified to predate their session's first event: 0.** Those last two numbers are
+different zeroes and the report will not round either off — the lock exists and verifies, but the
+session it belongs to was never exported into `data/sessions/anon/`, so there are no committed
+events to check its ordering against. [`docs/WHATS_LEFT.md`](docs/WHATS_LEFT.md) §0 is the decision
+about that.
 
 Real vs synthetic, per variant:
 
@@ -245,6 +257,7 @@ Real vs synthetic, per variant:
 | A — Baseline | 0 | not yet collected | not yet collected | not yet collected | not yet collected |
 | B — Focal SKU at eye level | 0 | not yet collected | not yet collected | not yet collected | not yet collected |
 | C — Ad on the bay-1 shelf talker | 0 | not yet collected | not yet collected | not yet collected | not yet collected |
+| D — Control arm, no creative anywhere | 0 | not yet collected | not yet collected | not yet collected | not yet collected |
 
 Split-half repeatability of the real panel (the noise ceiling every accuracy number would be
 quoted against): **not yet collected**. Calibration fit and holdout: **not yet collected** —
@@ -257,6 +270,7 @@ The synthetic panel on its own, which needs no human:
 | A | `B1S5P1` (bottom) | 0.0267 | 0.0211 | 0.04 |
 | B | `B1S3P2` (eye) | 0.0497 | 0.0454 | 0.03 |
 | C | `B1S5P1` (bottom) | 0.0254 | 0.0205 | 0.13 |
+| D | `B1S5P1` (bottom) | 0.0268 | 0.0213 | not yet collected — D carries no creative, so there is no exposed arm to split on |
 
 **The known effect.** Variant B moves `SKU_008` from the bottom shelf to eye level. The
 synthetic panel recovers it: fused attention **0.0267 → 0.0497, uplift +0.86**. The real panel's
@@ -295,7 +309,7 @@ causes are understood and written up in
 | Persona-share recovery from a known mix | worst per-share error 0.05 | ±0.10 |
 | `exploration = 1` vs pure saliency | worst per-target deviation 0.0037 | 0.02 |
 
-Figures (`docs/figures/heatmap_A|B|C.png`) are written by `make eval` and are gitignored, so they
+Figures (`docs/figures/heatmap_A|B|C|D.png`) are written by `make eval` and are gitignored, so they
 exist only after you run it. `agreement_vs_ceiling.png`, `calibration_fit_vs_holdout.png` and
 `reject_reasons.png` are **deliberately not drawn** — `scripts/eval.py` refuses to render a chart
 whose bars would all be zero, because an axis of zero-height bars reads as a measured zero.
@@ -334,8 +348,9 @@ whose bars would all be zero, because an axis of zero-height bars reads as a mea
   unfinished, and whether what was collected has reached the committed corpus. `make collect` runs
   the export and the eval together.
 - The placement optimizer and the slot-value pricing on top of it (S24, S25). The optimizer
-  scores all 13 placements on this aisle in ~6 s, and `check_top_pick_stability()` re-ranks them
-  across run sizes — which is how we know the default ranking reorders. The pricing
+  scores all 13 placements on this aisle in 7–11 s from cold, and `check_top_pick_stability()`
+  re-ranks them across run sizes — which is how we know the leader holds at all four rungs and
+  where the gap against today's placement opens. The pricing
   layer turns a lift into money. Read the caveat in the next section before quoting either:
   the ranking is **not resolved** at the default run size, and every figure the pricing prints rests on
   commercial inputs this project does not have and does not invent.
@@ -345,7 +360,7 @@ whose bars would all be zero, because an axis of zero-height bars reads as a mea
 | | Why |
 |---|---|
 | **The real panel** (S9 pilot, S21 collection) | Needs people and laptops — this is the only thing left that code cannot supply. `data/sessions/anon/` is empty; `predictions/` holds one lock, from the single session collected so far. That session was rejected as `too_short` (29 s against a 45 s minimum); the floor has since been **removed** — it was a proxy for shelf coverage that preferentially discarded the `mission` archetype — and the session was re-gated and accepted under the rule that replaced it, disclosed in METHODOLOGY.md §2.3 and counted in RESULTS.md. It is still **not committable**: it predates the `first_event_at` stamp, so `eval.py` cannot verify its lock was written before its first event and refuses it rather than guessing. The **tooling is built**: `scripts/collect_link.py` hands out balanced, seed-reproducible links, `make collect` exports the database into the corpus `make eval` reads, and `#/home` reports what the panel holds and whether an export is outstanding. One real bug stood in the way and is fixed (S31): `eval.py` reconstructed each session's first-event time as `started_at + t_ms`, which understates it by the `POST /sessions` round trip, so **every** honestly-ordered session would have failed the pre-registration check. The server now stamps `first_event_at` itself, and the two moments being compared come from one clock. What is missing is shoppers. |
-| **Product identities from video** (part of S20) | The pipeline **is built** (see above) and reads shelf geometry and colour on a CPU. What it cannot read is what a detection model would: brand, product name, price, promotion, and promotional signs. Those are written into the emitted planogram as `unknown` / `unidentified product N` / `0` / `false` and no ad slots are emitted, rather than being guessed. Grounding DINO on a GPU remains the upgrade path (`requirements-vision.txt`); the available GPU (GeForce MX250) is far below what fp16 needs. |
+| **Product identities from video** (part of S20) | The pipeline **is built** (see above) and reads shelf geometry and colour on a CPU. What it cannot read is what a detection model would: brand, product name, price, promotion, and promotional signs. Those are written into the emitted planogram as `unknown` / `unidentified product N` / `0` / `false` and no ad slots are emitted, rather than being guessed. That is a limit on *detection*, not on what the shelf can carry: on `#/vision` an operator names the brand and the shelf, and the save writes the creative and the two patches that hang and book the fixture, so a video-read shelf does score an ad lift (185 exposed purchases on the 60-second clip, nothing hand-edited). Grounding DINO on a GPU remains the upgrade path (`requirements-vision.txt`); the available GPU (GeForce MX250) is far below what fp16 needs. |
 | **A video of a real aisle** | None was recorded, so the only clip the pipeline has ever been run on is `scripts/make_vision_fixture.py`'s rendering of the seed planogram — even lighting, no perspective, no occlusion, no motion blur. It reads that clip exactly right (5 shelves, 8 facings, matching bay 1), and that is a statement about the stages composing rather than about accuracy on real footage. No `data/planograms/video_aisle.json` is committed, because a planogram derived from a picture this repository drew is not evidence about a shop. |
 | **The GLB store shell** (S6) | Cut under PLAN §9's drop order ("GLB shell → back to procedural"). The shelving, bays, boards, facings and ad fixtures are still procedural three.js geometry built from the planogram JSON, and there is no modelled shop interior. What *is* built is narrower and should not be mistaken for it: one CC0 glTF sample model from the Khronos GitHub repository — `data/models/WaterBottle.glb`, provenance and SHA-256 in `data/models/README.md` — is committed and rendered in the store, on a display plinth in the aisle gap beside bay 1. That is one prop, not a shell. It satisfies the portal's "sample 3D model from github or huggingface" requirement and nothing else: it is scenery, it is not a SKU, it is not in the planogram, and no number in `RESULTS.md` moved when it was added. |
 
@@ -359,7 +374,7 @@ use — see [METHODOLOGY §5](docs/METHODOLOGY.md#5-persona-policies-persona-age
   checkable: shelf-station rationale, every noise-pipeline parameter, the fusion and saliency
   weights, the pre-registration protocol, metric definitions, the noise ceiling and why *"more
   accurate than humans"* is not a coherent claim, the calibration/holdout protocol, privacy, and
-  thirteen limitations.
+  fourteen limitations.
 - **[`RESULTS.md`](RESULTS.md)** — generated by `make eval`. Do not edit by hand.
 - **[`docs/integration.md`](docs/integration.md)** — the Brand Lift / CPS integration artifact
   (S22): how census demographics would seed the persona population shares, and how Brand Lift
@@ -369,6 +384,10 @@ use — see [METHODOLOGY §5](docs/METHODOLOGY.md#5-persona-policies-persona-age
   **[`docs/video/shotlist.md`](docs/video/shotlist.md)** — the demo script and shot list, with
   timings, and an explicit note on which segments are live one-take and which are slides.
   **The video has not been recorded**, so there is no link to it here yet.
+- **[`docs/PHASE3.md`](docs/PHASE3.md)** — what was done after the submission tag, written only
+  from limits this repository had already recorded: the control arm `D`, the per-arm purchase
+  counts, and the answer to "is the optimizer's ranking resolvable". Its P3.3 section is
+  deliberately kept as the record of what the *old* estimator found and is marked as dated.
 - **[`docs/PLAN.md`](docs/PLAN.md)** — three phases, 25 numbered sessions, five tracks, the drop
   order, the risk table. §13 lists where it overrides the spec.
 - **[`docs/SPEC.md`](docs/SPEC.md)** — data contracts, algorithms with parameters, acceptance tests.
@@ -393,7 +412,7 @@ PLAN §12's table, with an honest status against each row.
 | AI personas autonomously navigating and buying | **S13** + S2 | **Met** | S2's simulator runs 40,000 shopper-trips in ~175–205 ms, deterministic per seed. S13's agent loop has now been run against a real model: 80 trips, 973 turns, 1 rejection, committed in `data/cache/traces/`. The four archetypes are distinguishable from their own reasoning — `mission` never changes station, `browser` uses every `look` action in the corpus, and `loyalist` names its brand in 245 of 245 reasons. `loyalist` completes only 6 of 20 trips: it buys its brand at every station and the 70 s budget beats it, which is reported rather than tuned away. |
 | Identical experiments, both panels | Shared resolved variant JSON; S14 lock | **Built, unexercised** | Both panels read the same server-resolved planogram, and `POST /sessions` writes the lock before the session row exists while the events endpoint and the ingest socket both refuse a session without one. With no sessions there are no locks, so the ordering has been verified by tests, never by evidence. |
 | Defined accuracy metrics, benchmarked | S16, S17, S19 | **Built, unexercised** | Spearman, KL, purchase-share MAE, Ad Slot Index, decision agreement, the 200-split noise ceiling, and the known-effect check are implemented and unit-tested; the calibration recovery test recovers a known persona mix to 0.05. Every one of them needs a real panel, and the only *measured* result is the synthetic side of the known effect. |
-| Automated actionable insights | S18 lift, S19 report, **S24 optimizer** | **Partial** | `make eval` regenerates `RESULTS.md` and the figures from committed evidence, refuses to write a report if the integrity checks fail, and lets a language model write only the headline sentence. Ad-to-Purchase Lift is computed for the synthetic panel. S24, the optimizer that turns this from an A/B tool into a recommendation engine, **is built**, and it now ranks on the **between-arm** lift — a randomisation against a control run of the same shelf with the creative taken down — rather than the within-run exposed/unexposed selection. That cost roughly five-fold in headline magnitude (`AD_1@B1_TALKER` reads +2.5 % where the old estimator read +12.7 %) and bought back the stability: the same leader and the same 4th place for today's placement at both 10k and 50k, with the seed spread narrowing. It is still honest that the order is **not resolved** — the leader's spread overlaps four rivals, which the screen names, and no placement clears today's spread. More seeds cannot fix that and larger runs can: `check_top_pick_stability()` is the check that shows it (METHODOLOGY §12.13). |
+| Automated actionable insights | S18 lift, S19 report, **S24 optimizer** | **Partial** | `make eval` regenerates `RESULTS.md` and the figures from committed evidence, refuses to write a report if the integrity checks fail, and lets a language model write only the headline sentence. Ad-to-Purchase Lift is computed for the synthetic panel. S24, the optimizer that turns this from an A/B tool into a recommendation engine, **is built**, and it now ranks on the **between-arm** lift — a randomisation against a control run of the same shelf with the creative taken down — rather than the within-run exposed/unexposed selection. That cost roughly five-fold in headline magnitude (`AD_1@B1_TALKER` reads +2.5 % where the old estimator read +12.7 %) and bought back the stability: the same leader at 10k, 50k, 250k and 500k, with the seed spread narrowing from 1.2 points wide to 0.2. It is still honest that the order is **not resolved** at the run size the screens use — the leader's spread overlaps four rivals, which the screen names, and no placement clears today's spread there. More seeds cannot fix that and larger runs can, and did: from 50k up the leader clears today's placement outright, while top pick against runner-up stays unsettled at every size measured. `check_top_pick_stability()` is the check that shows it (METHODOLOGY §12.13). |
 | Reduce time and cost | SPEC §8 table | **Partial** | PLAN required SPEC §8's table recomputed on Day 8. Done, cell by cell, and it splits in two. The **95 % CI row is arithmetic and checks out exactly** — a normal-approximation interval on p = 0.30 gives ±12.70 pp at n = 50, ±14.20 pp at n = 40 and ±0.90 pp at n = 10,000, matching the ±13 / ±14 / ±0.9 printed there; n = 10,000 is this repo's actual `N_SYNTH`. The **compute row is measured and better than claimed**: a full 10,000-shopper population per persona in ~175–205 ms and a what-if answer at p95 under 11 ms warm, so "minutes for a what-if" overstates the cost by orders of magnitude. The **cost and calendar-time cells cannot be recomputed here** — $100K+ physical stores and $10–30K surveys are external market figures cited from the proposal, and no study of any kind has been commissioned by this project. SPEC.md is left unedited as the historical brief; this row is the recompute. |
 | Roadmap for Brand Lift / CPS | **S22** — [`docs/integration.md`](docs/integration.md) + `sim/persona_survey.py` | **Partial** | Delivered as a written artifact plus code, not a slide: the survey instrument, the per-persona and population roll-up, and the design for seeding persona shares from CPS demographics. But **no CPS data has been obtained or used**, no Brand Lift study has been run, and no survey answer has been produced — that needs an LLM key, and the survey module refuses to write a cache without one, exactly as `slow_agent.py` does. |
 | Foundation for AR / spatial / AI shopping | Planogram JSON renderer-agnostic; S20 video ingest | **Yes** | The planogram is a plain JSON document with metric bay dimensions and per-slot geometry; the React renderer is one consumer of it and the API never assumes a renderer. The video-ingest path is built: `vision/pipeline.py` reads a clip into that same document on a CPU, `POST /vision/planogram` and `#/vision` put it behind an upload. It reads geometry and colour, not product identities, and says so in every field it could not observe. |
@@ -410,15 +429,15 @@ an empty panel, which is a weaker test than the one SPEC intended.
 | Path | What lives there |
 |---|---|
 | `schemas/` | JSON Schema — the only cross-track contract |
-| `data/` | Seed planogram, variants A/B/C, personas, LLM caches, anonymised sessions |
+| `data/` | Seed planogram, variants A/B/C/D, personas, LLM caches, anonymised sessions |
 | `scripts/` | `make_seed_data.py`, `validate_data.py`, `gen_schemas.py`, `eval.py` |
 | `api/app/` | FastAPI: routers, `resolve.py`, `live.py`, `prediction.py`, `simcache.py` |
 | `sim/` | Saliency, persona policies, vectorised simulator, LLM persona agents |
 | `analytics/` | Fusion, metrics, noise ceiling, calibration, lift, known effect, report |
 | `vision/` | Video → planogram: frame sampling, shelf-edge detection, colour-run facing segmentation, IoU agreement across frames, and schema-valid assembly. Classical CV on a CPU — it reads geometry and colour, not products. |
 | `web/src/` | `store/` `capture/` `spectator/` `whatif/` `dashboard/` `contracts/` `api/` |
-| `predictions/` | One lock file per session — evidence, committed. Empty until sessions exist. |
-| `docs/` | `PLAN.md`, `SPEC.md`, `METHODOLOGY.md`, `integration.md`, `prompts.md`, `video/` |
+| `predictions/` | One lock file per session — evidence, committed. Holds one lock today, from the single session that has been through the flow; `predictions/dev/` takes the `skip_capture` runs and is gitignored. |
+| `docs/` | `PLAN.md`, `SPEC.md`, `METHODOLOGY.md`, `PHASE3.md`, `WHATS_LEFT.md`, `SENSITIVITY.md`, `integration.md`, `prompts.md`, `video/` |
 
 ## Seed data
 
@@ -435,6 +454,7 @@ space and break colour adjacency.
 | A | Nothing — baseline | The only variant calibration is fitted on |
 | B | `SKU_008` moves from the bottom shelf to eye level in bay 1 | Known effect both panels must recover |
 | C | The creative moves from the bay-3 endcap to the bay-1 shelf talker | Ad placement holdout |
+| D | Every ad slot's `creative_id` set to `null` | The control arm the between-arm Brand Lift is measured against (`docs/PHASE3.md` P3.1). It differs from A in the ad and in nothing else, which a test asserts by deep-comparing the two resolved documents with both sets of creatives blanked |
 
 ## Privacy
 

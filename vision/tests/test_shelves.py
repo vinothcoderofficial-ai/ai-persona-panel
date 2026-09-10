@@ -64,6 +64,38 @@ def test_ignores_a_short_horizontal_mark():
     assert shelf_edge_rows(frame) == []
 
 
+@pytest.mark.parametrize(
+    "backing,lip", [(190, 40), (190, 170), (120, 100), (60, 40), (250, 235)]
+)
+def test_exposure_and_contrast_do_not_change_the_shelf_count(backing, lip):
+    """The same bay filmed brighter, darker or flatter is the same bay.
+
+    This is the property `shelf_edge_rows` used to credit to a second
+    `PEAK_FRACTION` filter, which asked whether a row was at least 0.35 of the
+    frame's strongest. That filter could never fire, and this test is here
+    because it was removed: the profile is a fraction of the frame width and so
+    is at most 1.0, candidates had already cleared `MIN_SPAN` at 0.55, and 0.35
+    of at-most-1.0 cannot exclude anything that has cleared 0.55. Measured over
+    four frames before removing it, zero rows dropped; a profile maximum above
+    1.571 would have been needed for one, which a fraction cannot reach.
+
+    Contrast invariance is real and is delivered a step earlier, inside
+    `_horizontal_edge_profile`: a pixel counts as edge if its gradient is in
+    the top of *that frame's own* range, so the count survives a 150-grey lip
+    on 190-grey backing as well as a black one. These five pairs span a 15:1
+    range of lip contrast and all read three shelves at the same rows.
+    """
+    frame = np.full((HEIGHT, WIDTH, 3), backing, dtype=np.uint8)
+    for row in (80, 200, 320):
+        frame[row : row + 4, :, :] = lip
+
+    rows = shelf_edge_rows(frame)
+
+    assert len(rows) == 3
+    for expected, found in zip([80, 200, 320], sorted(rows)):
+        assert abs(found - expected) <= 6, (expected, found)
+
+
 def test_ignores_vertical_structure():
     """Bay uprights are vertical and must not be read as shelves."""
     frame = np.full((HEIGHT, WIDTH, 3), 190, dtype=np.uint8)

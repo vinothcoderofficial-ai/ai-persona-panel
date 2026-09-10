@@ -186,9 +186,15 @@ def test_a_soft_edge_between_two_packs_is_still_two_facings():
     that ramps over twenty columns never shows a single step big enough to
     count - the two packs merge into one run and the shelf reads as holding
     half the stock it holds. Rotating a frame produces exactly this ramp, and
-    so does any real lens, which is why this is not a synthetic worry: the
-    committed fixture reads eight facings level and ten once it has been turned
-    and turned back, because merges like this one shift where the runs fall.
+    so does any real lens, which is why this is not a synthetic worry.
+
+    Re-measured on the rendering `scripts/make_vision_fixture.py` draws of bay
+    0 of `data/planograms/demo_aisle.json`, which holds five shelves and eight
+    filled slots: it reads five bands and eight facings level, and five bands
+    and eight facings at every tilt from 0.5 through 6.0 degrees turned and
+    turned back. Seven degrees saturates the search and is refused rather than
+    read. This once said the fixture read ten after a rotation; that number is
+    from before the two-neighbourhood break test above, and it no longer holds.
     """
     frame = soft_edged_band_frame([BLUE, RED], ramp=24)
 

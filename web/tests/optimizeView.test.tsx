@@ -382,15 +382,54 @@ describe("the placement running today", () => {
 });
 
 describe("acting on a recommendation", () => {
-  it("offers each placement's patches to the what-if screen", async () => {
-    // A recommendation nobody can try is a slogan. The link carries the
-    // candidate so the what-if panel opens on the move being recommended.
+  /*
+   * There used to be a "Try it" button on every row, and it was the same
+   * constant `#/whatif` on all of them. The test that stood here was named for
+   * a handoff — "offers each placement's patches to the what-if screen" — and
+   * asserted only that the href contained `#/whatif`, which is exactly what a
+   * button that carries nothing also satisfies. So the name described a
+   * feature, the assertion described a constant, and the screen offered a
+   * control that opened the what-if panel on the baseline whichever row you
+   * pressed: press "Try it" on rank 1 and on rank 4 and you get the same empty
+   * dropdowns.
+   *
+   * It cannot be made to work from this file. `main.tsx` routes on
+   * `hash.startsWith("#/whatif")` and renders `<WhatIfPanel />` with no props;
+   * nothing under `web/src/whatif/` reads `location`, a query string or a hash,
+   * and the panel's selection starts at `EMPTY_SELECTION`. A placement in the
+   * URL would therefore be read by nobody. Carrying `Entry.patches` across
+   * would mean teaching the what-if panel to accept a selection from the
+   * address bar, which is a change to that screen and not to this one.
+   *
+   * So the button is gone and `Entry.patches` — fetched, typed, and read by
+   * nothing — went with it. What replaces it is one link that says what it
+   * actually does. A control that lies about where it takes you is worse than
+   * no control: the row already names the move in full, and a person who
+   * follows a link expecting it to be set up and finds an empty panel learns
+   * to distrust the whole screen.
+   */
+
+  it("offers no per-row link, because none of them could carry that row's move", async () => {
     const harness = await mount();
     try {
-      const link = harness.container.querySelector<HTMLAnchorElement>(
-        '[data-testid="optimize-try-1"]',
-      );
-      expect(link?.getAttribute("href")).toContain("#/whatif");
+      const perRow = harness.container.querySelectorAll('[data-testid^="optimize-try-"]');
+      expect(perRow).toHaveLength(0);
+    } finally {
+      harness.unmount();
+    }
+  });
+
+  it("points at the what-if panel and says it opens on the baseline, not on the move", async () => {
+    // A recommendation nobody can try is a slogan, so the route is still
+    // offered — with the one sentence that stops it being a lie: the panel
+    // opens unpatched and the move is chosen in its own dropdowns, from the
+    // row above.
+    const harness = await mount();
+    try {
+      expect(node(harness, "optimize-whatif-link").getAttribute("href")).toBe("#/whatif");
+      const said = text(harness, "optimize-whatif").toLowerCase();
+      expect(said).toContain("baseline");
+      expect(said).toContain("does not carry");
     } finally {
       harness.unmount();
     }

@@ -550,6 +550,18 @@ function Result({
     const patches = advertPatches(advert);
     const variantId = `${planogramId}_asread`;
 
+    // What is on disk, tracked as it happens rather than inferred afterwards.
+    // Two writes and no transaction, and only two of the three ways this can
+    // fail carry a status code: a refusal answers with a `Response` and the
+    // branch that reads it knows exactly how far the save got, but a dropped
+    // connection, an aborted request or an API restarted between the POSTs
+    // throws, and the `catch` below is handed no response to reason from. It
+    // used to assume nothing had landed, which is right for a throw on the
+    // first write and a lie about the second — the planogram is stored, and
+    // the operator is told the database is untouched. This flag is the only
+    // thing either branch needs to tell those two apart.
+    let planogramStored = false;
+
     try {
       const stored = await fetchImpl("/api/planograms", {
         method: "POST",
@@ -561,6 +573,7 @@ function Result({
         setSave({ status: "failed", detail: await detailOf(stored), planogramId: null });
         return;
       }
+      planogramStored = true;
 
       const variant = await fetchImpl("/api/variants", {
         method: "POST",
@@ -594,7 +607,11 @@ function Result({
       setSave({
         status: "failed",
         detail: error instanceof Error ? error.message : String(error),
-        planogramId: null,
+        // Not a hardcoded null. A throw out of the *second* fetch leaves the
+        // planogram on disk under an id nothing else on this screen can now
+        // reconstruct, and the half-state message below is the only place the
+        // operator will ever see it.
+        planogramId: planogramStored ? planogramId : null,
       });
     }
   };

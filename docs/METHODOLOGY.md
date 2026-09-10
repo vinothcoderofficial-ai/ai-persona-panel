@@ -15,7 +15,7 @@ real panel and a synthetic one. **At the time of writing only one of those two p
 
 | | State |
 |---|---|
-| Synthetic panel (10,000 shoppers × 4 personas × 3 variants) | **Computed.** Regenerate with `make eval`; every number in `RESULTS.md`'s synthetic sections comes from it. |
+| Synthetic panel (10,000 shoppers × 4 personas × 4 variants) | **Computed.** Regenerate with `make eval`; every number in `RESULTS.md`'s synthetic sections comes from it. |
 | Real panel (`data/sessions/anon/`) | **Empty.** No human has shopped a recorded session. PLAN S9 (webcam pilot on 5 laptops) and S21 (collect ≥ 60 sessions) are outstanding. |
 | Prediction locks (`predictions/`) | **One**, from the single session that has been through the flow, plus one dev run. Enough to prove the mechanism (§6), not remotely a panel — and it cannot be graded, because no accepted session was ever exported to `data/sessions/anon/`. |
 | Persona decision traces (`data/cache/traces/`) | **Real.** 80 trips from `deepseek-v4-pro:cloud`, 4 personas x 20 shoppers, 973 turns, 1 rejection. `sim/slow_agent.py` still refuses to write a trace a test double produced, and a guard test asserts every committed trace names its model. |
@@ -451,9 +451,16 @@ what SPEC 4.6 actually asks for — is that no behaviour was recorded before the
 The spectator screen shows the hash prefix and `created_at` in a badge before the shopping
 starts, so the ordering is visible on the recording rather than only in a file.
 
-**Current state:** zero locks exist, because zero real sessions exist. `scripts/eval.py` treats
-an empty panel as a successful run (exit 0) and reports `Prediction locks found: 0` rather than
-implying a verification that did not happen.
+**Current state:** **one** lock exists — `predictions/da18f055-…json`, from the single session
+that has been through the flow — and `RESULTS.md` reports `Prediction locks found: 1`, with its
+`sha256` recomputed from the file and matched. What it also reports is `Locks verified to predate
+their session's first event: 0`, and the gap between those two lines is the honest state of this
+section: the digest check needs only the lock, and passes; the *ordering* check needs the
+session's events, and that session has never been exported into `data/sessions/anon/`. So the
+mechanism is proven and the claim it exists to support is still ungraded.
+
+`scripts/eval.py` treats an empty panel as a successful run (exit 0) rather than implying a
+verification that did not happen, which is why both numbers are printed instead of one.
 
 ---
 
@@ -575,7 +582,8 @@ Objective, minimised: `(1 − attention_spearman) + 5 × purchase_share_mae`. Bo
 `analytics/metrics.py`; neither is reimplemented in the calibration module.
 
 **Fit on variant A only.** `calibrate()` takes one variant's real panel and one variant's
-per-persona simulation, and the caller passes A. Fitting on B or C would consume the holdout.
+per-persona simulation, and the caller passes A. Fitting on B, C or D would consume the holdout —
+`RESULTS.md` names all three as held out.
 The fitted variant id is echoed in the result, and `evaluate()` scores the other variants under
 the **frozen** shares without re-fitting. `RESULTS.md` reports fit and holdout separately, always.
 
@@ -793,9 +801,9 @@ a different category, a different fixture or a different country.
 Grounding DINO on a GPU laptop. That detector was dropped under PLAN §5's own four-hour CUDA
 timebox — the available GPU (GeForce MX250) is far below what fp16 Grounding DINO needs, and this
 machine has no CUDA torch. The track was then **rebuilt on classical CV** rather than abandoned:
-`vision/` is seven modules and about 1,450 lines (`frames`, `camera`, `shelves`, `facings`,
+`vision/` is seven modules and about 1,620 lines (`frames`, `camera`, `shelves`, `facings`,
 `track`, `planogram`, `pipeline`), `web/src/vision/VisionView.tsx` renders the result at `#/vision`,
-and `vision/tests/` is 115 passing tests. An earlier revision of this section said the package was
+and `vision/tests/` is 138 passing tests. An earlier revision of this section said the package was
 a stub and the screen empty; that has not been true since S30.
 
 **What it reads.** Horizontal edge rows → shelf bands; colour runs within a band → facing boxes;
@@ -807,6 +815,13 @@ and promotional signage. `vision/planogram.py` writes those absences into the do
 `brand: "unknown"`, `name: "unidentified product N"`, `price: 0`, `promo: false` and emits no ad
 slots at all. `price` feeds `price_sensitivity` and `promo` feeds `promo_sensitivity` in every
 persona policy, so a plausible guess there would not be cosmetic — it would move numbers.
+
+None of that makes an ad impossible on a video-read shelf, and it used to be written here as if it
+did. The operator supplies what the camera cannot: `#/vision` takes a brand and a shelf, and the
+save writes a creative onto the planogram plus the two variant patches — `add_ad_slot` to hang the
+fixture, `set_ad_creative` to book it — so the same lift maths runs on a shelf read from a clip.
+Both halves are operator-supplied and both say so, in the variant's own name and on the screen
+above the fields. What the pipeline still refuses to do is *detect* signage or invent it.
 
 **The limits, as measured.** Two failure modes were found by running the pipeline against its own
 fixture with the degradations a hand-held phone adds, and both were silent before they were fixed:
@@ -852,10 +867,16 @@ lighting, no perspective convergence, no occlusion, no motion blur, no reflectio
 It reads that clip correctly — five shelves and eight facings, matching bay 1 — and that is a
 statement about the seven stages composing, **not** a claim about accuracy on a real aisle. No
 number here has been validated against a shop. `data/planograms/video_aisle.json` is still not
-committed, and `#/vision` writes nothing to the database and says so on screen, because a planogram
-derived from a picture this repository drew is not evidence about a shop and would be
-indistinguishable from one that was the moment it became JSON. `requirements-vision.txt` holds the
-GPU upgrade path for the identities half; it has not been run.
+committed, and `POST /vision/planogram` still returns `saved: false` and writes nothing — reading a
+clip is not committing a store. What the screen has gained since is a *deliberate* second step:
+**keep this reading** upserts a `video_`-prefixed, run-stamped planogram plus a zero-patch variant
+on it, so a shelf read from a clip can be shopped and scored. Nothing about that step is implicit
+and nothing about it fills a field the camera could not see — the id, the `source: "video"` field,
+the document name and the per-SKU names all keep saying which rows a camera measured and which a
+person typed. That labelling is the whole safeguard, because a planogram derived from a picture
+this repository drew is not evidence about a shop and would be indistinguishable from one that was
+the moment it became JSON. `requirements-vision.txt` holds the GPU upgrade path for the identities
+half; it has not been run.
 
 The "foundation for AR / spatial" claim still rests on the planogram JSON being renderer-agnostic,
 not on this ingest path being trustworthy on real footage.
@@ -905,7 +926,7 @@ building*, and nothing here widens that.
 S24 (placement optimizer) and S25 (ad slot value) are both built, so PLAN §1's "three outputs,
 in increasing value" now describes three built outputs. What follows is what they do *not* show.
 
-Three limits on what the optimizer's ranking and its price tag can be said to show:
+Six limits on what the optimizer's ranking and its price tag can be said to show:
 
 * **The ranking is unresolved, but — since the default changed — no longer a run-size artefact.**
   This bullet used to say the opposite, and the correction is instructive rather than
@@ -943,12 +964,22 @@ Three limits on what the optimizer's ranking and its price tag can be said to sh
   to order. A rank that wobbles among rows declared unresolved is the report working, not
   drifting.
 
-  Same leader, same rank for the current placement, and a seed spread that *narrows* with run size
-  rather than reshuffling. **Stable is not resolved**: at both sizes the leader's spread still
-  overlaps several rivals, the screen names them, and no placement clears the current placement's
-  spread — so "moving beats where it is now" remains unsupported. What changed is that the
-  ordering is no longer being driven by the estimator's own variance, so more shoppers would now
-  be expected to settle it rather than merely rearrange it.
+  **Stable is not resolved** — but the two halves of "not resolved" behave differently as the run
+  grows, and conflating them is how this paragraph was wrong for a while.
+
+  *Top pick against runner-up* is unsettled at every size measured: the leader's spread overlaps
+  rivals the ranking then names on screen. *Top pick against the current placement* is unsettled
+  only at the 10,000 the screens run. From 50,000 up the run prints
+
+  ```
+  1 placement(s) clear the current placement's seed spread entirely: ad:AD_1@B1_TALKER. That
+  pair is settled at this n_synth even where the order among the leaders is not.
+  ```
+
+  and at 500,000 a second candidate joins it. So "moving beats where it is now" is unsupported at
+  the default run size and supported above it — which is exactly what changed when the ordering
+  stopped being driven by the estimator's own variance: more shoppers now settle the question
+  rather than merely rearrange the answer.
 
   The honest summary of the change: swapping to the randomised estimator cost roughly five-fold in
   headline magnitude and bought most of the stability back.
@@ -962,9 +993,10 @@ Three limits on what the optimizer's ranking and its price tag can be said to sh
   which is the check a seed spread structurally cannot make, because every seed it re-rolls is
   drawn at the same size.
 
-* **Two different claims, and only one of them is buyable.** Everything in this bullet was
-  measured on the **within-run** objective, when it was the default. It has not been re-measured
-  at 250k and 500k against the between-arm default, and it should not be quoted as though it had.
+* **Two different claims, and only one of them is buyable.** The next two paragraphs record what
+  the **within-run** objective said while it was the default, and are kept as that record; the
+  between-arm re-measurement follows them and is the one today's screens rank on. Do not quote a
+  number from one half as though it came from the other.
 
   Top pick versus runner-up was not separable at any feasible size: the gap is ~0.4 points and
   separating it would need `n_synth` ≈ 3.7 million (~1.8 h per ranking). Top pick versus **the
@@ -994,6 +1026,12 @@ Three limits on what the optimizer's ranking and its price tag can be said to sh
   So at 250k the settled recommendation is an **ad move**, `AD_1` from the bay-3 endcap to the
   bay-1 shelf talker — where the within-run estimator said no ad move cleared the current
   placement below 500k, and that the only settled claim was a SKU move.
+
+  That pair is already settled one rung lower. `python scripts/optimize.py --focal-sku SKU_008
+  --n-synth 50000` prints the same `1 placement(s) clear …: ad:AD_1@B1_TALKER` line, with the
+  leader at +2.0% (seeds +1.9%..+2.3%) against the current placement's +1.0% (seeds
+  +0.7%..+1.1%). **50,000 is the lowest rung on the ladder at which anything clears today's
+  placement**; at the 10,000 the screens run, nothing does.
 
   At 500,000 a second candidate joins it — the run prints *"2 placement(s) clear the current
   placement's seed spread entirely: ad:AD_1@B1_TALKER, sku:SKU_008@top"* — so the ad move and the

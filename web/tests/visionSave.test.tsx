@@ -176,10 +176,24 @@ function json(status: number, body: unknown): Response {
   });
 }
 
-/** What each POST should answer with. Absent means 201 and an echo. */
+/**
+ * What each POST should answer with. Absent means 201 and an echo.
+ *
+ * An `Error` rather than a `Response` makes that fetch *throw*, which is the
+ * other half of how a save fails and is not the same code path as a refusal: a
+ * dropped connection, an aborted request or an API restarted mid-save never
+ * produces a `Response` at all, so the component learns nothing from a status
+ * line and everything from which writes it had already got through.
+ */
 interface Outcomes {
-  planograms?: Response;
-  variants?: Response;
+  planograms?: Response | Error;
+  variants?: Response | Error;
+}
+
+/** A stubbed outcome, delivered the way the real `fetch` would deliver it. */
+function deliver(outcome: Response | Error): Response {
+  if (outcome instanceof Error) throw outcome;
+  return outcome;
 }
 
 async function mount(outcomes: Outcomes = {}): Promise<Harness> {
@@ -194,8 +208,14 @@ async function mount(outcomes: Outcomes = {}): Promise<Harness> {
     calls.push({ url: input, method, body });
 
     if (input.endsWith("/vision/planogram")) return json(200, RESPONSE);
-    if (input.endsWith("/planograms")) return outcomes.planograms ?? json(201, body);
-    if (input.endsWith("/variants")) return outcomes.variants ?? json(201, {});
+    if (input.endsWith("/planograms")) {
+      return outcomes.planograms === undefined
+        ? json(201, body)
+        : deliver(outcomes.planograms);
+    }
+    if (input.endsWith("/variants")) {
+      return outcomes.variants === undefined ? json(201, {}) : deliver(outcomes.variants);
+    }
     throw new Error(`unexpected request to ${input}`);
   };
 
@@ -654,6 +674,58 @@ describe("what the screen says about saving", () => {
       expect(said).toContain("unknown base_planogram_id");
       expect(said).toContain(savedPlanogram(harness).planogram_id);
       expect(maybe(harness, "vision-open-store")).toBeNull();
+    } finally {
+      harness.unmount();
+    }
+  });
+
+  it("admits the same half-done state when the variant request never completes", async () => {
+    // The identical half-state, arriving down the other path. A refusal comes
+    // back as a `Response` and carries a status line; a dropped connection, an
+    // aborted request or an API restarted between the two POSTs throws, and
+    // there is no response to read anything off. What the operator is owed is
+    // the same in both cases, because what is on disk is the same in both
+    // cases: the planogram landed, the variant did not, and the id of the
+    // planogram they now own is the one thing they cannot reconstruct from the
+    // screen. Reporting this as "nothing was saved" is a lie they find out
+    // about the next time they list /planograms — with a store they cannot
+    // name sitting in it.
+    const harness = await mount({
+      variants: new TypeError("Failed to fetch"),
+    });
+    await labelAndSave(harness);
+    try {
+      const said = text(harness, "vision-save-error");
+      expect(said).toContain("Failed to fetch");
+      expect(said).toContain(savedPlanogram(harness).planogram_id);
+      expect(said).not.toContain("Nothing was saved");
+      // The caution that says the database is untouched is now false, so it
+      // must be gone: half of this write is committed.
+      expect(maybe(harness, "vision-not-saved")).toBeNull();
+      expect(maybe(harness, "vision-open-store")).toBeNull();
+      expect(maybe(harness, "vision-saved")).toBeNull();
+    } finally {
+      harness.unmount();
+    }
+  });
+
+  it("still says nothing was saved when the first request never completes", async () => {
+    // The other side of the same coin, and the reason the flag has to be set
+    // from what actually happened rather than assumed either way: when the
+    // planograms POST itself throws, nothing reached the database and the
+    // "not saved" caution is exactly right. A fix that reported the half-state
+    // unconditionally would send this operator hunting for a planogram that
+    // does not exist.
+    const harness = await mount({
+      planograms: new TypeError("Failed to fetch"),
+    });
+    await labelAndSave(harness);
+    try {
+      const said = text(harness, "vision-save-error");
+      expect(said).toContain("Nothing was saved");
+      expect(said).toContain("Failed to fetch");
+      expect(maybe(harness, "vision-not-saved")).not.toBeNull();
+      expect(maybe(harness, "vision-saved")).toBeNull();
     } finally {
       harness.unmount();
     }

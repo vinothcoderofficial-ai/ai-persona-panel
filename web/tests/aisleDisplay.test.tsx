@@ -166,16 +166,30 @@ function mount(ui: ReactElement): { container: HTMLDivElement; unmount: () => vo
   };
 }
 
-function mountScene(): { container: HTMLDivElement; unmount: () => void } {
+function mountScene(document: Planogram = planogram): {
+  container: HTMLDivElement;
+  unmount: () => void;
+} {
   return mount(
     <PlanogramScene
-      planogram={planogram}
+      planogram={document}
       logger={new NullSink()}
       tracker={null}
       consent={true}
       mode="cursor_only"
     />,
   );
+}
+
+/**
+ * The committed aisle with its second and third gondolas taken away.
+ *
+ * This is the shape of every planogram the video pipeline produces:
+ * `vision/planogram.py` emits exactly one bay, 1.2 m wide, whatever the clip
+ * showed, and `#/vision` saves that document and opens the store on it.
+ */
+function singleBay(): Planogram {
+  return { ...planogram, bays: [planogram.bays[0]] };
 }
 
 function loadingOverlay(container: HTMLElement): HTMLElement | null {
@@ -311,6 +325,96 @@ describe("where the display prop stands", () => {
     expect(columnBottom).toBeCloseTo(0, 6);
     const columnTop = place.column.y + place.columnSize.h / 2;
     expect(columnTop).toBeCloseTo(place.deck.y - place.deckSize.h / 2, 6);
+  });
+});
+
+describe("a store with only one bay", () => {
+  /*
+   * Rule 1 again, in the one case where the placement cannot obey it.
+   *
+   * `aisleDisplayPlacement` puts the plinth at `gapCenterX(planogram, 0)` — the
+   * middle of the 0.30 m gap between bay 1 and bay 2 — and everything
+   * geometry.ts argues for that spot depends on there being a bay on both
+   * sides of it: it belongs to no bay, it holds no slot, and it is read as
+   * furniture standing in a gondola run rather than as part of either
+   * neighbour. On a one-bay store there is no second gondola and no gap. The
+   * same arithmetic then puts the prop just past the right edge of the only
+   * bay, in open aisle, with its deck 2 cm off the carcass — which is the "it
+   * reads as part of the shelf" failure the whole placement note exists to
+   * avoid, and a video-read bay can carry a facing running the full 1.2 m to
+   * that same edge.
+   *
+   * This is not a hypothetical store. `vision/planogram.py` always emits
+   * exactly one bay, and `#/vision` saves that document and links straight
+   * into the store on it, so every clip anybody uploads lands here.
+   *
+   * The bottle is decoration, so the answer is to leave it out: the seed store
+   * keeps it (the portal's "sample 3D model" row depends on it being in the
+   * scene, and that is what the tests above pin), and a store with nowhere to
+   * put it gets no display rather than a misplaced one.
+   */
+
+  it("stands the prop 2 cm off the only bay instead of in a gap", () => {
+    // The measurement the skip is for, taken rather than asserted by eye.
+    const single = singleBay();
+    expect(single.bays).toHaveLength(1);
+
+    const place = aisleDisplayPlacement(single);
+    const bayRight = bayLeftX(single, 0) + single.bays[0].width_m;
+    const deckLeft = place.deck.x - place.deckSize.w / 2;
+
+    // In a real gap the deck has BAY_GAP_M/2 = 0.15 m of clear air on each
+    // side of its centre line and 0.02 m of it to spare beyond the deck's own
+    // half-width. With no bay on the right, all of that clearance is on the
+    // side where there is nothing, and the deck ends up all but touching the
+    // only bay there is.
+    expect(deckLeft - bayRight).toBeCloseTo(0.02, 6);
+    expect(deckLeft - bayRight).toBeLessThan(BAY_GAP_M / 2);
+  });
+
+  it("renders no display at all, neither plinth nor bottle", async () => {
+    const view = mountScene(singleBay());
+
+    await act(async () => {
+      gates.shelves.resolve();
+    });
+    await settle();
+    await act(async () => {
+      gates.model.resolve();
+    });
+    await settle();
+
+    expect(displayPlinth(view.container)).toBeNull();
+    expect(displayBottle(view.container)).toBeNull();
+    // Skipped, not failed: nothing threw, so no boundary anywhere fired.
+    expect(errorOverlay(view.container)).toBeNull();
+    expect(loadingOverlay(view.container)).toBeNull();
+    // And the store itself is the whole point of the screen, so it is still
+    // shoppable with the decoration missing.
+    expect(view.container.textContent).toContain("Cart (0)");
+
+    view.unmount();
+  });
+
+  it("keeps the display in the committed multi-bay store", async () => {
+    // The other half of the same rule, and the reason this is a skip and not a
+    // deletion: `data/models/README.md` and the portal requirement both rest on
+    // the CC0 asset actually being in the seed scene.
+    const view = mountScene();
+
+    await act(async () => {
+      gates.shelves.resolve();
+    });
+    await settle();
+    await act(async () => {
+      gates.model.resolve();
+    });
+    await settle();
+
+    expect(displayPlinth(view.container)).not.toBeNull();
+    expect(displayBottle(view.container)).not.toBeNull();
+
+    view.unmount();
   });
 });
 

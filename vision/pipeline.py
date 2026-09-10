@@ -91,6 +91,16 @@ class Result:
     bands: List[Band]
     tracks_by_band: Dict[Tuple[int, int], List[Track]]
     frames_sampled: int
+    # The rate the clip was sampled at, carried for the same reason
+    # `roll_degrees` is: everything in this result was read off *those* frames,
+    # and anything drawn over a different sampling of the same clip is a
+    # picture of frames the numbers did not come from. `write_overlays` used to
+    # re-sample at a hardcoded 2 fps while `run` took whatever `--fps` said, so
+    # `--fps 5 --overlays` wrote boxes from one set of frames over the images
+    # of another - and the only artefact anybody can audit the reading against
+    # was the thing that was wrong. Carried rather than passed again so no
+    # caller can get it wrong.
+    frames_fps: float
     notes: List[str]
     # How far off level the clip was, and therefore how far every frame was
     # turned before anything was measured. Carried rather than discarded
@@ -239,6 +249,7 @@ def run(
         bands=bands,
         tracks_by_band=tracks_by_band,
         frames_sampled=len(frames),
+        frames_fps=fps,
         notes=notes,
         roll_degrees=roll_degrees,
     )
@@ -275,6 +286,13 @@ def draw_overlay(frame: np.ndarray, result: Result) -> np.ndarray:
 def write_overlays(video_path: str | Path, result: Result, out_dir: str | Path) -> List[Path]:
     """Draw the reading over the sampled frames and write them as PNGs.
 
+    The clip is re-sampled at `result.frames_fps` and capped at
+    `result.frames_sampled`, which between them reproduce exactly the frames
+    `run` read - `extract_frames` samples by frame index, so the same rate and
+    the same count give the same indices. Sampling at a rate of this
+    function's own would draw the boxes over frames the boxes did not come
+    from, which is the one thing these images must not do.
+
     The frames are turned back by the same angle `run` measured before they are
     drawn on. `result.bands` and every track box are in the corrected frame, so
     drawing them over the raw footage would put every box a few degrees away
@@ -285,7 +303,9 @@ def write_overlays(video_path: str | Path, result: Result, out_dir: str | Path) 
     directory.mkdir(parents=True, exist_ok=True)
 
     written: List[Path] = []
-    for frame in extract_frames(video_path, fps=2.0, max_frames=result.frames_sampled):
+    for frame in extract_frames(
+        video_path, fps=result.frames_fps, max_frames=result.frames_sampled
+    ):
         path = directory / f"frame_{frame.index:05d}.png"
         levelled = deskew(frame.image, result.roll_degrees)
         cv2.imwrite(str(path), draw_overlay(levelled, result))

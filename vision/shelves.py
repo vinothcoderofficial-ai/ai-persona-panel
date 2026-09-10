@@ -40,10 +40,15 @@ MERGE_WITHIN_PX = 18
 # it, a merged lip's leftovers become a shelf of zero-height slots.
 MIN_BAND_PX = 20
 
-# How strong a row's horizontal-edge response must be, relative to the
-# strongest row in the frame, before it counts. Relative rather than absolute
-# so exposure and contrast do not change the shelf count.
-PEAK_FRACTION = 0.35
+# There is deliberately no second, *relative* bar here - no "a row must also be
+# some fraction of the frame's strongest row". One was carried until it was
+# measured and found to be inert: the profile is a fraction of the frame width,
+# so it is at most 1.0; candidates have already cleared `MIN_SPAN` at 0.55; and
+# 0.35 of at-most-1.0 cannot exclude a row that has cleared 0.55. It would have
+# taken a profile maximum above 1.571 to drop even one, which a fraction cannot
+# reach. Its stated job - that exposure and contrast must not change the shelf
+# count - is real and is done a step earlier, by the per-frame gradient
+# threshold inside `_horizontal_edge_profile`.
 
 
 @dataclass(frozen=True)
@@ -90,20 +95,24 @@ def shelf_edge_rows(frame: np.ndarray) -> List[int]:
     Empty when the frame has none. That is the important case: a blank wall, a
     frame of somebody's coat, a shot of the floor. Returning a best guess there
     would put a shelf in a planogram that nothing was ever filmed on.
+
+    Span is the only test, and it is worth being plain about what that does not
+    cover: a faint horizontal texture running the full width of the frame -
+    brickwork, a slatted wall, blinds - reads as shelves, because
+    `_horizontal_edge_profile` thresholds against the frame's own gradient range
+    and a full-width scratch is then a full-width edge. Measured: 183-grey rows
+    every 24 rows on 190-grey backing - a seven-value texture - return 20 shelf
+    edges on a 480-row frame, 24 being just above `MERGE_WITHIN_PX`. Contrast
+    cannot be the discriminator here without also losing a real lip
+    photographed flatly, which is why it is not one; `pipeline.py` writes the band
+    count into its notes so a reading like that is visible rather than implied.
     """
     profile = _horizontal_edge_profile(frame)
     if profile.size == 0:
         return []
 
-    # Long enough to be a shelf rather than a label...
+    # Long enough to be a shelf rather than a label.
     candidates = np.flatnonzero(profile >= MIN_SPAN)
-    if candidates.size == 0:
-        return []
-
-    # ...and strong relative to this frame's own strongest row, so a frame full
-    # of faint texture does not produce a hundred shelves.
-    threshold = PEAK_FRACTION * profile.max()
-    candidates = np.array([row for row in candidates if profile[row] >= threshold])
     if candidates.size == 0:
         return []
 

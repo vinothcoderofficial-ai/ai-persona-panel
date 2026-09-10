@@ -47,6 +47,11 @@ Decide which before you record, and say the matching line from `script.md`:
 
 Do not record option B by accident. If the key is dead and nobody chose, take option C.
 
+**As this repository stands the choice has already been made: `.env` carries `LLM_OFFLINE=1`, so
+the machine is on option C and `GET /ai/status` reports `can_call: false`.** Option B is only
+reachable by setting `LLM_OFFLINE=0` and leaving the dead key in place — which is to say, by
+undoing C on purpose. Changing nothing is now the safe move rather than the risky one.
+
 ### 2. `#/vision` reads a rendering, not real footage
 
 There is no video of a real aisle in this project and none can be invented. The only clip is
@@ -156,7 +161,11 @@ Pre-flight: `python scripts/make_vision_fixture.py` has been run. The clip is
 1. Read the intro line on screen aloud or paraphrase it — it states the pipeline's limits before
    anything is uploaded, which is the right order.
 2. Choose the clip.
-3. It returns in about **2 seconds** on a warm API.
+3. It returns in about **3–4 seconds**. Measured over three consecutive reads of this clip on the
+   machine this file was written on: 4.1 s, 3.3 s, 3.4 s. Nothing about the read is cached — the
+   whole pipeline runs every time — so there is no warm-up to fire and no faster second take. It
+   is CPU-bound and therefore **machine-dependent**: time it on the recording laptop before you
+   plan the beat around it.
 
 What comes back, verified:
 
@@ -181,6 +190,23 @@ Point at three things and no more:
 * the **confidence** on each facing, which is per-frame distinctness multiplied by how many of the
   8 frames agreed;
 * the **"this reading was not saved"** box. Reading a video is not committing a store.
+
+Then the second half of the shot, which `script.md` narrates and this list used to leave out
+entirely — the divisions of labour, in this order:
+
+4. **Label two or three rows on camera** — a category, a brand, a price — and say the other five
+   are the same. Categories come from a dropdown of `shoppable_categories`, the union of every
+   persona's `goal_categories`, because a category no persona is going after produces a deserted
+   store. A field left blank stays `unknown` or 0; the screen never fills one for you.
+5. **The advertising panel.** Name the brand being advertised and the shelf its talker hangs on.
+   The camera detected no signage and the pipeline emits none, so this is operator-placed and the
+   saved variant's name records that. Leave the brand blank and neither fixture nor creative is
+   saved; name a shelf without a brand and nothing is booked, and the screen says why.
+6. **Press "keep this reading"**, then follow the link into the store. Only now is anything
+   written: a `video_`-prefixed, run-stamped planogram plus a zero-patch variant, or — if you
+   named a brand — that variant carrying `add_ad_slot` and `set_ad_creative`. **Claim the save
+   only once it is on screen, and only after the labelling**, or the shot claims the pipeline
+   identified products it did not.
 
 ### Shot 4 — the store (1:10–1:45)
 
@@ -277,7 +303,7 @@ Verified against a running instance:
 |---|---|
 | provider | `ollama` |
 | model | `deepseek-v4-pro:cloud` |
-| live calls | `configured` — see the warning; this says a credential is present, not that it works |
+| live calls | **Not possible as this machine stands.** `GET /ai/status` returns `offline: true`, `api_key_set: true`, `can_call: false`, with the reason printed verbatim on screen: *"LLM_OFFLINE=1: no request will be sent. Cached policies and traces are served instead. Set LLM_OFFLINE=0 in .env to ask the model again."* That is option C, and it matches the pre-flight note below. An earlier version of this row read `configured`, which was true before `LLM_OFFLINE=1` was set and is not now — a key being present is not the same as a call being possible, and the screen distinguishes them |
 | personas | 4, each with a cached policy and 20 traced shoppers |
 | traces | **80 shopping trips, 973 turns total** — browser 435, loyalist 245, switcher 194, mission 99 |
 
@@ -316,8 +342,16 @@ Stop it before it finishes; the point is made in five turns.
 2. Let `HeatmapDiff` finish its 600 ms animation and let `LiftBars` settle.
 
 Reference values at seed 42, verified: the eye-level move reports about **+0.78 focal attention**
-and **+1.15 focal purchase share** relative to baseline. `elapsed_ms` is **1 ms warm**; the first
-call after a cold start was 410 ms, so fire one warm-up before recording.
+and **+1.15 focal purchase share** relative to baseline (0.7770 and 1.1471 exactly, from
+`POST /whatif`). `elapsed_ms` reads **1 ms warm**; the first call after a cold start measured
+269 ms, so fire one warm-up before recording. Both timings are machine-dependent — read whatever
+the screen says on the day rather than these.
+
+Measure it the way the screen does, if you re-check it. `elapsed_ms` is the **server's** own
+compute time, which is what `WhatIfPanel` prints and says it is printing; a stopwatch on the
+round trip includes the network and the render and reads a few milliseconds higher. Substituting
+one for the other is how this line briefly came to say 2-4 ms, which would have had the presenter
+read a number the screen was not showing - the thing the last rule in this file forbids.
 
 The heatmap rows are now **named as products** rather than as slot ids. Worth one clause — it is
 the difference between a demo a stranger can read and one only the authors can.
@@ -339,13 +373,14 @@ Verified, with `SKU_008`:
 | top pick | `AD_1 on B1_TALKER (shelf_talker, bay B1)` at **+2.5 %** |
 | today's placement | **4th of 13**, at +0.9 % |
 | order settled? | **no** — the panel says so, and names the rows it is not ranked against |
-| placements clearing today's spread | **none** |
-| wall time | ~2 s warm, ~8 s cold |
+| placements clearing today's spread | **none**, at this run size |
+| wall time | **7–11 s cold; ~50 ms if the identical ranking is re-run.** Machine-dependent — measure it on the recording laptop |
 
 Re-measured after the optimizer was moved onto the randomised estimator. **The old numbers in
 this table were +12.7 % and 5th of 13**, from the within-run exposed-versus-unexposed split. If
-you have rehearsed those, unlearn them: the screen now says +2.5 % and 4th, and the gap between
-those two pairs is the entire point of shot 7c.
+you have rehearsed those, unlearn them: the screen now says +2.5 % and 4th. (There is no shot 7c;
+an earlier draft of this file pointed at one and the pointer is removed rather than left dangling.
+The gap between the two estimators belongs to shot 7b, above.)
 
 Point at exactly two things:
 
@@ -358,22 +393,28 @@ you what it has *not* established. And no placement clears today's spread either
 where it is now" is not a claim this run size supports in any direction.
 
 **Do not say the ordering is a run-size artefact.** That was true of the old estimator and is not
-true of this one — measured on the committed aisle, `AD_1 on B1_TALKER` leads at both 10,000
-(+2.5 %) and 50,000 (+2.0 %), today's placement holds 4th at both, and the leader's seed spread
-*narrows* from +1.3…+2.5 to +1.9…+2.3. The within-run split moved its leader around because its
-numerator came from the ad-exposed arm, roughly one purchase event in 42; the between-arm
-comparison divides by two whole populations and does not have that problem. Stable is not the same
-as resolved, and the amber box is still the honest thing to point at.
+true of this one — measured on the committed aisle, `AD_1 on B1_TALKER` leads at all four rungs of
+the ladder: 10,000 (+2.5 %), 50,000 (+2.0 %), 250,000 (+2.1 %) and 500,000 (+2.0 %), with the
+leader's seed spread *narrowing* from 1.2 points wide (+1.3…+2.5) to 0.2 (+1.8…+2.0). Today's
+placement holds 4th at 10k and 50k and wanders between 3rd and 5th above that, which is not a
+contradiction: its value sits at +0.9…+1.0 % throughout, inside the cluster of rows the ranking
+explicitly refuses to order. The within-run split moved its *leader* around because its numerator
+came from the ad-exposed arm, roughly one purchase event in 42; the between-arm comparison divides
+by two whole populations and does not have that problem. Stable is not the same as resolved, and
+the amber box is still the honest thing to point at.
 
-**If a judge asks whether it ever settles:** yes, at 250,000 shoppers, off-camera — and it settles
-*for* the ad move, `AD_1` to the bay-1 shelf talker at +2.1 % against today's +1.0 %, seed ranges not
-overlapping. Under the old within-run estimator no ad move cleared today's placement below 500k and
+**If a judge asks whether it ever settles:** yes, and sooner than this file used to say. The
+earliest rung that settles it is **50,000** — one rung above the screen, 5× the run size — where
+the run prints *"1 placement(s) clear the current placement's seed spread entirely:
+ad:AD_1@B1_TALKER"*, the leader at +2.0 % (seeds +1.9…+2.3) against today's +1.0 % (seeds
++0.7…+1.1), the ranges not overlapping. It stays settled at 250k and 500k, and at 500k a SKU move
+joins it. Under the old within-run estimator no ad move cleared today's placement below 500k and
 the only settled claim was a SKU move, so this reversed when the estimator did. One aisle, one
-creative, 25× the run size on screen. Answer the question with it; do not narrate it over a 10k screen.
+creative. Answer the question with it; do not narrate it over a 10k screen.
 
-Say "beats where it is now", not "is the best placement". Even at 250k the order *among the
-leaders* is still unsettled — the only pair the code calls settled is the top pick against today's
-placement, and it says so in those words.
+Say "beats where it is now", not "is the best placement". At every size measured, 500k included,
+the order *among the leaders* is still unsettled — the only pair the code ever calls settled is
+the top pick against today's placement, and it says so in those words.
 
 So do not say "so we should move the creative to the shelf talker".
 
@@ -436,14 +477,24 @@ are built, and `docs/figures/` holds four heatmaps and the what-if GIF.
 - [ ] `python scripts/make_vision_fixture.py` has run — `data/vision/demo_aisle.mp4` exists
 - [ ] `make seed` has run — `web/public/textures/*.png` exist (gitignored, 32 files)
 - [ ] `make validate` → **13 files, 0 errors**
-- [ ] `make test` → green: **999 python, 681 web**
+- [ ] `make test` → green: **1,067 python** (46 files, `1067 passed in 437.72s`) and **699 web**
+      (61 files). Both counts were read off a run made while this line was written and both suites
+      are still growing — what the checklist actually requires is *green*, not these two numbers
 - [ ] `make eval` → `RESULTS.md` and `docs/figures/heatmap_*.png` regenerated today
 - [ ] `make api` and `make web` both up
 
 ### Warm up before rolling
 
-- [ ] **One warm-up what-if and one warm-up optimize already fired.** Cold calls are ~410 ms and
-      ~8 s; warm are ~1 ms and ~2 s, and the difference is visible on camera
+- [ ] **One warm-up what-if and one warm-up optimize already fired**, with exactly the inputs the
+      take will use. Measured on the machine this file was written on: the what-if is ~390 ms cold
+      and 2–4 ms after; the optimize ranking is **7–11 s cold** over four fresh processes (11.4,
+      8.3, 6.8, 10.3 s) and **~50 ms** when the same ranking is asked for again, because
+      `api/app/simcache.py` still holds every arm it simulated. Both are wall-clock figures on one
+      laptop and will differ on yours — **re-measure them**, and note that the optimize warm-up
+      only helps if the focal SKU, creative, seed and run size all match the take. Change any of
+      them on camera and you are paying the cold price again
+- [ ] **The `#/vision` read is not in this list on purpose.** It is 3–4 s every time and nothing
+      caches it, so a warm-up buys nothing there
 - [ ] **Type `SKU_008` into the optimize focal-SKU box** before the take, or the space is 8
       placements and the narration says 13
 
@@ -478,8 +529,8 @@ are built, and `docs/figures/` holds four heatmaps and the what-if GIF.
   hand", never "what it answered".
 - **Quoting the old optimizer numbers.** +12.7 % and 5th of 13 came from the within-run split.
   The screen now reads +2.5 % and 4th of 13 on the between-arm lift.
-- **Saying "the best placement".** Even at 250k only the pair against today's placement is
-  settled. Say "beats where it is now".
+- **Saying "the best placement".** At no measured run size, 500k included, is the order among the
+  leaders settled; only the pair against today's placement ever is. Say "beats where it is now".
 - **Implying `#/vision` saved anything before you clicked.** Reading a clip saves nothing and the
   screen says so; there is now a deliberate **keep this reading** step, and it comes *after* the
   labelling. Claim the save only once it is on screen.

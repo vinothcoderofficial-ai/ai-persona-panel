@@ -101,6 +101,16 @@ def panned(frame: np.ndarray, dx: int) -> np.ndarray:
     return cv2.warpAffine(frame, matrix, (WIDTH, HEIGHT), borderValue=(190, 190, 190))
 
 
+def blurred(frame: np.ndarray, kernel: int = 31) -> np.ndarray:
+    """`frame` as a lens that is not perfectly focused would have delivered it.
+
+    Every other fixture in this file has one-pixel edges, which nothing filmed
+    does. The blur is not decoration here: it is what makes the search
+    objective tie, and the tie is where `estimate_roll` was wrong.
+    """
+    return cv2.GaussianBlur(frame, (kernel, kernel), 0)
+
+
 class TestEstimateRoll:
     def test_a_level_frame_has_no_roll(self) -> None:
         assert abs(estimate_roll(level_frame())) <= 0.25
@@ -135,6 +145,69 @@ class TestEstimateRoll:
         found = estimate_roll(rolled(level_frame(), 20.0))
 
         assert abs(found) <= ROLL_SEARCH_DEGREES
+
+
+class TestEstimateRollWhenAnglesTie:
+    """The objective saturates, so ties are the normal case, not the odd one.
+
+    `_edge_profile_peak` counts how much of the frame's strongest row is edge,
+    as a fraction of the width. Once a full-width lip is found the number is
+    exactly 1.0 and cannot go higher, so every angle that still lands the lip
+    on one row scores the same. A sharp fixture puts one angle there; anything
+    with a soft edge - a real lens, motion blur, an mp4 round trip - widens
+    that into a plateau of angles all scoring 1.0, symmetric about the true
+    tilt because the smearing is symmetric.
+
+    Measured on this fixture blurred at k=31: a true 0.0 ties across -0.50 to
+    +0.50 and a true +3.0 ties across +2.50 to +3.50 - five quarter-degree
+    steps either way. The peak is a plateau, and the answer is its centre.
+    Taking any other member of it is a *systematic* error rather than a noisy
+    one, which is the dangerous kind: it does not average out across the frames
+    of a clip, and `pipeline.run` deskews every frame by the one angle read off
+    the sharpest.
+    """
+
+    @pytest.mark.parametrize("degrees", [-3.0, -1.0, 0.0, 1.0, 3.0])
+    def test_a_blurred_tilt_is_read_from_the_centre_of_the_plateau(
+        self, degrees: float
+    ) -> None:
+        """Half a step, not a whole one: the centre is what the plateau means.
+
+        Before this, the search kept a candidate only on a strictly better
+        score and walked from the most negative angle upward, so the first
+        member of the plateau won and every tilt above came back half a degree
+        low - twice the quarter-degree accuracy the module claims for itself,
+        and in the same direction at every angle.
+        """
+        found = estimate_roll(blurred(rolled(level_frame(), degrees)))
+
+        assert abs(found - degrees) <= ROLL_SEARCH_STEP / 2, (degrees, found)
+
+    def test_the_error_on_a_blurred_frame_does_not_all_lean_one_way(self) -> None:
+        """A quarter degree of rounding is fine; a constant offset is not.
+
+        Averaging the signed errors separates the two. Search rounding lands
+        either side of the truth and cancels; a tie broken toward one end of
+        the plateau does not, and this fixture summed to -2.5 degrees over five
+        tilts before the change.
+        """
+        tilts = (-3.0, -1.5, 0.0, 1.5, 3.0)
+        errors = [
+            estimate_roll(blurred(rolled(level_frame(), degrees))) - degrees
+            for degrees in tilts
+        ]
+
+        assert abs(sum(errors)) <= ROLL_SEARCH_STEP / 2, list(zip(tilts, errors))
+
+    def test_a_blurred_frame_tilted_past_the_range_still_saturates(self) -> None:
+        """Reading the plateau's centre must not soften the refusal.
+
+        A plateau that runs off the end of the search was never bracketed, so
+        its centre is not a measurement - the true peak may be anywhere beyond.
+        The honest report there is the edge of the range, which is exactly what
+        `roll_is_saturated` reads and `vision/pipeline.py` refuses on.
+        """
+        assert roll_is_saturated(estimate_roll(blurred(rolled(level_frame(), 20.0))))
 
 
 class TestDeskew:

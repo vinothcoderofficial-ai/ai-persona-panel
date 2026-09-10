@@ -37,7 +37,7 @@ indistinguishable from a real one the moment it becomes JSON.
 """
 from __future__ import annotations
 
-from typing import Sequence
+from typing import List, Sequence
 
 import cv2
 import numpy as np
@@ -78,8 +78,14 @@ import numpy as np
 ROLL_SEARCH_DEGREES = 7.0
 
 # The search granularity, and therefore the accuracy `estimate_roll` claims. A
-# quarter degree costs 49 warps of one frame; an eighth would cost 97 and buy
-# nothing, because the bands it produces land on the same pixel rows.
+# quarter degree over the range above costs 57 warps of one frame; an eighth
+# would cost 113 and buy nothing, because the bands it produces land on the
+# same pixel rows.
+#
+# The estimate itself can land on a half step. `estimate_roll` returns the
+# centre of the run of angles that tie for best, and an even-length run has its
+# centre between two of them - which is a finer answer than the step, not a
+# coarser one, and `deskew` takes any angle.
 ROLL_SEARCH_STEP = 0.25
 
 # How far the camera may travel between two sampled frames, as a fraction of
@@ -112,22 +118,77 @@ def estimate_roll(frame: np.ndarray) -> float:
     a blank wall gives a flat objective, and returning its argmax would turn a
     frame by an arbitrary angle on no evidence and hand back something that
     looked corrected.
+
+    **The peak is a plateau, and the answer is its centre.** The objective is
+    the fraction of the strongest row that is edge, so it stops at exactly 1.0
+    the moment a full-width lip lands on one row and every angle that still
+    manages that scores the same. Only a drawn one-pixel edge puts a single
+    angle there; a real lens, motion blur or an mp4 round trip smears the lip
+    over several rows and widens the top into a run of tied angles, symmetric
+    about the true tilt because the smearing is symmetric. Measured on this
+    repository's fixture blurred at k=31, a true 0.0 ties from -0.50 to +0.50
+    and a true +3.0 from +2.50 to +3.50.
+
+    Picking any other member of that run is a *systematic* error, not a noisy
+    one: taking the first tried returned exactly -0.50 degrees low at every
+    tilt measured, twice the quarter-degree accuracy `ROLL_SEARCH_STEP` claims,
+    and it does not average out - `vision/pipeline.py` reads one angle off the
+    sharpest frame and deskews the whole clip by it.
+
+    Tied is tested with `==` and that is deliberate rather than sloppy: the
+    score is an integer count of strong pixels over the frame width, so equal
+    counts give bitwise equal floats and a tolerance would only start merging
+    genuinely different angles.
     """
     steps = int(round(ROLL_SEARCH_DEGREES / ROLL_SEARCH_STEP))
     angles = [index * ROLL_SEARCH_STEP for index in range(-steps, steps + 1)]
+    scores = [_edge_profile_peak(_rotate(frame, -angle)) for angle in angles]
 
-    best_angle = 0.0
-    best_score = 0.0
-    for angle in angles:
-        score = _edge_profile_peak(_rotate(frame, -angle))
-        # Strictly greater, and the list runs from negative to positive through
-        # zero, so a tie between two equally good angles keeps the smaller
-        # rotation rather than the first one tried.
-        if score > best_score:
-            best_score = score
-            best_angle = angle
+    best_score = max(scores)
+    if best_score <= 0.0:
+        return 0.0
 
-    return best_angle if best_score > 0.0 else 0.0
+    first, last = _widest_plateau(scores, best_score)
+
+    # A plateau that runs off the end of the bracket was never bracketed, so
+    # its centre is not something this measured - the objective may well go on
+    # scoring 1.0 past the last angle tried. Reporting the edge is the honest
+    # answer and the one `roll_is_saturated` reads, so the clip is refused
+    # rather than corrected by a number pulled inward by the truncation.
+    if first == 0:
+        return angles[0]
+    if last == len(angles) - 1:
+        return angles[-1]
+
+    return (angles[first] + angles[last]) / 2.0
+
+
+def _widest_plateau(scores: Sequence[float], best_score: float) -> tuple[int, int]:
+    """First and last index of the longest run of angles scoring `best_score`.
+
+    Longest rather than first, and the middle one on a tie between equally long
+    runs. Both cases are degenerate - a frame with two separate equally good
+    tilts has no single answer to give - but they have to resolve the same way
+    every time, because a committed planogram that changed between runs would
+    make every number derived from it unreproducible.
+    """
+    runs: List[tuple[int, int]] = []
+    index = 0
+    while index < len(scores):
+        if scores[index] != best_score:
+            index += 1
+            continue
+        end = index
+        while end + 1 < len(scores) and scores[end + 1] == best_score:
+            end += 1
+        runs.append((index, end))
+        index = end + 1
+
+    # `sum(run)` is twice the run's centre index and `len(scores) - 1` is twice
+    # the index of zero degrees, so the second key is distance from level in
+    # half-steps - kept negative so `max` prefers the nearer one.
+    middle = len(scores) - 1
+    return max(runs, key=lambda run: (run[1] - run[0], -abs(sum(run) - middle)))
 
 
 def roll_is_saturated(roll_degrees: float) -> bool:

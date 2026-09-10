@@ -326,7 +326,3 @@ def facing_boxes(frame: np.ndarray, band: Band) -> List[Facing]:
         )
 
     return facings
-
-
-def total_width(facings: Sequence[Facing]) -> int:
-    return sum(facing.width for facing in facings)

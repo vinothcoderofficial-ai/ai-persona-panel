@@ -67,7 +67,8 @@ Timings are the outer edge of each shot. Speak under them; the live shots need s
 > A store has to come from somewhere. Point a camera at a shelf bay, front-on, and drop the clip
 > here.
 >
-> *(Choose `data/vision/demo_aisle.mp4`. It returns in about two seconds.)*
+> *(Choose `data/vision/demo_aisle.mp4`. It returns in three or four seconds — time it on the
+> recording laptop first, it is CPU-bound and nothing about the read is cached.)*
 >
 > Eight frames sampled at two per second. Five shelves. Eight product facings. It found the shelf
 > edges, segmented each shelf into facings by colour, and agreed them across frames.
@@ -102,7 +103,10 @@ Timings are the outer edge of each shot. Speak under them; the live shots need s
 >
 > *(Click **keep this reading**, then follow the link into the store.)* And now it is a shelf you
 > can walk into, a shelf four synthetic personas will shop, and a shelf that can carry an ad
-> lift — 185 exposed purchases on ten thousand shoppers, off a clip, with nothing hand-edited.
+> lift — a hundred and eighty-five exposed purchases on ten thousand shoppers, off a clip, with
+> nothing hand-edited. *(That figure was measured on the sixty-second version of this same
+> rendering, not on the four-second one you are watching. Say "we measured" rather than "you are
+> seeing", or drop the number and say "an ad lift".)*
 > Before those fields were filled, three of the four personas never moved: every category read
 > "unknown", and none of them shop a category called unknown.
 
@@ -154,10 +158,12 @@ must not be cut is the "rendering, not footage" caveat above it.
 > refuse a session that has no lock, so there is no path by which a single event could be recorded
 > before that commitment. The clock in the corner runs the whole time.
 >
-> *(Shop for 45+ seconds across two stations, at least one interaction, hovering pack to pack.)*
+> *(Hover at least six different packs across two stations, with at least one pickup or
+> add-to-cart. Cover the shelf rather than watching the clock; there is no time requirement.)*
 >
-> Forty-five seconds, two bays, one interaction — that is the gate, and you saw what happens when
-> a session misses it.
+> Six different products, two bays, one interaction — that is the whole gate, and you saw in the
+> first minute what happens when a session misses it. Note what is *not* in that list: how long I
+> took. The clock in the corner is evidence of ordering, not a threshold.
 >
 > The heatmap on the left is building from what I am doing right now. The one on the right is the
 > locked prediction; it has not moved and it cannot.
@@ -264,22 +270,30 @@ must not be cut is the "rendering, not footage" caveat above it.
 >
 > *(Enter `SKU_008`, run.)* Thirteen configurations — every ad slot against every creative, plus
 > the focal product at every shelf level — each a full ten-thousand-shopper simulation, scored on
-> **purchase** lift rather than attention. Two seconds.
+> **purchase** lift rather than attention. *(Read the time off the meta line; do not quote a number
+> from this file.)*
 >
-> Today's planogram comes **fifth of thirteen**.
+> The winner is the bay-one shelf talker, at **plus two and a half per cent**. Today's planogram
+> comes **fourth of thirteen**, at **plus nought point nine**.
 >
-> Now read this box, because it is the honest half. **"This order is not settled."** And it names
-> the placements it is not actually ranked against.
+> Now read this box, because it is the honest half. **"This order is not settled."** It names the
+> four placements the top pick is not actually ranked against — their seed spreads overlap the
+> leader's —
+> and then it says the other half out loud: **no placement clears today's spread either.** So the
+> screen is refusing two claims at once. It will not tell you which placement is best, and it will
+> not tell you that moving beats where you are.
 >
-> That is a stronger statement than "the ranking is noisy". It is saying the order depends on how
-> many shoppers you simulate: at ten thousand the winner is the shelf talker; at fifty thousand it
-> is a shelf move for the focal product, and today's placement has climbed to second. It is a
-> run-size artefact, not a close call — and adding seeds cannot fix it, because the range is a
-> minimum and a maximum and can only widen.
+> And I want to be precise about *why*, because there is a wrong version of this sentence. This is
+> not the ranking falling apart when you change the run size. The same placement leads at ten
+> thousand, fifty thousand, two hundred and fifty thousand and half a million, and the spread
+> around it narrows the whole way. What is unsettled is the *separation*, not the order — and more
+> seeds cannot fix that, because the range is a minimum and a maximum and can only widen. Only
+> more shoppers can.
 >
-> So I am not going to stand here and tell you to move the creative. What settles, two hundred and
-> fifty thousand shoppers deep, is something else entirely: move the focal product to the top
-> shelf. No ad placement beats where it is now at any size we can afford to run.
+> And they do. Off camera, at five times this run size, one row does clear today's placement: move
+> the creative to the bay-one shelf talker. But that is a number I ran, not a number on this
+> screen — so what I will stand here and tell you is what the screen supports, which is nothing
+> yet.
 >
 > A tool that printed the ten-thousand-shopper answer as a recommendation would be easier to sell
 > and worse to trust.
@@ -352,7 +366,8 @@ Kept here so a retake does not drift into them.
 | "The system identified these products from the video" | It did not. Every product reads `unidentified product N`; brand, name, price and promotion are not observable from video and are written as unknown. |
 | "And now that shelf is in the system" *(immediately after the upload in shot 3)* | Reading a clip still saves nothing — the screen says so until you act. There is now a deliberate **keep this reading** step, but it comes *after* you have typed in the categories, brands and prices the camera cannot read. Say it in that order, or the shot claims the pipeline identified products it did not. |
 | "The camera worked out what these products are" | It read geometry and colour. A **person** typed the identities in, on camera, and the payload marks them operator-supplied. That division of labour is the point of the shot, not an apology for it. |
-| "The optimizer recommends moving the creative" | **At the run size on screen the order is explicitly unsettled** — say that, not the recommendation. It does settle at 250k, off-camera, and it settles *in favour of* the ad move (`AD_1` to the bay-1 shelf talker, +2.1 % against the current +1.0 %, seed ranges not overlapping). That is 25× the run size on screen, so it is a footnote you may answer a question with, never a line you narrate over a 10k screen. |
+| "The optimizer recommends moving the creative" | **At the run size on screen the order is explicitly unsettled** — say that, not the recommendation. It does settle off-camera, and it settles *in favour of* the ad move (`AD_1` to the bay-1 shelf talker): the earliest rung that clears today's placement is **50,000**, +2.0 % against the current +1.0 % with the seed ranges not overlapping, and it holds at 250k and 500k. That is 5× the run size on screen at the earliest, so it is a footnote you may answer a question with, never a line you narrate over a 10k screen. |
+| "The ranking is a run-size artefact" / "at fifty thousand a different placement wins" | True of the **within-run** estimator, which is not what the screen ranks on. On the between-arm default `AD_1 on B1_TALKER` leads at 10k, 50k, 250k and 500k and the spread narrows the whole way. Say the order is *unseparated*, not that it *changes*. |
 | "Validated" / "proven" | Reserve both words for after the panel is collected. |
 | Any number not visible on screen at the moment it is spoken | The whole point of the live takes. |
 
@@ -368,3 +383,8 @@ Removed from the previous cut. Listed so an older take is not spliced in by mist
 | "The sample-3D-model requirement is not met" | `data/models/WaterBottle.glb`, CC0, is committed and rendered in the aisle. |
 | "Prediction locks found: zero" | It reads **1** now. The interesting line is the one below it — zero verified to predate. |
 | "The personas were designed by an LLM" *(as a forbidden line)* | Still forbidden for the **committed policies**, which were hand-written — but the generator now runs from `#/ai`, so say "the generator is live and you can watch it" rather than implying the policies came from it. |
+| "Forty-five seconds, two bays, one interaction — that is the gate" *(shot 5)* | The duration floor was removed, and shot 2 of this same script explains why. The gate is **six distinct slots, two bays, one interaction**, and nothing about elapsed time. Saying it in shot 5 contradicted shot 5's own screen. |
+| "Today's planogram comes fifth of thirteen" *(shot 7b)* | Fifth and +12.7 % were the **within-run** estimator's numbers. The screen ranks on the between-arm lift and reads **fourth of thirteen at +0.9 %**, with the leader at +2.5 %. |
+| "It is a run-size artefact … at fifty thousand it is a shelf move for the focal product" *(shot 7b)* | Also the old estimator. The leader is the same at all four rungs of the ladder and the spread narrows; what is unresolved is the separation, not the order. |
+| "What settles at two hundred and fifty thousand is a SKU move to the top shelf" *(shot 7b)* | Reversed with the estimator. The pair that settles is the **ad move**, and it settles from **50,000** up. |
+| "Two seconds" *(the optimizer, shot 7b)* | Never re-measured after the default changed. A cold ranking is 7–11 s on the machine this was written on and a repeat of the identical one is ~50 ms — read the meta line on screen instead of quoting either. |

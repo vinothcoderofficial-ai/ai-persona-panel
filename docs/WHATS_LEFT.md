@@ -4,6 +4,10 @@
 > against the repository at the time of writing — the commands that check each one are inline, so
 > this file can be re-verified rather than believed. Where a number is quoted it was measured on
 > this machine.
+>
+> Re-verified since, and two things had drifted: the ad-on-a-video-shelf gap was closed in
+> section 2 while the re-check list at the bottom still described it as open, and the ladder's
+> settled pair appears one rung lower than section 3 said. Both are corrected below.
 
 The recording checklist lives in [`docs/video/shotlist.md`](video/shotlist.md#pre-flight-checklist).
 This file is the other half: what is *not* done, ranked by whether it blocks the demo.
@@ -43,7 +47,10 @@ than a Spearman computed on one person. If six or more arrive before the deadlin
 `data/sessions/anon/` holds only `.gitkeep`. Every real-vs-synthetic cell in `RESULTS.md` reads
 *not yet collected*.
 
-- **What it needs:** 12–16 people, ~2 minutes each, in `cursor_only` mode via `#/home`.
+- **What it needs:** 12–16 people, ~2 minutes each, in `cursor_only` mode via `#/home`. That is
+  the floor at which the pipeline produces anything at all, **not** the target: PLAN S21 asks for
+  **≥ 60 accepted, aiming at 100**, and `docs/video/script.md` says sixty on camera. Twelve buys a
+  noise ceiling and a decision-agreement row; it does not buy a panel worth quoting a Spearman off.
 - **Where to concentrate them:** at least **6 on variant A**. `noise_ceiling.py: MIN_SESSIONS = 4`
   is checked against the *fit* variant alone, so twelve spread evenly across A–D yields no ceiling
   at all. Cover at least two variants or decision agreement cannot be computed either
@@ -54,7 +61,7 @@ than a Spearman computed on one person. If six or more arrive before the deadlin
 ### Webcam gaze has never actually run
 
 There is not one `fixation` event in the database — every event is `hover`, `cursor_dwell`,
-`pickup`, `add_to_cart` or a station transition. Both sessions were `cursor_only`. The whole
+`pickup`, `add_to_cart`, `checkout` or a station transition. Both sessions were `cursor_only`. The whole
 capture pipeline in `web/src/capture/` is tested and has never seen a camera.
 
 - **What it needs:** one real webcam session on the demo laptop, before rehearsal, confirming the
@@ -128,17 +135,19 @@ n = 250,000   top AD_1 on B1_TALKER  +2.1%   current 3rd of 13   seeds +1.9%..+2
 n = 500,000   top AD_1 on B1_TALKER  +2.0%   current 5th of 13   seeds +1.8%..+2.0%
 ```
 
-Same leader at every size, with the spread tightening from 1.2 points wide to 0.2. At 250k one
-placement clears today's; at 500k two do — the ad move and a SKU move. Top pick versus runner-up is
-still not settled anywhere, and METHODOLOGY §12.13 carries the reading.
+Same leader at every size, with the spread tightening from 1.2 points wide to 0.2. **From 50k up,
+one placement clears today's** — the ad move, `AD_1` to the bay-1 shelf talker — and at 500k a
+second joins it, a SKU move. At the 10k the screens run, nothing clears, which is what the amber
+box on `#/optimize` says. Top pick versus runner-up is still not settled at any size, and
+METHODOLOGY §12.13 carries the reading.
 
 **Nothing left to run here.** The only thing this ladder cannot tell you is whether any of it
 describes real shoppers, which is section 1.
 
 ### `sim/persona_survey.py` has never been run
 
-The largest module in `sim/` — a complete CLI, 25 passing tests — and `data/cache/surveys/` has
-never existed. Its only prerequisite, `data/cache/traces/`, is already populated with real model
+The largest module in `sim/` at 733 lines — a complete CLI, 26 passing tests — and
+`data/cache/surveys/` has never existed. Its only prerequisite, `data/cache/traces/`, is already populated with real model
 output.
 
 - **What it needs:** `python -m sim.persona_survey --all --max-shoppers 5` — about 100 model calls,
@@ -186,8 +195,19 @@ Section 2 — can a variant put an ad on a video-read shelf?
 python -c "import json; print([b['properties']['op']['const'] for b in json.load(open('schemas/variant.schema.json'))['definitions']['patch']['oneOf']])"
 ```
 
-Five ops. `add_ad_slot` creates the fixture; a video-read planogram still carries no
-`creatives`, which is the remaining half.
+Five ops. `add_ad_slot` hangs the fixture and `set_ad_creative` books it. The half that used to
+be missing was the creative itself — `vision/planogram.py` detects no signage and will not invent
+any, so a video-read planogram carried an empty `creatives` list and there was nothing for
+`set_ad_creative` to point at. The operator supplies it now, on `#/vision`:
+
+```
+grep -n "OPERATOR_CREATIVE_ID" web/src/vision/VisionView.tsx
+```
+
+Three hits — the id itself, the creative written onto the saved planogram, and the
+`set_ad_creative` patch that books it — is the closed state described in section 2 above. Fewer
+than three means this gap has reopened and section 2's `exposed purchases : 185` cannot be
+reproduced.
 
 Section 3 — the ladder, and everything else:
 
