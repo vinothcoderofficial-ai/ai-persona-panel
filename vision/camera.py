@@ -42,11 +42,40 @@ from typing import Sequence
 import cv2
 import numpy as np
 
-# How far off level this will look, in degrees either way. Six is generous for
-# a hand-held shot and cheap; past it the shot is not front-on in the sense the
-# rest of the pipeline needs, and rotating it would not rescue the perspective
-# convergence that comes with a camera that far off axis.
-ROLL_SEARCH_DEGREES = 6.0
+# How far off level this will look, in degrees either way, and it is set to the
+# angle past which the correction stops working rather than to a round number.
+#
+# Turning a frame back does not only undo the tilt: it also swings the corners
+# of the image out of frame and replicates the border into the wedges left
+# behind. The further the turn, the more of the top and bottom shelf the frame
+# loses. Measured on the committed fixture, which is five shelves and eight
+# facings, the reading is exact through 7.00 degrees and drops to four bands at
+# 7.25 - not because the angle was measured wrongly (it is measured to the
+# quarter degree there) but because a shelf has left the picture.
+#
+# So the search range is the *correctness* limit, which makes saturation and
+# failure the same event: a frame this can measure is a frame it can correct.
+# That is what `roll_is_saturated` is for. 7 degrees each way at
+# ROLL_SEARCH_STEP is 57 warps of one frame - milliseconds.
+#
+# The number is measured on a rendering of this repository's own planogram, so
+# it is a property of that fixture as much as of the algorithm; a real shelf
+# with less headroom above the top band would give up sooner. It is a stated
+# measurement, not a guarantee about footage nobody has shot.
+#
+# The range is a **bracket, not a cap**. `estimate_roll` returns the best angle
+# inside it, so a frame tilted further comes back clamped at the edge, and
+# deskewing by a clamped value leaves a residual tilt. `shelf_bands` does not
+# fail cleanly on a residual: it degrades, reading one band fewer than the bay
+# has. Measured on the committed fixture at the old 6-degree range, 6.5 degrees
+# estimated 6.00 and read four bands and seven facings where there are five and
+# eight - and emitted a schema-valid planogram saying so. That is the silent
+# under-count this module exists to remove, moved rather than removed.
+#
+# A saturated estimate cannot be told from a much larger one - a true 10 and a
+# true 25 both come back at the edge - so saturation is the only signal
+# available, and `roll_is_saturated` is what `vision/pipeline.py` refuses on.
+ROLL_SEARCH_DEGREES = 7.0
 
 # The search granularity, and therefore the accuracy `estimate_roll` claims. A
 # quarter degree costs 49 warps of one frame; an eighth would cost 97 and buy
@@ -99,6 +128,17 @@ def estimate_roll(frame: np.ndarray) -> float:
             best_angle = angle
 
     return best_angle if best_score > 0.0 else 0.0
+
+
+def roll_is_saturated(roll_degrees: float) -> bool:
+    """Did the search run out of range rather than find a peak?
+
+    True when the estimate sits at the edge of what `estimate_roll` looked at,
+    which means the real tilt is at least that and may be far more. Correcting
+    by the clamped value would leave a residual tilt and read a shelf short, so
+    the pipeline refuses instead - see the note on `ROLL_SEARCH_DEGREES`.
+    """
+    return abs(roll_degrees) >= ROLL_SEARCH_DEGREES
 
 
 def deskew(frame: np.ndarray, roll_degrees: float) -> np.ndarray:

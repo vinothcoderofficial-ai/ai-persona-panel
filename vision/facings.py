@@ -110,42 +110,86 @@ def _column_lab(strip: np.ndarray) -> np.ndarray:
 def _raw_runs(profile: np.ndarray) -> List[Tuple[int, int]]:
     """Column ranges between colour breaks, as (start, end_exclusive).
 
-    A column breaks from the run it is in when it has drifted `COLOUR_BREAK`
-    from that run's **mean so far**, not from the single column before it.
+    A break is a **local step**: the mean colour of the `MIN_FACING_PX` columns
+    ending at a column, against the mean of the `MIN_FACING_PX` columns
+    starting there. A step of `COLOUR_BREAK` between those two neighbourhoods
+    is a boundary; anything gentler is not.
 
-    The difference is the whole behaviour of this function on anything filmed.
-    A drawn rectangle has a one-pixel edge and either test finds it. Nothing
-    filmed does: depth of field, the shelf's own shadow, motion blur and any
-    resampling on the way in all spread a pack's edge over a band of columns.
-    Compared column-to-column, a boundary that arrives over twenty columns
-    never shows a single step of twelve, so no break is recorded at all and two
-    packs read as one - or, once background suppression sees a band that is one
-    run from end to end, as none. That was measured, not supposed: a band of
-    three packs with a twenty-four column ramp between them read as zero
-    facings before this changed.
+    Two failure modes bracket this rule, and both were measured rather than
+    imagined.
 
-    Against the run's mean, a ramp is caught partway up, where the colour has
-    genuinely left the pack it started in; `_absorb_slivers` then folds the
-    leftover strip of the ramp into whichever neighbour it resembles. The mean
-    rather than the run's first column because a single column carries the
-    frame's noise, and on a compressed clip that noise is what would decide
-    where a facing starts.
+    **Column against its neighbour cannot see a soft edge.** Nothing filmed has
+    a one-pixel edge - depth of field, the shelf's own shadow, motion blur and
+    any resampling spread it over a band of columns - and a boundary that
+    arrives over twenty columns never shows a single step of twelve. Three
+    packs with a 24-column ramp between them read as *zero* facings, because a
+    band that is one run end to end is then suppressed as background.
+
+    **Column against its run's mean sees edges that are not there.** Drift from
+    the mean of the first n columns grows like slope*n/2, so a smooth
+    illumination gradient crosses any fixed threshold eventually, however
+    gentle - the break is a property of the band's width, not of anything on
+    the shelf. An empty band spanning about 25 L* split into two runs, whose
+    means then sat far enough apart that `_background` concluded there was no
+    backing and returned both as products. A 30% radial falloff, ordinary for a
+    phone lens, was enough. Nothing downstream would have caught it either: a
+    lighting gradient is static, so the same phantom appears in every sampled
+    frame and `vision/track.py` reads that as corroboration and *raises* its
+    confidence.
+
+    Comparing two neighbourhoods separates the two cases by the one thing that
+    actually distinguishes them, which is spatial scale. A pack edge is a step
+    over tens of columns; a lighting gradient is a ramp over hundreds. The soft
+    edge still reads full strength here, because the window is narrower than
+    the ramp is wide; the gradient contributes only its slope across one window,
+    which is a fraction of a Lab unit.
     """
-    if profile.shape[0] == 0:
+    width = profile.shape[0]
+    if width == 0:
         return []
 
+    window = MIN_FACING_PX
+
+    # How big a colour step sits at each column, comparing the `window` columns
+    # behind it against the `window` columns in front.
+    steps = np.zeros(width, dtype=np.float32)
+    for column in range(1, width):
+        before = profile[max(0, column - window) : column]
+        after = profile[column : min(width, column + window)]
+        if before.shape[0] == 0 or after.shape[0] == 0:
+            continue
+        steps[column] = float(np.linalg.norm(after.mean(axis=0) - before.mean(axis=0)))
+
+    # Where each column sits against the one before it. This is the old rule,
+    # kept for what it is genuinely good at: saying precisely WHERE an edge is.
+    # It cannot say whether there is one - it is blind to any edge that arrives
+    # gradually - so the two are used for different halves of the question.
+    adjacent = np.zeros(width, dtype=np.float32)
+    for column in range(1, width):
+        adjacent[column] = float(np.linalg.norm(profile[column] - profile[column - 1]))
+
+    # One edge raises `steps` across the whole window either side of it, so a
+    # cluster of columns is over the line for a single boundary. The window
+    # decides that a boundary exists; the derivative decides which column it is.
+    # Taking the window's own peak instead puts the break up to a window early -
+    # measured, it turned a three-pixel scuff into a twelve-pixel facing, which
+    # is exactly wide enough to survive `_absorb_slivers`.
     breaks: List[int] = [0]
-    total = profile[0].astype(np.float64).copy()
-    count = 1
-    for column in range(1, profile.shape[0]):
-        if float(np.linalg.norm(profile[column] - total / count)) >= COLOUR_BREAK:
-            breaks.append(column)
-            total = profile[column].astype(np.float64).copy()
-            count = 1
-        else:
-            total += profile[column]
-            count += 1
-    breaks.append(profile.shape[0])
+    over = steps >= COLOUR_BREAK
+    column = 1
+    while column < width:
+        if not over[column]:
+            column += 1
+            continue
+        end = column
+        while end + 1 < width and over[end + 1]:
+            end += 1
+        peak = int(column + int(np.argmax(adjacent[column : end + 1])))
+        if peak > breaks[-1]:
+            breaks.append(peak)
+        column = end + 1
+
+    breaks.append(width)
     return [(breaks[i], breaks[i + 1]) for i in range(len(breaks) - 1)]
 
 

@@ -200,3 +200,79 @@ def test_a_soft_edged_shelf_reads_the_same_count_as_a_sharp_one():
     soft = facing_boxes(soft_edged_band_frame([BLUE, RED, GREEN], ramp=24), BAND)
 
     assert len(soft) == len(sharp) == 3
+
+
+def gradient_band_frame(low: int, high: int, *, top: int = 50, bottom: int = 250) -> np.ndarray:
+    """An EMPTY shelf, lit unevenly: backing only, brightening left to right."""
+    frame = np.zeros((HEIGHT, WIDTH, 3), dtype=np.float32)
+    ramp = np.linspace(low, high, WIDTH, dtype=np.float32)
+    frame[:, :, :] = ramp[None, :, None]
+    return frame.astype(np.uint8)
+
+
+def vignetted_band_frame(depth: float, *, base: int = 190) -> np.ndarray:
+    """An EMPTY shelf under a lens that falls off at both ends.
+
+    The realistic optical case, and harder than a straight ramp: a parabola
+    leaves a running mean faster than a line does.
+    """
+    x = np.linspace(-1.0, 1.0, WIDTH, dtype=np.float32)
+    falloff = 1.0 - depth * (x ** 2)
+    frame = np.zeros((HEIGHT, WIDTH, 3), dtype=np.float32)
+    frame[:, :, :] = (base * falloff)[None, :, None]
+    return frame.astype(np.uint8)
+
+
+def test_an_empty_shelf_lit_unevenly_is_still_empty():
+    """A lighting gradient is not stock.
+
+    The break test compares a column against its run's mean so far, which is
+    what lets it see an edge that arrives gradually. The same property makes it
+    sensitive to a gradient that never arrives at all: drift from the mean of
+    the first n columns grows like slope*n/2, so a smooth ramp eventually
+    crosses any fixed threshold no matter how gentle it is, and the band splits.
+    Once it is two runs, `_background` finds their means far apart, assumes
+    there is no backing, and returns both as facings.
+
+    Measured before this was fixed: an empty band spanning about 25 L* read as
+    two products, and a 30% radial falloff - ordinary for a phone lens - was
+    enough. Nothing downstream filters them, because a lighting gradient is
+    static: it appears in every sampled frame, and `vision/track.py` reads that
+    as corroboration and raises the confidence.
+    """
+    assert facing_boxes(gradient_band_frame(150, 210), BAND) == []
+
+
+def test_a_lens_that_falls_off_at_the_edges_does_not_stock_the_shelf():
+    assert facing_boxes(vignetted_band_frame(0.40), BAND) == []
+
+
+def test_a_gradient_across_a_real_pack_finds_the_pack_whole():
+    """The pack is found, once, at its true edges - and the backing beside it
+    is NOT suppressed, which is a limitation rather than a success.
+
+    `_background` decides there is backing by asking whether the band's two end
+    stretches are the same colour. Under a gradient they are genuinely not, so
+    it concludes the band is stocked edge to edge and returns the empty
+    stretches as products too. That is a real cost on real footage, where a
+    shelf is almost never lit evenly.
+
+    It is recorded here rather than fixed because the obvious fix is worse.
+    Removing a linear trend before the comparison does suppress the backing -
+    and it also flattens genuine structure, so a band holding two differently
+    coloured packs starts reading as backing. Measured: it fixed this case and
+    broke five that already worked.
+
+    So the property worth pinning is the one that holds: the pack itself is
+    found once, at its real boundaries, whatever the light is doing. An
+    over-counted backing run inflates `facings` on a shelf; a split or missing
+    pack would corrupt the geometry the whole planogram is built from.
+    """
+    frame = gradient_band_frame(150, 210).astype(np.int16)
+    frame[60:240, 200:440] = np.array(RED, dtype=np.int16)
+
+    boxes = facing_boxes(frame.astype(np.uint8), BAND)
+
+    pack = [box for box in boxes if box.x0 <= 210 and box.x1 >= 430]
+    assert len(pack) == 1, f"the pack was split or lost: {boxes}"
+    assert abs(pack[0].x0 - 200) <= 4 and abs(pack[0].x1 - 440) <= 4

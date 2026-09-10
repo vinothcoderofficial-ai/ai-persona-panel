@@ -35,6 +35,8 @@ import numpy as np
 import pytest
 
 from vision.camera import (
+    ROLL_SEARCH_STEP,
+    roll_is_saturated,
     MAX_DRIFT_FRACTION,
     ROLL_SEARCH_DEGREES,
     camera_drift,
@@ -213,3 +215,81 @@ class TestCameraDrift:
 
     def test_no_frames_is_no_drift(self) -> None:
         assert camera_drift([]) == 0.0
+
+
+class TestSaturation:
+    """A tilt past the search range must be refused, not half-corrected.
+
+    `estimate_roll` searches a fixed range and returns the best angle *inside*
+    it, so a frame tilted further comes back clamped at the edge. Deskewing by
+    the clamped value leaves a residual tilt, and `shelf_bands` degrades
+    gradually rather than failing cleanly: measured on the committed fixture,
+    6.5 degrees estimated 6.00, deskewed to a residual 0.5, and read **four**
+    bands and seven facings on a five-shelf, eight-facing bay - then emitted a
+    schema-valid planogram with no sign of the problem.
+
+    That is the exact failure this module was written to remove. It is worse
+    here than the original: `vision/planogram.py` spreads four bands over the
+    five-name level enum, so `eye` - the largest weight in `sim/saliency.py` -
+    vanishes from a bay that has one.
+
+    A saturated estimate cannot be distinguished from a much larger one: a true
+    6-degree tilt and a true 20-degree tilt both come back at the edge. So
+    saturation is the signal, and the only sound response is to refuse.
+    """
+
+    def test_a_tilt_inside_the_range_is_measured_not_clamped(self) -> None:
+        found = estimate_roll(rolled(level_frame(), ROLL_SEARCH_DEGREES - 1.0))
+
+        assert abs(found) < ROLL_SEARCH_DEGREES
+
+    def test_a_tilt_past_the_range_saturates(self) -> None:
+        """The property everything else here depends on."""
+        found = estimate_roll(rolled(level_frame(), ROLL_SEARCH_DEGREES + 4.0))
+
+        assert abs(found) >= ROLL_SEARCH_DEGREES
+
+    def test_saturated_is_reported_as_saturated(self) -> None:
+        assert roll_is_saturated(ROLL_SEARCH_DEGREES)
+        assert roll_is_saturated(-ROLL_SEARCH_DEGREES)
+        assert not roll_is_saturated(ROLL_SEARCH_DEGREES - ROLL_SEARCH_STEP)
+        assert not roll_is_saturated(0.0)
+
+
+def test_every_tilt_is_either_read_correctly_or_refused() -> None:
+    """The invariant the whole module exists for, swept rather than sampled.
+
+    Correct **or** refused, never quietly short. This was written after the
+    opposite was found by measurement: the range was a round number rather than
+    the angle past which the correction stops working, so between them sat a
+    window that returned four bands for a five-shelf bay and said nothing. The
+    bug is not that some tilt is unreadable - plenty are - it is that an
+    unreadable one was being answered instead of refused.
+
+    Sampling a few angles is what missed it the first time: 5 degrees worked and
+    8 degrees refused, and the window in between was never tried. So this walks
+    the range in the search's own step size.
+    """
+    packed = packed_frame()
+    truth_bands = len(shelf_bands(packed))
+    truth_facings = sum(len(facing_boxes(packed, band)) for band in shelf_bands(packed))
+
+    silent = []
+    steps = int(round(20.0 / ROLL_SEARCH_STEP))
+    for index in range(-steps, steps + 1):
+        degrees = index * ROLL_SEARCH_STEP
+        tilted = rolled(packed, degrees)
+        estimate = estimate_roll(tilted)
+        if roll_is_saturated(estimate):
+            continue  # the pipeline refuses this clip
+        bands = shelf_bands(deskew(tilted, estimate))
+        if not bands:
+            continue  # the pipeline refuses this too: no shelf edges
+        facings = sum(len(facing_boxes(deskew(tilted, estimate), band)) for band in bands)
+        if len(bands) != truth_bands or facings != truth_facings:
+            silent.append((degrees, len(bands), facings))
+
+    assert silent == [], (
+        f"{len(silent)} tilt(s) produced a reading that was neither correct nor refused, "
+        f"expected {truth_bands} bands / {truth_facings} facings: {silent[:8]}"
+    )

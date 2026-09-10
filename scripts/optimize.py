@@ -38,11 +38,18 @@ none, and passing some but not all is an error rather than a quiet fill-in.
         --baseline-units 120 --margin-per-unit 7.5 --stores 4 --weeks 13 \
         --currency INR --basis "ILLUSTRATIVE ONLY -- round figures"
 
-Note the `--objective within-run-lift` in that last one. `slot_value.price_ranking`
-accepts only the within-run lift by name, so pricing the honest between-arm
-number is not something this repository can do yet; asking for it is refused
-here rather than crashing inside slot_value or, worse, printing money against a
-ranking that was made on a different metric.
+Either lift can be priced, and every priced row names which one it was, because
+the two differ several-fold on this aisle and money that does not say what is
+under it is not checkable. The default `between-arm-lift` is the natural input:
+incremental units are `baseline_units * lift`, and the between-arm number is
+that quantity measured against a control run of the same shelf with the creative
+taken down. The within-run split prices a contrast between two self-selected
+halves of one population, so it overstates a store's incremental units by
+whatever the selection is worth (docs/PHASE3.md P3.1).
+
+A purchase share is not a lift and is refused here rather than crashing inside
+slot_value or, worse, printing money against a ranking made on a different
+metric.
 """
 from __future__ import annotations
 
@@ -151,15 +158,15 @@ def check_pricing_is_possible(args: argparse.Namespace) -> None:
     simulation. Saying so before any of that runs, and naming the one objective
     that can be priced, is the same refusal made useful.
     """
-    if args.objective == "within-run-lift":
+    if args.objective in ("between-arm-lift", "within-run-lift"):
         return
     raise SystemExit(
-        f"error: --objective {args.objective} cannot be priced. "
-        "analytics/slot_value.py prices incremental units from the within-run "
-        "ad-to-purchase lift only, and refuses any other objective by name rather than "
-        "multiplying an unrelated number by a margin. Either drop the commercial flags, "
-        "or add --objective within-run-lift and read the resulting money knowing the "
-        "lift underneath it is the selection-confounded one (docs/PHASE3.md P3.1)."
+        f"error: --objective {args.objective} cannot be priced. Incremental units are "
+        "baseline_units * lift, so the objective has to BE a lift: use between-arm-lift "
+        "(the randomised comparison, and the natural input to this arithmetic) or "
+        "within-run-lift (the selection-confounded one -- docs/PHASE3.md P3.1). A purchase "
+        "share is not a lift, and multiplying one by a baseline unit volume produces a "
+        "confident, meaningless number."
     )
 
 

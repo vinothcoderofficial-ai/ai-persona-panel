@@ -71,13 +71,21 @@ is true.
 
 What the number inherits from S24
 ---------------------------------
-The underlying ranking is **not resolved** at 10,000 shoppers.
-docs/METHODOLOGY.md section 12.13 records it: re-rolling the same simulation at
-seeds 42-46 moves the top pick between +6.2% and +14.2% and the current
-placement between +1.3% and +8.9%, and those ranges overlap. A value built on
-the seed-42 lift carries exactly that uncertainty, so every `summary()` says
-the figure is a point estimate at one seed whose underlying lift is not
-resolved.
+The underlying ranking is **not resolved** at 10,000 shoppers, on either
+estimator. docs/METHODOLOGY.md section 12.13 records both ladders. On the
+default between-arm objective, re-rolling seeds 42-46 moves the top pick
+between +1.3% and +2.5% while the current placement's own range overlaps
+several rivals the ranking then refuses to order; on the within-run split the
+same re-roll moved the top pick between +6.2% and +14.2% and the current
+placement between +1.3% and +8.9%. A value built on the seed-42 lift carries
+exactly that uncertainty, so every `summary()` says the figure is a point
+estimate at one seed whose underlying lift is not resolved.
+
+The magnitudes are not comparable across those two rows and are not meant to
+be: the between-arm number is several times smaller **because** it is a
+randomisation rather than a selection, which is the whole finding of
+docs/PHASE3.md P3.1. Priced money inherits that difference directly, so every
+priced row names the estimator it came from.
 
 `SlotValue` carries S24's `SeedSpread` through to money: because value is
 linear in lift at fixed assumptions, pricing each seed's lift gives the range
@@ -104,6 +112,7 @@ from analytics.optimizer import (
     Ranking,
     SeedSpread,
     ad_purchase_lift_objective,
+    between_arm_lift_objective,
     variant_id_for,
 )
 from api.app import simcache
@@ -112,7 +121,26 @@ from api.app.resolve import resolve
 # What the measured input is called wherever it is printed. It is the ONLY
 # measured quantity in this module; everything else on a printed line is an
 # assumption or arithmetic over one.
+#
+# There are two of them, and which one is under a money figure changes what the
+# money means, so the name travels with every priced row rather than sitting in
+# a module constant. `analytics/lift.py` measures the same brand-share contrast
+# two ways: WITHIN one run, splitting shoppers by whether they fixated an ad
+# slot, and BETWEEN a treated run and a control run of the same shelf with the
+# creative taken down. On the committed aisle they differ several-fold, because
+# within-run "exposed" is a selection - those shoppers had already walked to the
+# endcap - and not a randomisation.
+#
+# `incremental_units_per_store_week` is baseline_units * lift: "how many more
+# units of this brand does a store move". The between-arm number is exactly that
+# quantity measured against a control. The within-run number is a contrast
+# between two self-selected halves of one population, so multiplying a whole
+# store's baseline by it overstates the case by whatever the selection is worth.
+# Both are priceable; only one is the natural input, and a reader has to be able
+# to tell which they are looking at.
 MEASURED_METRIC = "ad-to-purchase lift"
+WITHIN_RUN_METRIC = "within-run ad-to-purchase lift"
+BETWEEN_ARM_METRIC = "between-arm ad-to-purchase lift"
 
 
 # ---------------------------------------------------------------------------
@@ -335,6 +363,10 @@ class SlotValue:
     value_spread: Optional[SeedSpread] = None
     rank: Optional[int] = None
     is_current: Optional[bool] = None
+    # Which of the two estimators produced `lift`. Defaults to the generic
+    # name so a hand-built SlotValue keeps working; `price_ranking` always
+    # sets it from the ranking's own objective.
+    measured_metric: str = MEASURED_METRIC
 
     @property
     def value_per_store_week(self) -> Optional[float]:
@@ -364,6 +396,7 @@ def price_from_lift(
     sim_run_id: Optional[str] = None,
     rank: Optional[int] = None,
     is_current: Optional[bool] = None,
+    measured_metric: str = MEASURED_METRIC,
 ) -> SlotValue:
     """Price a lift that has already been computed. Pure arithmetic, no simulation.
 
@@ -388,6 +421,7 @@ def price_from_lift(
         value_spread=_price_spread(lift_spread, assumptions),
         rank=rank,
         is_current=is_current,
+        measured_metric=measured_metric,
     )
 
 
@@ -473,11 +507,18 @@ def price_ranking(
     product the money is about. Left out, `SlotValue.brand` is None and the
     summary simply does not claim one.
     """
-    expected = ad_purchase_lift_objective(creative_id).name
-    if ranking.objective_name != expected:
+    priceable = {
+        ad_purchase_lift_objective(creative_id).name: WITHIN_RUN_METRIC,
+        between_arm_lift_objective(creative_id).name: BETWEEN_ARM_METRIC,
+    }
+    measured_metric = priceable.get(ranking.objective_name)
+    if measured_metric is None:
         raise ValueError(
-            f"ranking was made on objective {ranking.objective_name!r}, not {expected!r}; "
-            "only that creative's ad-to-purchase lift can be priced as incremental units"
+            f"ranking on objective {ranking.objective_name!r} cannot be priced. "
+            f"Incremental units are baseline_units * lift, so the objective has to BE a lift "
+            f"for this creative - one of {sorted(priceable)!r}. A purchase share is not a lift, "
+            "and multiplying one by a baseline unit volume produces a confident, meaningless "
+            "number."
         )
 
     brand = None if planogram is None else creative_brand(planogram, creative_id)
@@ -485,6 +526,7 @@ def price_ranking(
     return tuple(
         price_from_lift(
             entry.objective, assumptions,
+            measured_metric=measured_metric,
             label=entry.candidate.label,
             lift_spread=entry.seed_spread,
             creative_id=creative_id,
@@ -560,7 +602,7 @@ def summary(priced: SlotValue) -> str:
 
     if priced.value is None:
         lines.append(
-            f"{priced.label}: value undefined. The {MEASURED_METRIC} has no answer for this "
+            f"{priced.label}: value undefined. The {priced.measured_metric} has no answer for this "
             "configuration (no ad-exposed arm, no unexposed arm, or an unexposed arm that "
             "bought none of the advertised brand), so there is no incremental volume to "
             "price. Undefined is not zero."
@@ -573,7 +615,7 @@ def summary(priced: SlotValue) -> str:
             f"= {_money(priced.value_per_store_week)} {assumptions.currency} per store-week."
         )
 
-    measured = f"Measured: {MEASURED_METRIC} "
+    measured = f"Measured: {priced.measured_metric} "
     measured += "undefined" if priced.lift is None else f"{priced.lift:+.1%}"
     if priced.brand:
         measured += f" for brand {priced.brand}"
@@ -623,7 +665,11 @@ def table(rows: Sequence[SlotValue]) -> str:
 
     assumptions = rows[0].assumptions
     width = max(len(row.label) for row in rows)
-    header = (f"{'#':>3}  {'placement':<{width}}  {MEASURED_METRIC:>21}  "
+    # The rows' own metric, not the module default: the two estimators differ
+    # several-fold, so a column headed only "ad-to-purchase lift" would let the
+    # same table mean two different things depending on a flag nobody printed.
+    metric = rows[0].measured_metric
+    header = (f"{'#':>3}  {'placement':<{width}}  {metric:>32}  "
               f"value over {_units(assumptions.store_weeks)} store-weeks ({assumptions.currency})")
     lines = [header, "-" * len(header)]
 

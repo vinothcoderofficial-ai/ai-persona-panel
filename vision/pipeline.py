@@ -64,9 +64,11 @@ if str(ROOT) not in sys.path:
 
 from vision.camera import (  # noqa: E402
     MAX_DRIFT_FRACTION,
+    ROLL_SEARCH_DEGREES,
     camera_drift,
     deskew,
     estimate_roll,
+    roll_is_saturated,
 )
 from vision.facings import Facing, facing_boxes  # noqa: E402
 from vision.frames import Frame, VideoUnreadable, extract_frames  # noqa: E402
@@ -154,6 +156,23 @@ def run(
 
     reference = sharpest(frames)
     roll_degrees = estimate_roll(reference.image)
+    if roll_is_saturated(roll_degrees):
+        # The search hit its own edge, so the real tilt is at least this and
+        # could be far more. Correcting by the clamped value does not fail
+        # cleanly - it leaves a residual tilt and reads a shelf short, which
+        # then spreads the remaining bands over the level enum and can drop
+        # `eye`, the largest term in sim/saliency.py, out of a bay that has one.
+        raise ValueError(
+            f"the camera is at least {ROLL_SEARCH_DEGREES:.0f} degrees off level, "
+            f"which is past what this pipeline can turn back (it searches "
+            f"+/-{ROLL_SEARCH_DEGREES:.0f} degrees). Correcting by the edge of that "
+            "range would leave the shelves still sloping and read fewer of them "
+            "than the bay has, so the clip is refused rather than half-read. "
+            "This pipeline reads a roughly front-on shot with the shelf edges "
+            "running across the frame; hold the camera level, or crop and "
+            "rotate the clip before feeding it in."
+        )
+
     if roll_degrees != 0.0:
         # Every frame, by the one angle measured on the sharpest: the bands
         # come from that frame and are applied to all the others, so correcting

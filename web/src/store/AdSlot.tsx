@@ -67,10 +67,36 @@ export function AdSlot({ creative, center, size, flat }: AdSlotProps) {
   const position: [number, number, number] = [center.x, center.y, center.z];
   const rotation: [number, number, number] = flat ? [-Math.PI / 2, 0, 0] : [0, 0, 0];
 
-  if (creative) {
+  // `creative.texture_url`, not `creative`. A booked creative can carry no
+  // artwork: `#/vision` lets an operator declare one on a shelf read from
+  // video, and there is no poster in that footage to point at, so the
+  // texture_url is "" exactly as it is for the SKUs. `useTexture` throws on an
+  // empty string, and from here that unwinds past Suspense into the scene's
+  // error boundary - the same defect that was fixed in `ProductSlot` and
+  // missed here, and it became reachable the moment a creative could be
+  // declared rather than only authored.
+  if (creative && creative.texture_url) {
     return (
       <mesh position={position} rotation={rotation}>
         <CreativePlane url={creative.texture_url} size={size} />
+      </mesh>
+    );
+  }
+
+  // Booked, but with nothing to show. Drawn as a plain panel over the fixture's
+  // whole footprint - deliberately NOT `emptyAdFixtureParts`, which is the
+  // vocabulary for "nothing is booked here". A booked arm that rendered as an
+  // empty holder would look like the control arm, while `sim/saliency.py` went
+  // on scoring the bay as advertised: the picture and the model would then be
+  // telling different stories about the same shelf. Full-footprint because
+  // every ad mounts proud of the shelf lip and occludes what is behind it, so
+  // a smaller panel would make booking an ad change how much merchandise is
+  // visible.
+  if (creative) {
+    return (
+      <mesh position={position} rotation={rotation}>
+        <planeGeometry args={[size.w, size.h]} />
+        <meshStandardMaterial color={CARCASS_COLOR} />
       </mesh>
     );
   }

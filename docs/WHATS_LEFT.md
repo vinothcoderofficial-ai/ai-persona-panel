@@ -105,7 +105,7 @@ advertisement, and the screen has no way to know which brand was meant.
 ### The pipeline has still never seen a real shelf
 
 The only clip in the project is `scripts/make_vision_fixture.py`'s rendering of the seed planogram.
-What changed is that it could now *survive* one: roll is corrected within ±6° and refused beyond,
+What changed is that it could now *survive* one: roll is corrected within ±7° and refused past it,
 a moving camera is refused rather than silently multiplying products, and soft edges no longer
 collapse a shelf to zero facings.
 

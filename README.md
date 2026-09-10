@@ -61,7 +61,7 @@ owns what and which process it runs in, [`docs/working-diagram.mermaid`](docs/wo
 flowchart TD
     subgraph IN["1 · Store ingestion"]
         MAN["Seed planogram (data/planograms/demo_aisle.json)"]
-        DET["Aisle clip → shelf edges + colour runs<br/>vision/pipeline.py (CPU, no detector)<br/>roll corrected ±6°, moving camera refused"]
+        DET["Aisle clip → shelf edges + colour runs<br/>vision/pipeline.py (CPU, no detector)<br/>roll corrected ±7°, moving camera refused"]
         MAN --> PG["Planogram JSON<br/>bays · shelves · slots · ad slots"]
         DET -- "geometry + colour only<br/>identities typed in by an operator" --> PG
     end

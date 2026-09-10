@@ -811,13 +811,33 @@ persona policy, so a plausible guess there would not be cosmetic — it would mo
 **The limits, as measured.** Two failure modes were found by running the pipeline against its own
 fixture with the degradations a hand-held phone adds, and both were silent before they were fixed:
 
-- **Roll is corrected, within ±6°.** A frame tilted one degree returned *fewer* shelf bands than
-  the bay has rather than refusing, and shelf level is the largest term in the saliency model.
-  `vision/camera.py` searches ±`ROLL_SEARCH_DEGREES` (6.0) in 0.25° steps against the detector's
-  own row profile; on the committed fixture it recovers the true angle to within 0.3°, and
-  deskewing restores the full band count the tilt destroyed without changing the facing count.
-  Past ±6° it reports no angle larger than it searched: the shelf detector then finds nothing and
-  the pipeline refuses the clip rather than emitting a shelf it half-read.
+- **Roll is corrected, within ±7°, and refused past it.** A frame tilted one degree returned
+  *fewer* shelf bands than the bay has rather than refusing, and shelf level is the largest term in
+  the saliency model. `vision/camera.py` searches ±`ROLL_SEARCH_DEGREES` (7.0) in 0.25° steps
+  against the detector's own row profile; on the committed fixture it recovers the true angle to
+  within 0.3° and deskewing restores the full band count without changing the facing count.
+
+  **An earlier revision of this bullet claimed the refusal and did not have it, and the correction
+  is worth recording.** The range was a round 6°, and `estimate_roll` returns the best angle
+  *inside* its range — so a clip tilted 6.5° came back clamped at 6.00, was deskewed by that,
+  kept a residual tilt, and read four bands and seven facings on a five-shelf, eight-facing bay.
+  It then emitted a schema-valid planogram with no sign of the problem, which is the exact silent
+  under-count the module was written to remove. Worse, `vision/planogram.py` spreads four bands
+  over the five-name level enum, so `eye` — the largest level weight in `sim/saliency.py` — left a
+  bay that has one.
+
+  Widening the search does not fix that; it relocates the window. The range has to *be* the angle
+  past which the correction stops working, so that saturating the search and failing to read are
+  the same event. Measured on the fixture, the reading is exact through 7.00° and drops a band at
+  7.25° — not because the angle is mis-measured (it is right to the quarter degree there) but
+  because turning the frame that far swings a shelf out of the picture. `roll_is_saturated` is what
+  `vision/pipeline.py` refuses on. Swept from −20° to +20° in 0.25° steps, every tilt is now either
+  read exactly right or refused: 55 correct, 106 refused, **0 silent under-reads**, pinned by
+  `test_every_tilt_is_either_read_correctly_or_refused`.
+
+  The 7° figure is measured on a rendering of this repository's own planogram, so it is a property
+  of that fixture as much as of the algorithm — a real shelf with less headroom above its top band
+  would give up sooner. It is a stated measurement, not a guarantee about footage nobody has shot.
 - **Camera movement is refused, over 1% of frame.** Facings are matched between frames at IoU 0.5,
   which holds for a phone propped against a shelf and fails for one being carried — a pack that
   has travelled does not overlap itself and is counted again in every frame, so a pan across three

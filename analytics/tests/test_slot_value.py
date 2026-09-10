@@ -48,6 +48,7 @@ from analytics.optimizer import (
     SeedSpread,
     ad_placement_candidates,
     ad_purchase_lift_objective,
+    between_arm_lift_objective,
     rank_candidates,
     sku_purchase_share_objective,
 )
@@ -559,6 +560,38 @@ def _ranking_on_lift(simulate, **kwargs):
         ad_purchase_lift_objective(CREATIVE), simulate=simulate, **kwargs)
 
 
+def _simulate_giving_between_arm_lift(target: float):
+    """A double whose CONTROL arm sells the baseline and whose treated arms sell
+    `1 + target` of it.
+
+    `between_variant_lift` reads whole-run `purchase_share` and needs
+    `variant_id` and `persona_id` on both arms - the within-run double supplies
+    neither, because `synth_lift` never looks at them. The control is
+    identifiable by the `opt_ctl_` prefix `_control_arms` mints for it, which is
+    the same thing the production code relies on to tell the arms apart.
+    """
+    baseline = 0.20
+
+    def simulate(resolved, variant_id, *, n_synth, seed):
+        treated = not variant_id.startswith("opt_ctl_")
+        crunch = baseline * (1.0 + target) if treated else baseline
+        shares = {"SKU_001": crunch, "SKU_003": 1.0 - crunch}
+        bundle = _fake_bundle({}, {}, purchase_share=shares,
+                              sim_run_id=f"{variant_id}:{seed}")
+        bundle.population["variant_id"] = variant_id
+        bundle.population["persona_id"] = "population"
+        return bundle
+
+    return simulate
+
+
+def _ranking_on_between_arm(simulate, **kwargs):
+    base = base_planogram()
+    return base, rank_candidates(
+        base, ad_placement_candidates(base, creative_ids=(CREATIVE,)),
+        between_arm_lift_objective(CREATIVE), simulate=simulate, **kwargs)
+
+
 def test_pricing_a_ranking_carries_the_rank_and_the_current_flag_through():
     base, ranking = _ranking_on_lift(_simulate_giving_lift(0.1), spread_seeds=())
     priced = sv.price_ranking(ranking, creative_id=CREATIVE, assumptions=hand_assumptions())
@@ -696,3 +729,73 @@ def test_worked_example_prices_ad_1_at_its_current_placement_and_at_the_top_pick
     print(f"\n{sv.table(priced)}")
     print(f"\n({elapsed:.1f}s for {ranking.n_candidates} placements at "
           f"{ranking.n_synth} shoppers)")
+
+
+# ---------------------------------------------------------------------------
+# Pricing the randomised lift
+#
+# `price_ranking` accepted exactly one objective by name, and refused every
+# other rather than multiplying an unrelated quantity by a margin. That guard
+# is right and stays. What was wrong was WHICH objectives it let through: only
+# the within-run split, which is the selection-confounded one. The optimizer's
+# default moved to `between_arm_lift_objective` - each placement's whole
+# population against a control run of the same shelf with the creative taken
+# down - and the money layer then refused every default ranking.
+#
+# The between-arm number is not merely also priceable, it is the BETTER basis
+# for this arithmetic. `incremental_units_per_store_week` is
+# `baseline_brand_units_per_store_week * lift`, i.e. "how many more units of
+# this brand does a store move". The between-arm lift is exactly that quantity
+# measured against a control; the within-run lift is a contrast between two
+# self-selected halves of one population, and multiplying a whole store's
+# baseline by it overstates the case by however much the selection is worth -
+# roughly five-fold on the committed aisle (docs/PHASE3.md P3.1).
+#
+# So both are priceable, and every priced row has to say which one it was, or
+# the money silently changes meaning with a flag nobody printed.
+
+
+def test_a_between_arm_ranking_can_be_priced():
+    base, ranking = _ranking_on_between_arm(_simulate_giving_between_arm_lift(0.1), spread_seeds=())
+
+    priced = sv.price_ranking(ranking, creative_id=CREATIVE, assumptions=hand_assumptions())
+
+    assert len(priced) == ranking.n_candidates
+
+
+def test_a_priced_row_says_which_lift_it_priced():
+    """Two estimators of the same name differ several-fold on this aisle. A
+    money figure that does not say which one is under it is not checkable."""
+    _, within = _ranking_on_lift(_simulate_giving_lift(0.1), spread_seeds=())
+    _, between = _ranking_on_between_arm(_simulate_giving_between_arm_lift(0.1), spread_seeds=())
+
+    priced_within = sv.price_ranking(within, creative_id=CREATIVE, assumptions=hand_assumptions())
+    priced_between = sv.price_ranking(between, creative_id=CREATIVE, assumptions=hand_assumptions())
+
+    assert priced_within[0].measured_metric != priced_between[0].measured_metric
+    assert "between" in priced_between[0].measured_metric.lower()
+    assert "within" in priced_within[0].measured_metric.lower()
+
+
+def test_the_summary_names_the_estimator_under_the_money():
+    _, between = _ranking_on_between_arm(_simulate_giving_between_arm_lift(0.1), spread_seeds=())
+
+    priced = sv.price_ranking(between, creative_id=CREATIVE, assumptions=hand_assumptions())
+
+    assert "between" in sv.summary(priced[0]).lower()
+
+
+def test_a_share_ranking_is_still_refused():
+    """The guard that mattered is unchanged: a purchase SHARE is not a lift,
+    and multiplying it by a baseline unit volume is meaningless."""
+    base = base_planogram()
+    ranking = rank_candidates(
+        base,
+        ad_placement_candidates(base, creative_ids=(CREATIVE,)),
+        sku_purchase_share_objective("SKU_008"),
+        simulate=_simulate_giving_lift(0.1),
+        spread_seeds=(),
+    )
+
+    with pytest.raises(ValueError, match="cannot be priced"):
+        sv.price_ranking(ranking, creative_id=CREATIVE, assumptions=hand_assumptions())

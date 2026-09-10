@@ -314,3 +314,68 @@ class TestOverlays:
 
         assert len(written) == result.frames_sampled
         assert all(path.exists() and path.stat().st_size > 0 for path in written)
+
+
+class TestRollSaturation:
+    """A clip tilted past what the search can bracket is refused.
+
+    Found by measuring rather than by reading: the pipeline was documented as
+    refusing past its search range and did not. It corrected by the clamped
+    angle, left a residual tilt, and read one shelf fewer than the bay had -
+    silently, with a note that reported the clamped value as though it were the
+    measurement.
+    """
+
+    def _write(self, path: Path, frames) -> Path:
+        writer = cv2.VideoWriter(
+            str(path), cv2.VideoWriter_fourcc(*"mp4v"), 10.0, (WIDTH, HEIGHT)
+        )
+        assert writer.isOpened()
+        try:
+            for frame in frames:
+                writer.write(np.ascontiguousarray(frame))
+        finally:
+            writer.release()
+        return path
+
+    def _tilted(self, path: Path, degrees: float) -> Path:
+        matrix = cv2.getRotationMatrix2D((WIDTH / 2, HEIGHT / 2), degrees, 1.0)
+        return self._write(
+            path,
+            (
+                cv2.warpAffine(
+                    aisle_frame(jitter=n % 2), matrix, (WIDTH, HEIGHT),
+                    borderValue=(175, 175, 175),
+                )
+                for n in range(30)
+            ),
+        )
+
+    def test_a_clip_past_the_search_range_is_refused(self, tmp_path: Path) -> None:
+        from vision.camera import ROLL_SEARCH_DEGREES
+
+        steep = self._tilted(tmp_path / "steep.mp4", ROLL_SEARCH_DEGREES + 2.0)
+
+        with pytest.raises(ValueError, match="level"):
+            run(steep)
+
+    def test_the_refusal_says_it_could_not_bracket_the_tilt(self, tmp_path: Path) -> None:
+        from vision.camera import ROLL_SEARCH_DEGREES
+
+        steep = self._tilted(tmp_path / "steep.mp4", ROLL_SEARCH_DEGREES + 2.0)
+
+        with pytest.raises(ValueError) as excinfo:
+            run(steep)
+
+        message = str(excinfo.value)
+        assert "front-on" in message or "level" in message
+        assert str(int(ROLL_SEARCH_DEGREES)) in message
+
+    def test_a_clip_inside_the_range_is_still_read(self, tmp_path: Path) -> None:
+        from vision.camera import ROLL_SEARCH_DEGREES
+
+        ok = self._tilted(tmp_path / "ok.mp4", ROLL_SEARCH_DEGREES - 2.0)
+
+        result = run(ok)
+
+        assert len(result.planogram["bays"][0]["shelves"]) == len(SHELF_EDGES)
